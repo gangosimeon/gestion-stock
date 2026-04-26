@@ -1,0 +1,5 @@
+<h1>Rendez-vous</h1>
+
+@if (appointments$ | async; as res) {
+  <pre>{{ res | json }}</pre>
+}

@@ -1,0 +1,70 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.kpi {
+  border-radius: 12px;
+}
+
+.kpi__label {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.kpi__value {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.kpi__hint {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.chart {
+  position: relative;
+  height: 320px;
+}
+
+.chart--small {
+  height: 280px;
+}
+
+.error {
+  color: #b00020;
+}
+
+@media (max-width: 900px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart {
+    height: 260px;
+  }
+}

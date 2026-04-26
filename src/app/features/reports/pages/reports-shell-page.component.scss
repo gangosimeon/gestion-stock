@@ -1,0 +1,112 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.error {
+  color: #b00020;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.kpi {
+  border-radius: 12px;
+}
+
+.kpi__label {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.kpi__value {
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.card--full {
+  grid-column: 1 / -1;
+}
+
+.chart {
+  height: 280px;
+  position: relative;
+}
+
+.table {
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+.productCell {
+  display: grid;
+}
+
+.productCell .name {
+  font-weight: 600;
+}
+
+.productCell .sku {
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.right {
+  text-align: right;
+}
+
+.profit {
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart {
+    height: 240px;
+  }
+}

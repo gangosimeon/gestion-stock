@@ -1,0 +1,77 @@
+@if (vm$ | async; as vm) {
+  <div class="page">
+    <div class="kpis">
+      <mat-card class="kpi">
+        <mat-card-content>
+          <div class="kpi__label">Ventes du jour</div>
+          <div class="kpi__value">{{ vm.kpis.todaySalesTotal | number: '1.0-0' }}</div>
+          <div class="kpi__hint">Total encaissé</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi">
+        <mat-card-content>
+          <div class="kpi__label">Bénéfice du jour</div>
+          <div class="kpi__value">{{ vm.kpis.todayProfit | number: '1.0-0' }}</div>
+          <div class="kpi__hint">(prix vente - achat)</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi">
+        <mat-card-content>
+          <div class="kpi__label">Stock total</div>
+          <div class="kpi__value">{{ vm.kpis.stockTotal | number: '1.0-0' }}</div>
+          <div class="kpi__hint">Somme des quantités</div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="grid">
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Ventes par jour (14 derniers jours)</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart">
+            <canvas #salesByDayCanvas></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Top produits</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart chart--small">
+            <canvas #topProductsCanvas></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Évolution stock (approx.)</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart chart--small">
+            <canvas #stockEvolutionCanvas></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>État</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (vm.errorMessage) {
+            <div class="error">{{ vm.errorMessage }}</div>
+          } @else {
+            <div>Données à jour</div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+}

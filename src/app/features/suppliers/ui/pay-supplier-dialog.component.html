@@ -1,0 +1,34 @@
+<h2 mat-dialog-title>{{ data.title }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <div mat-dialog-content class="content">
+    <mat-form-field appearance="outline">
+      <mat-label>Montant</mat-label>
+      <input matInput type="number" formControlName="amount" />
+      @if (form.controls.amount.touched && form.controls.amount.errors?.['required']) {
+        <mat-error>Champ obligatoire</mat-error>
+      }
+      @if (form.controls.amount.touched && form.controls.amount.errors?.['min']) {
+        <mat-error>Montant invalide</mat-error>
+      }
+      @if (form.controls.amount.touched && form.controls.amount.errors?.['max']) {
+        <mat-error>Dépasse le reste à payer</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Date paiement</mat-label>
+      <input matInput type="date" formControlName="paymentDateIso" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Note</mat-label>
+      <input matInput formControlName="note" />
+    </mat-form-field>
+  </div>
+
+  <div mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Annuler</button>
+    <button mat-flat-button color="primary" type="submit">Payer</button>
+  </div>
+</form>

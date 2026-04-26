@@ -1,0 +1,141 @@
+@if (vm$ | async; as vm) {
+  <div class="page">
+    <div class="header">
+      <div class="title">Bilans & Rapports</div>
+      <span class="spacer"></span>
+      <button mat-stroked-button type="button" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Actualiser
+      </button>
+    </div>
+
+    <mat-tab-group (selectedTabChange)="onTabChange($event)">
+      <mat-tab label="Journalier" />
+      <mat-tab label="Mensuel" />
+      <mat-tab label="Annuel" />
+    </mat-tab-group>
+
+    @if (vm.isLoading) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    <div class="filters">
+      @if (vm.filters.tab === 'DAILY') {
+        <mat-form-field appearance="outline">
+          <mat-label>Date</mat-label>
+          <input matInput [matDatepicker]="dp" [formControl]="dateCtrl" />
+          <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
+          <mat-datepicker #dp></mat-datepicker>
+        </mat-form-field>
+      }
+
+      @if (vm.filters.tab === 'MONTHLY') {
+        <mat-form-field appearance="outline">
+          <mat-label>Mois (YYYY-MM)</mat-label>
+          <input matInput [formControl]="monthCtrl" placeholder="2026-04" />
+        </mat-form-field>
+      }
+
+      @if (vm.filters.tab === 'YEARLY') {
+        <mat-form-field appearance="outline">
+          <mat-label>Année</mat-label>
+          <mat-select [formControl]="yearCtrl">
+            @for (y of years; track y) {
+              <mat-option [value]="y">{{ y }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      @if (vm.errorMessage) {
+        <div class="error">{{ vm.errorMessage }}</div>
+      }
+    </div>
+
+    <div class="kpis">
+      <mat-card class="kpi">
+        <mat-card-content>
+          <div class="kpi__label">Total ventes</div>
+          <div class="kpi__value">{{ vm.kpis.totalSales | number: '1.0-0' }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi">
+        <mat-card-content>
+          <div class="kpi__label">Bénéfice</div>
+          <div class="kpi__value">{{ vm.kpis.profit | number: '1.0-0' }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi">
+        <mat-card-content>
+          <div class="kpi__label">Transactions</div>
+          <div class="kpi__value">{{ vm.kpis.transactionsCount | number: '1.0-0' }}</div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="grid">
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Ventes</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart">
+            <canvas #salesCanvas></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Bénéfice</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart">
+            <canvas #profitCanvas></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="card card--full">
+        <mat-card-header>
+          <mat-card-title>Produits les plus vendus</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="table">
+            <table mat-table [dataSource]="vm.topProducts">
+              <ng-container matColumnDef="product">
+                <th mat-header-cell *matHeaderCellDef>Produit</th>
+                <td mat-cell *matCellDef="let r">
+                  <div class="productCell">
+                    <div class="name">{{ r.name }}</div>
+                    <div class="sku">{{ r.sku }}</div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="quantity">
+                <th mat-header-cell *matHeaderCellDef class="right">Qté</th>
+                <td mat-cell *matCellDef="let r" class="right">{{ r.quantity | number: '1.0-0' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef class="right">CA</th>
+                <td mat-cell *matCellDef="let r" class="right">{{ r.total | number: '1.0-0' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="profit">
+                <th mat-header-cell *matHeaderCellDef class="right">Bénéfice</th>
+                <td mat-cell *matCellDef="let r" class="right profit">{{ r.profit | number: '1.0-0' }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+}

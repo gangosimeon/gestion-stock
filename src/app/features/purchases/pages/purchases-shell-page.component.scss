@@ -1,0 +1,41 @@
+.container {
+  height: calc(100vh - 0px);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.content {
+  padding: 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.search {
+  max-width: 520px;
+  flex: 1;
+}
+
+.error {
+  color: #b00020;
+}
+
+.table {
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+.right {
+  text-align: right;
+}
+
+.total {
+  font-weight: 800;
+}

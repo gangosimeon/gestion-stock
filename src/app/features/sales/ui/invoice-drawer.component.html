@@ -1,0 +1,65 @@
+<div class="invoice">
+  <div class="invoice__header">
+    <div>
+      <div class="invoice__title">Facture</div>
+      <div class="invoice__meta">
+        <div><strong>Réf:</strong> {{ sale.id }}</div>
+        <div><strong>Date:</strong> {{ sale.createdAt | date: 'short' }}</div>
+      </div>
+    </div>
+
+    <div class="invoice__actions">
+      <button mat-stroked-button type="button" (click)="print()">
+        <mat-icon>print</mat-icon>
+        Imprimer
+      </button>
+      <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <mat-divider />
+
+  <div class="invoice__body">
+    <div class="block">
+      <div class="label">Client</div>
+      <div class="value">{{ customer?.name ?? 'Comptoir' }}</div>
+      @if (customer?.phone) { <div class="hint">{{ customer?.phone }}</div> }
+    </div>
+
+    <div class="block">
+      <div class="label">Type</div>
+      <div class="value">{{ sale.type === 'WHOLESALE' ? 'Gros' : 'Détail' }}</div>
+    </div>
+
+    <div class="items">
+      <div class="items__head">
+        <div>Article</div>
+        <div class="right">Qté</div>
+        <div class="right">PU</div>
+        <div class="right">Total</div>
+      </div>
+
+      @for (it of sale.items; track trackByIndex($index)) {
+        <div class="items__row">
+          <div>{{ it.productId }}</div>
+          <div class="right">{{ it.quantity }}</div>
+          <div class="right">{{ it.unitPrice | number: '1.0-0' }}</div>
+          <div class="right">{{ (it.unitPrice * it.quantity) | number: '1.0-0' }}</div>
+        </div>
+      }
+    </div>
+
+    <div class="totals">
+      <div class="totals__row">
+        <div>Total</div>
+        <div class="right"><strong>{{ sale.total | number: '1.0-0' }}</strong></div>
+      </div>
+      <div class="totals__row">
+        <div>Paiement</div>
+        <div class="right">{{ sale.paymentMethod }}</div>
+      </div>
+    </div>
+  </div>
+</div>

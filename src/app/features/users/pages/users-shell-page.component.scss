@@ -1,0 +1,39 @@
+.container {
+  height: calc(100vh - 56px);
+}
+
+.content {
+  padding: 12px 16px 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.table {
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.error {
+  color: #b00020;
+}
+
+.hint {
+  opacity: 0.8;
+}
+
+@media (max-width: 600px) {
+  .container {
+    height: auto;
+    min-height: 100vh;
+  }
+}

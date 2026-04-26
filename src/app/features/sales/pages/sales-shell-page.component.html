@@ -1,0 +1,172 @@
+<mat-drawer-container class="container" autosize>
+  <mat-drawer-content>
+    <mat-toolbar color="primary">
+      <span>Vente</span>
+      <span class="spacer"></span>
+      <button mat-stroked-button type="button" (click)="clear()">
+        <mat-icon>delete</mat-icon>
+        Vider
+      </button>
+      <button mat-flat-button type="button" (click)="checkout()">
+        <mat-icon>shopping_cart_checkout</mat-icon>
+        Encaisser
+      </button>
+    </mat-toolbar>
+
+    @if (vm$ | async; as vm) {
+      @if (vm.isLoading) { <mat-progress-bar mode="indeterminate" /> }
+
+      <div class="content">
+        <mat-card class="panel">
+          <div class="panel__title">Écran vente</div>
+
+          <div class="grid">
+            <mat-form-field appearance="outline" class="span2">
+              <mat-label>Ajouter un produit</mat-label>
+              <input
+                matInput
+                [formControl]="productSearch"
+                [matAutocomplete]="auto"
+                placeholder="SKU ou nom..."
+              />
+              <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectProduct($event.option.value)">
+                @for (p of filteredProducts$ | async; track p.id) {
+                  <mat-option [value]="p.id">
+                    <div class="option">
+                      <div class="name">{{ p.sku }} — {{ p.name }}</div>
+                      <div class="meta">Stock: {{ p.stockQuantity }}</div>
+                    </div>
+                  </mat-option>
+                }
+              </mat-autocomplete>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Client</mat-label>
+              <mat-select [formControl]="customerId">
+                <mat-option [value]="null">Comptoir</mat-option>
+                @for (c of vm.customers; track c.id) {
+                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <div class="type">
+              <div class="label">Type vente</div>
+              <mat-radio-group [value]="vm.form.type" (change)="onTypeChange($event.value)">
+                <mat-radio-button value="RETAIL">Détail</mat-radio-button>
+                <mat-radio-button value="WHOLESALE">Gros</mat-radio-button>
+              </mat-radio-group>
+            </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Paiement</mat-label>
+              <mat-select [value]="vm.form.paymentMethod" (valueChange)="onPaymentChange($event)">
+                <mat-option value="CASH">Cash</mat-option>
+                <mat-option value="MOBILE_MONEY">Mobile Money</mat-option>
+                <mat-option value="BANK_TRANSFER">Virement</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Montant reçu</mat-label>
+              <input matInput type="number" [formControl]="paidAmount" />
+            </mat-form-field>
+          </div>
+
+          @if (vm.errorMessage) {
+            <div class="error">{{ vm.errorMessage }}</div>
+          }
+
+          <div class="table">
+            <table mat-table [dataSource]="dataSource">
+              <ng-container matColumnDef="product">
+                <th mat-header-cell *matHeaderCellDef>Produit</th>
+                <td mat-cell *matCellDef="let r">
+                  <div class="productCell">
+                    <div class="name">{{ r.name }}</div>
+                    <div class="sku">{{ r.sku }} · Stock: {{ r.stockQuantity }}</div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="qty">
+                <th mat-header-cell *matHeaderCellDef>Qté</th>
+                <td mat-cell *matCellDef="let r" class="qty">
+                  <button mat-icon-button type="button" (click)="dec(r)" aria-label="-">
+                    <mat-icon>remove</mat-icon>
+                  </button>
+                  <input class="qtyInput" [value]="r.quantity" (change)="setQty(r, $any($event.target).value)" />
+                  <button mat-icon-button type="button" (click)="inc(r)" aria-label="+">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="unit">
+                <th mat-header-cell *matHeaderCellDef>PU</th>
+                <td mat-cell *matCellDef="let r" class="right">{{ r.unitPrice | number: '1.0-0' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef>Total</th>
+                <td mat-cell *matCellDef="let r" class="right">{{ r.lineTotal | number: '1.0-0' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="profit">
+                <th mat-header-cell *matHeaderCellDef>Bénéfice</th>
+                <td mat-cell *matCellDef="let r" class="right profit">{{ r.lineProfit | number: '1.0-0' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let r" class="right">
+                  <button mat-icon-button color="warn" type="button" (click)="remove(r)" aria-label="Supprimer">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          </div>
+
+          <mat-divider />
+
+          <div class="summary">
+            <div class="kpi">
+              <div class="label">Articles</div>
+              <div class="value">{{ vm.totals.itemsCount }}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Total</div>
+              <div class="value">{{ vm.totals.total | number: '1.0-0' }}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Bénéfice</div>
+              <div class="value">{{ vm.totals.profit | number: '1.0-0' }}</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Rendu</div>
+              <div class="value">{{ (vm.form.paidAmount - vm.totals.total) | number: '1.0-0' }}</div>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+    }
+  </mat-drawer-content>
+
+  <mat-drawer #invoiceDrawer position="end" mode="over">
+    @if (vm$ | async; as vm) {
+      @if (vm.lastSale) {
+        @let sale = vm.lastSale;
+        <app-invoice-drawer
+          [sale]="sale"
+          [customer]="vm.customers.find(c => c.id === sale.customerId) ?? null"
+          (close)="closeInvoice()"
+        />
+      }
+    }
+  </mat-drawer>
+</mat-drawer-container>

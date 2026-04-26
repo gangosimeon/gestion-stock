@@ -1,0 +1,60 @@
+.page {
+  display: grid;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.toolbar__title {
+  font-weight: 800;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.content {
+  padding: 16px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.search {
+  max-width: 520px;
+}
+
+.error {
+  color: #b00020;
+}
+
+.table {
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+.right {
+  text-align: right;
+}
+
+.link {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.sub {
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.sidenav {
+  min-height: calc(100vh - 64px);
+}

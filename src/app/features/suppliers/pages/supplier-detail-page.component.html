@@ -1,0 +1,120 @@
+@if (vm$ | async; as vm) {
+  <div class="page">
+    <div class="header">
+      <button mat-stroked-button type="button" routerLink="/suppliers">
+        <mat-icon>arrow_back</mat-icon>
+        Retour
+      </button>
+      <span class="spacer"></span>
+    </div>
+
+    @if (vm.isLoading) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    @if (vm.errorMessage) {
+      <div class="error">{{ vm.errorMessage }}</div>
+    }
+
+    @if (vm.supplier; as s) {
+      <div class="grid">
+        <mat-card class="card">
+          <mat-card-header>
+            <mat-card-title>{{ s.name }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="info">
+            <div><span class="label">Téléphone</span> {{ s.phone ?? '—' }}</div>
+            <div><span class="label">Email</span> {{ s.email ?? '—' }}</div>
+            <div><span class="label">Adresse</span> {{ s.address ?? '—' }}</div>
+            <div><span class="label">Délai livraison</span> {{ s.deliveryLeadTimeDays }} jours</div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="card">
+          <mat-card-header>
+            <mat-card-title>Suivi dette</mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="info">
+            <div><span class="label">Total achats</span> {{ vm.totalPurchases | number: '1.0-0' }}</div>
+            <div><span class="label">Total payé</span> {{ vm.totalPaid | number: '1.0-0' }}</div>
+            <div><span class="label">Reste à payer</span> <span class="debt">{{ vm.balance | number: '1.0-0' }}</span></div>
+
+            <div>
+              <button mat-stroked-button type="button" (click)="paySupplier(vm)">
+                Payer
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="card card--full">
+          <mat-card-header>
+            <mat-card-title>Historique d’achats</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="table">
+              <table mat-table [dataSource]="vm.history">
+                <ng-container matColumnDef="date">
+                  <th mat-header-cell *matHeaderCellDef>Date</th>
+                  <td mat-cell *matCellDef="let h">{{ h.purchaseDateIso | date: 'dd/MM/yyyy' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="reference">
+                  <th mat-header-cell *matHeaderCellDef>Référence</th>
+                  <td mat-cell *matCellDef="let h">{{ h.reference }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="items">
+                  <th mat-header-cell *matHeaderCellDef class="right">Articles</th>
+                  <td mat-cell *matCellDef="let h" class="right">{{ h.itemsCount | number: '1.0-0' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="total">
+                  <th mat-header-cell *matHeaderCellDef class="right">Total</th>
+                  <td mat-cell *matCellDef="let h" class="right total">{{ h.totalAmount | number: '1.0-0' }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              </table>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="card card--full">
+          <mat-card-header>
+            <mat-card-title>Historique paiements</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="table">
+              <table mat-table [dataSource]="vm.payments">
+                <ng-container matColumnDef="date">
+                  <th mat-header-cell *matHeaderCellDef>Date</th>
+                  <td mat-cell *matCellDef="let p">{{ p.paymentDateIso | date: 'dd/MM/yyyy' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="amount">
+                  <th mat-header-cell *matHeaderCellDef class="right">Montant</th>
+                  <td mat-cell *matCellDef="let p" class="right total">{{ p.amount | number: '1.0-0' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="order">
+                  <th mat-header-cell *matHeaderCellDef>Commande</th>
+                  <td mat-cell *matCellDef="let p">{{ p.orderId ?? '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="note">
+                  <th mat-header-cell *matHeaderCellDef>Note</th>
+                  <td mat-cell *matCellDef="let p">{{ p.note ?? '—' }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: paymentColumns"></tr>
+              </table>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+  </div>
+}

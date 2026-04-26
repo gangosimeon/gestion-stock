@@ -1,0 +1,26 @@
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.content {
+  padding: 16px;
+}
+
+.btn {
+  cursor: pointer;
+}

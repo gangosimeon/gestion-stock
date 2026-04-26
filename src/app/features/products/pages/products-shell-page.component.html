@@ -1,0 +1,113 @@
+<mat-drawer-container class="container" autosize>
+  <mat-drawer-content>
+    <mat-toolbar color="primary">
+      <span>Produits</span>
+      <span class="spacer"></span>
+      <button mat-flat-button type="button" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        Nouveau
+      </button>
+    </mat-toolbar>
+
+    @if (vm$ | async; as vm) {
+      @if (vm.isLoading) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+
+      <div class="content">
+        <div class="toolbar">
+          <mat-form-field appearance="outline" class="search">
+            <mat-label>Rechercher</mat-label>
+            <input matInput [formControl]="search" placeholder="SKU, nom, catégorie, fournisseur" />
+            <button mat-icon-button matSuffix type="button" (click)="search.setValue('')" aria-label="Vider">
+              <mat-icon>close</mat-icon>
+            </button>
+          </mat-form-field>
+
+          @if (vm.errorMessage) {
+            <div class="error">{{ vm.errorMessage }}</div>
+          }
+        </div>
+
+        <div class="table">
+          <table mat-table [dataSource]="dataSource" matSort>
+            <ng-container matColumnDef="sku">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>SKU</th>
+              <td mat-cell *matCellDef="let p">{{ p.sku }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom</th>
+              <td mat-cell *matCellDef="let p">
+                <button mat-button type="button" (click)="openDetail(p)">{{ p.name }}</button>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="category">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Catégorie</th>
+              <td mat-cell *matCellDef="let p">{{ p.categoryName }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="supplier">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fournisseur</th>
+              <td mat-cell *matCellDef="let p">{{ p.supplierName ?? '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="stock">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Stock</th>
+              <td mat-cell *matCellDef="let p">
+                <div class="stock">
+                  <span>{{ p.stockQuantity }}</span>
+
+                  @if (lowStock(p)) {
+                    <mat-chip color="warn" selected>Stock faible</mat-chip>
+                  } @else {
+                    <mat-chip color="primary" selected>{{ availability(p) }}</mat-chip>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="prices">
+              <th mat-header-cell *matHeaderCellDef>Prix</th>
+              <td mat-cell *matCellDef="let p">
+                <div class="prices">
+                  <div>Achat: {{ p.purchasePrice }}</div>
+                  <div>Détail: {{ p.retailPrice }}</div>
+                  <div>Gros: {{ p.wholesalePrice }}</div>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let p" class="actions">
+                <button mat-icon-button type="button" (click)="openEdit(p)" aria-label="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button type="button" (click)="confirmDelete(p)" aria-label="Supprimer">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+
+          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
+        </div>
+      </div>
+    }
+  </mat-drawer-content>
+
+  <mat-drawer #drawer position="end" mode="over">
+    @if (drawer$ | async; as d) {
+      <app-product-drawer
+        [ctx]="{ mode: d.mode, productId: d.productId, categories: vmSnapshot.categories, suppliers: vmSnapshot.suppliers }"
+        (close)="closeDrawer()"
+        (saved)="onSaved()"
+      />
+    }
+  </mat-drawer>
+</mat-drawer-container>

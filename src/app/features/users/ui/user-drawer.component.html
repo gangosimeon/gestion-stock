@@ -1,0 +1,53 @@
+<div class="drawer">
+  <div class="drawer__header">
+    <div class="drawer__title">{{ ctx.mode === 'CREATE' ? 'Nouvel utilisateur' : 'Modifier utilisateur' }}</div>
+
+    <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider />
+
+  <form class="drawer__content" [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Username</mat-label>
+      <input matInput formControlName="username" />
+      @if (fieldError('username'); as e) { <mat-error>{{ e }}</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nom complet</mat-label>
+      <input matInput formControlName="fullName" />
+      @if (fieldError('fullName'); as e) { <mat-error>{{ e }}</mat-error> }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Téléphone (optionnel)</mat-label>
+      <input matInput formControlName="phone" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Rôles</mat-label>
+      <mat-select formControlName="roles" multiple>
+        @for (r of roleOptions; track r) {
+          <mat-option [value]="r">{{ roleLabel(r) }}</mat-option>
+        }
+      </mat-select>
+      @if (fieldError('roles'); as e) { <mat-error>{{ e }}</mat-error> }
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="isActive">Actif</mat-slide-toggle>
+
+    <div class="drawer__actions">
+      <button mat-button type="button" (click)="requestClose()">Annuler</button>
+      <span class="spacer"></span>
+      <button mat-flat-button color="primary" type="submit" [disabled]="isSubmitting">
+        {{ ctx.mode === 'CREATE' ? 'Créer' : 'Enregistrer' }}
+      </button>
+      @if (isSubmitting) {
+        <mat-progress-spinner diameter="20" mode="indeterminate" />
+      }
+    </div>
+  </form>
+</div>

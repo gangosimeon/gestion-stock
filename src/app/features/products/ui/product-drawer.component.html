@@ -1,0 +1,106 @@
+<div class="drawer">
+  <div class="drawer__header">
+    <div>
+      <div class="drawer__title">{{ title }}</div>
+      @if (ctx.mode === 'detail' && loadedProduct) {
+        <div class="drawer__subtitle">SKU: {{ loadedProduct.sku }}</div>
+      }
+    </div>
+
+    <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider />
+
+  @if (loadError) {
+    <div class="drawer__error">{{ loadError }}</div>
+  }
+
+  <form class="drawer__content" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="grid">
+      <mat-form-field appearance="outline">
+        <mat-label>SKU</mat-label>
+        <input matInput formControlName="sku" />
+        @if (fieldError('sku'); as e) { <mat-error>{{ e }}</mat-error> }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nom</mat-label>
+        <input matInput formControlName="name" />
+        @if (fieldError('name'); as e) { <mat-error>{{ e }}</mat-error> }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Catégorie</mat-label>
+        <mat-select formControlName="categoryId">
+          @for (c of ctx.categories; track c.id) {
+            <mat-option [value]="c.id">{{ c.name }}</mat-option>
+          }
+        </mat-select>
+        @if (fieldError('categoryId'); as e) { <mat-error>{{ e }}</mat-error> }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fournisseur principal</mat-label>
+        <mat-select formControlName="supplierId">
+          <mat-option value="">—</mat-option>
+          @for (s of ctx.suppliers; track s.id) {
+            <mat-option [value]="s.id">{{ s.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <div class="grid grid--2">
+        <mat-form-field appearance="outline">
+          <mat-label>Prix d'achat</mat-label>
+          <input matInput type="number" formControlName="purchasePrice" />
+          @if (fieldError('purchasePrice'); as e) { <mat-error>{{ e }}</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Prix détail</mat-label>
+          <input matInput type="number" formControlName="retailPrice" />
+          @if (fieldError('retailPrice'); as e) { <mat-error>{{ e }}</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Prix gros</mat-label>
+          <input matInput type="number" formControlName="wholesalePrice" />
+          @if (fieldError('wholesalePrice'); as e) { <mat-error>{{ e }}</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Stock</mat-label>
+          <input matInput type="number" formControlName="stockQuantity" />
+          @if (fieldError('stockQuantity'); as e) { <mat-error>{{ e }}</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Seuil d'alerte</mat-label>
+          <input matInput type="number" formControlName="alertThreshold" />
+          @if (fieldError('alertThreshold'); as e) { <mat-error>{{ e }}</mat-error> }
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="drawer__actions">
+      @if (ctx.mode === 'detail') {
+        <button mat-stroked-button type="button" (click)="requestEdit()">Modifier</button>
+      }
+
+      <span class="spacer"></span>
+
+      <button mat-button type="button" (click)="requestClose()">Fermer</button>
+
+      @if (canSubmit) {
+        <button mat-flat-button color="primary" type="submit" [disabled]="isLoading">Enregistrer</button>
+      }
+
+      @if (isLoading) {
+        <mat-progress-spinner diameter="20" mode="indeterminate" />
+      }
+    </div>
+  </form>
+</div>

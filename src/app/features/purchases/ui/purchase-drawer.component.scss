@@ -1,0 +1,110 @@
+.drawer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+}
+
+.drawer__title {
+  font-weight: 800;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.content {
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.lineAdd {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.table {
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+.right {
+  text-align: right;
+}
+
+.total {
+  font-weight: 800;
+}
+
+.prod {
+  display: grid;
+}
+
+.prod .name {
+  font-weight: 600;
+}
+
+.prod .sku {
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+.summary .value {
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.detailActions {
+  display: grid;
+  gap: 12px;
+}
+
+.invoice {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.invoice__title {
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.invoice__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .lineAdd {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice__grid {
+    grid-template-columns: 1fr;
+  }
+}
