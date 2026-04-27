@@ -1,6 +1,20 @@
 <div class="layout">
   <header class="topbar">
     <div class="brand">Gestion Stock</div>
+    <div class="topbar__center">
+      @if (warehouses$ | async; as w) {
+        @if (warehouseId$ | async; as wid) {
+          <mat-form-field appearance="outline" class="warehouse">
+            <mat-label>Magasin</mat-label>
+            <mat-select [value]="wid" (valueChange)="setWarehouse($event)">
+              @for (it of w.items; track it.id) {
+                <mat-option [value]="it.id">{{ it.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+      }
+    </div>
     <button type="button" class="btn" (click)="logout()">Déconnexion</button>
   </header>
 

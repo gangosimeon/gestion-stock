@@ -1,0 +1,36 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 700;
+}
+
+.table {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.right {
+  text-align: right;
+}
+
+.neg {
+  color: #b00020;
+  font-weight: 900;
+}
+
+.pos {
+  color: #1b5e20;
+  font-weight: 900;
+}

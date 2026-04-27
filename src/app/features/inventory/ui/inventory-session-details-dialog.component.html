@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>Détails inventaire</h2>
+
+<div mat-dialog-content>
+  <div class="meta">
+    <div><strong>Date:</strong> {{ data.session.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+    <div><strong>Articles:</strong> {{ data.session.itemsCount }}</div>
+    <div><strong>Écart total:</strong> {{ data.session.totalDifference | number: '1.0-0' }}</div>
+    <div><strong>Note:</strong> {{ data.session.note ?? '—' }}</div>
+  </div>
+
+  <div class="table">
+    <table mat-table [dataSource]="data.session.lines">
+      <ng-container matColumnDef="product">
+        <th mat-header-cell *matHeaderCellDef>Produit</th>
+        <td mat-cell *matCellDef="let l">
+          <div><strong>{{ l.productName }}</strong></div>
+          <div style="opacity:0.7;font-size:12px">{{ l.productSku }}</div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="system">
+        <th mat-header-cell *matHeaderCellDef class="right">Système</th>
+        <td mat-cell *matCellDef="let l" class="right">{{ l.systemQuantity }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="physical">
+        <th mat-header-cell *matHeaderCellDef class="right">Réel</th>
+        <td mat-cell *matCellDef="let l" class="right">{{ l.physicalQuantity }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="diff">
+        <th mat-header-cell *matHeaderCellDef class="right">Écart</th>
+        <td mat-cell *matCellDef="let l" class="right">{{ l.difference | number: '1.0-0' }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Fermer</button>
+</div>

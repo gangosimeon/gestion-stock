@@ -1,0 +1,67 @@
+@if (vm$ | async; as vm) {
+  @if (vm.isLoading) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <div class="page">
+    <div class="top">
+      <a mat-button [routerLink]="['/inventory/history']">Historique</a>
+      <span class="spacer"></span>
+      <button mat-flat-button color="primary" type="button" (click)="submit(vm.products)" [disabled]="isSubmitting">
+        Enregistrer
+      </button>
+    </div>
+
+    @if (vm.errorMessage) {
+      <div class="error">{{ vm.errorMessage }}</div>
+    }
+
+    <mat-card class="card">
+      <mat-card-header>
+        <mat-card-title>Inventaire manuel</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="note">
+          <mat-label>Note</mat-label>
+          <input matInput [formControl]="note" />
+        </mat-form-field>
+
+        <div class="table">
+          <table mat-table [dataSource]="vm.products">
+            <ng-container matColumnDef="product">
+              <th mat-header-cell *matHeaderCellDef>Produit</th>
+              <td mat-cell *matCellDef="let p">
+                <div class="productCell">
+                  <div class="name">{{ p.name }}</div>
+                  <div class="sku">{{ p.sku }}</div>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="system">
+              <th mat-header-cell *matHeaderCellDef class="right">Stock système</th>
+              <td mat-cell *matCellDef="let p" class="right">{{ p.stockQuantity }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="physical">
+              <th mat-header-cell *matHeaderCellDef class="right">Stock réel</th>
+              <td mat-cell *matCellDef="let p" class="right">
+                <input class="qty" type="number" [formControl]="physicalCtrl(p.id)" />
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="diff">
+              <th mat-header-cell *matHeaderCellDef class="right">Écart</th>
+              <td mat-cell *matCellDef="let p" class="right" [class.neg]="diff(p) < 0" [class.pos]="diff(p) > 0">
+                {{ diff(p) | number: '1.0-0' }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

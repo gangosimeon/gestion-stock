@@ -1,0 +1,57 @@
+@if (vm$ | async; as vm) {
+  @if (vm.isLoading) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <div class="page">
+    <div class="top">
+      <a mat-button [routerLink]="['/cash-register/open']">Ouverture</a>
+      <a mat-button [routerLink]="['/cash-register/close']">Fermeture</a>
+    </div>
+
+    @if (vm.errorMessage) {
+      <div class="error">{{ vm.errorMessage }}</div>
+    }
+
+    <div class="table">
+      <table mat-table [dataSource]="vm.sessions">
+        <ng-container matColumnDef="openedAt">
+          <th mat-header-cell *matHeaderCellDef>Ouverture</th>
+          <td mat-cell *matCellDef="let s">{{ s.openedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let s">{{ s.status === 'OPEN' ? 'Ouverte' : 'Fermée' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="expected">
+          <th mat-header-cell *matHeaderCellDef class="right">Attendu</th>
+          <td mat-cell *matCellDef="let s" class="right"><strong>{{ s.expectedCash | number: '1.0-0' }}</strong></td>
+        </ng-container>
+
+        <ng-container matColumnDef="counted">
+          <th mat-header-cell *matHeaderCellDef class="right">Compté</th>
+          <td mat-cell *matCellDef="let s" class="right">{{ s.countedCash ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="diff">
+          <th mat-header-cell *matHeaderCellDef class="right">Diff.</th>
+          <td mat-cell *matCellDef="let s" class="right" [class.neg]="s.difference < 0" [class.pos]="s.difference > 0">
+            {{ s.difference | number: '1.0-0' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="right">Actions</th>
+          <td mat-cell *matCellDef="let s" class="right">
+            <button mat-stroked-button type="button" (click)="openDetails(s)">Détails</button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+  </div>
+}

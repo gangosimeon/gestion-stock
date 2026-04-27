@@ -3,6 +3,10 @@
     <div class="header">
       <div class="title">Bilans & Rapports</div>
       <span class="spacer"></span>
+      <button mat-stroked-button type="button" (click)="exportExcel()">
+        <mat-icon>download</mat-icon>
+        Exporter Excel
+      </button>
       <button mat-stroked-button type="button" (click)="refresh()">
         <mat-icon>refresh</mat-icon>
         Actualiser

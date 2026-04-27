@@ -17,6 +17,16 @@
   font-weight: 600;
 }
 
+.topbar__center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.warehouse {
+  width: min(320px, 42vw);
+}
+
 .content {
   padding: 16px;
 }

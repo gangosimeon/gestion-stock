@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>Détails session</h2>
+
+<div mat-dialog-content>
+  <div class="kpis">
+    <div><strong>Fond:</strong> {{ data.session.openingBalance | number: '1.0-0' }}</div>
+    <div><strong>Ventes cash:</strong> {{ data.session.cashSalesTotal | number: '1.0-0' }}</div>
+    <div><strong>Entrées:</strong> {{ data.session.totalIn | number: '1.0-0' }}</div>
+    <div><strong>Sorties:</strong> {{ data.session.totalOut | number: '1.0-0' }}</div>
+    <div><strong>Attendu:</strong> {{ data.session.expectedCash | number: '1.0-0' }}</div>
+    <div><strong>Compté:</strong> {{ data.session.countedCash ?? '—' }}</div>
+    <div><strong>Différence:</strong> {{ data.session.difference | number: '1.0-0' }}</div>
+  </div>
+
+  <div class="table">
+    <table mat-table [dataSource]="data.operations">
+      <ng-container matColumnDef="date">
+        <th mat-header-cell *matHeaderCellDef>Date</th>
+        <td mat-cell *matCellDef="let o">{{ o.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef>Type</th>
+        <td mat-cell *matCellDef="let o">{{ o.type === 'IN' ? 'Entrée' : 'Sortie' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="amount">
+        <th mat-header-cell *matHeaderCellDef class="right">Montant</th>
+        <td mat-cell *matCellDef="let o" class="right"><strong>{{ o.amount | number: '1.0-0' }}</strong></td>
+      </ng-container>
+
+      <ng-container matColumnDef="note">
+        <th mat-header-cell *matHeaderCellDef>Note</th>
+        <td mat-cell *matCellDef="let o">{{ o.note ?? '—' }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Fermer</button>
+</div>

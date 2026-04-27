@@ -1,0 +1,26 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 700;
+}
+
+.table {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.right {
+  text-align: right;
+}

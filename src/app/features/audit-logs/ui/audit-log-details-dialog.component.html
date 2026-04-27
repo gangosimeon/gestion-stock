@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>Détails log</h2>
+
+<div mat-dialog-content>
+  <div><strong>Date:</strong> {{ data.log.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</div>
+  <div><strong>Utilisateur:</strong> {{ data.log.username }} ({{ data.log.userId }})</div>
+  <div><strong>Action:</strong> {{ data.log.action }}</div>
+  <div><strong>Entité:</strong> {{ data.log.entityType }} · {{ data.log.entityId }}</div>
+
+  <h3>Before</h3>
+  <pre class="json">{{ data.log.before | json }}</pre>
+
+  <h3>After</h3>
+  <pre class="json">{{ data.log.after | json }}</pre>
+
+  @if (data.log.meta) {
+    <h3>Meta</h3>
+    <pre class="json">{{ data.log.meta | json }}</pre>
+  }
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Fermer</button>
+</div>

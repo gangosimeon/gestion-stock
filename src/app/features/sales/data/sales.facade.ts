@@ -159,6 +159,7 @@ export class SalesFacade {
       type: form.type,
       customerId: form.customerId ?? undefined,
       paymentMethod: form.paymentMethod,
+      paidAmount: form.paidAmount,
       items: toSaleItems(cart)
     };
 

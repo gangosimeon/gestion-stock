@@ -28,6 +28,10 @@ export const LAYOUT_ROUTES: Routes = [
         loadChildren: () => import('../features/sales/sales.routes').then((m) => m.SALES_ROUTES)
       },
       {
+        path: 'clients',
+        loadChildren: () => import('../features/clients/clients.routes').then((m) => m.CLIENTS_ROUTES)
+      },
+      {
         path: 'appointments',
         loadChildren: () => import('../features/appointments/appointments.routes').then((m) => m.APPOINTMENTS_ROUTES)
       },
@@ -42,6 +46,26 @@ export const LAYOUT_ROUTES: Routes = [
       {
         path: 'suppliers',
         loadChildren: () => import('../features/suppliers/suppliers.routes').then((m) => m.SUPPLIERS_ROUTES)
+      },
+      {
+        path: 'cash-register',
+        loadChildren: () => import('../features/cash-register/cash-register.routes').then((m) => m.CASH_REGISTER_ROUTES)
+      },
+      {
+        path: 'expenses',
+        loadChildren: () => import('../features/expenses/expenses.routes').then((m) => m.EXPENSES_ROUTES)
+      },
+      {
+        path: 'inventory',
+        loadChildren: () => import('../features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES)
+      },
+      {
+        path: 'warehouses',
+        loadChildren: () => import('../features/warehouses/warehouses.routes').then((m) => m.WAREHOUSES_ROUTES)
+      },
+      {
+        path: 'audit-logs',
+        loadChildren: () => import('../features/audit-logs/audit-logs.routes').then((m) => m.AUDIT_LOGS_ROUTES)
       },
       {
         path: 'users',

@@ -18,6 +18,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subject, finalize, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
+import { PaymentMethod } from '../../../core/models/sale.model';
 import { SalesFacade } from '../data/sales.facade';
 import { CartRow, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
@@ -117,7 +118,7 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     this.facade.setSaleType(type);
   }
 
-  onPaymentChange(method: any): void {
+  onPaymentChange(method: PaymentMethod): void {
     this.facade.setPaymentMethod(method);
   }
 
@@ -151,10 +152,34 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     this.facade.clearCart();
   }
 
+  dueAmount(): number {
+    if (!this.vmSnapshot) return 0;
+    const total = Number(this.vmSnapshot.totals?.total ?? 0);
+    const paid = Number(this.vmSnapshot.form?.paidAmount ?? 0);
+    return Math.max(0, total - paid);
+  }
+
+  changeAmount(): number {
+    if (!this.vmSnapshot) return 0;
+    const total = Number(this.vmSnapshot.totals?.total ?? 0);
+    const paid = Number(this.vmSnapshot.form?.paidAmount ?? 0);
+    return Math.max(0, paid - total);
+  }
+
   checkout(): void {
     if (!this.vmSnapshot) return;
     if (this.vmSnapshot.cart.length === 0) {
       this.snackbar.open('Panier vide', 'OK', { duration: 2500 });
+      return;
+    }
+
+    const total = Number(this.vmSnapshot.totals.total ?? 0);
+    const paid = Number(this.vmSnapshot.form.paidAmount ?? 0);
+    const due = Math.max(0, total - paid);
+    const customerId = this.vmSnapshot.form.customerId as string | null;
+
+    if (due > 0 && !customerId) {
+      this.snackbar.open('Sélectionne un client pour enregistrer une vente à crédit.', 'OK', { duration: 3500 });
       return;
     }
 

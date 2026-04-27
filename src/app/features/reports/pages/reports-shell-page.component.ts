@@ -60,6 +60,8 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
 
   readonly vm$ = this.facade.vm$;
 
+  private vmSnapshot: any = null;
+
   readonly years = this.buildYears();
 
   constructor() {
@@ -73,11 +75,52 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
+      this.vmSnapshot = vm;
       this.syncControls(vm);
 
       this.renderSales(vm.salesSeries.map((p) => p.label), vm.salesSeries.map((p) => p.value));
       this.renderProfit(vm.profitSeries.map((p) => p.label), vm.profitSeries.map((p) => p.value));
     });
+  }
+
+  async exportExcel(): Promise<void> {
+    if (!this.vmSnapshot) return;
+    const vm = this.vmSnapshot as any;
+
+    const XLSX = await import('xlsx');
+
+    const wb = XLSX.utils.book_new();
+
+    const kpis = [
+      ['totalSales', vm.kpis.totalSales],
+      ['profit', vm.kpis.profit],
+      ['transactionsCount', vm.kpis.transactionsCount]
+    ];
+    const wsKpi = XLSX.utils.aoa_to_sheet([['kpi', 'value'], ...kpis]);
+    XLSX.utils.book_append_sheet(wb, wsKpi, 'KPIs');
+
+    const wsTop = XLSX.utils.json_to_sheet(
+      (vm.topProducts ?? []).map((r: any) => ({
+        sku: r.sku,
+        name: r.name,
+        quantity: r.quantity,
+        total: r.total,
+        profit: r.profit
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, wsTop, 'TopProducts');
+
+    const wsSeries = XLSX.utils.json_to_sheet(
+      (vm.salesSeries ?? []).map((s: any, idx: number) => ({
+        label: s.label,
+        sales: s.value,
+        profit: vm.profitSeries?.[idx]?.value ?? 0
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, wsSeries, 'Series');
+
+    const fileName = `reports_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   }
 
   ngOnDestroy(): void {

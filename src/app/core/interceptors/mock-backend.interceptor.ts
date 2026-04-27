@@ -7,6 +7,11 @@ import { Product } from '../models/product.model';
 import { Appointment } from '../models/appointment.model';
 import { Category } from '../models/category.model';
 import { Customer } from '../models/customer.model';
+import { CustomerPayment } from '../models/customer-payment.model';
+import { CashOperation, CashRegisterSession } from '../models/cash-register.model';
+import { Expense } from '../models/expense.model';
+import { InventorySession } from '../models/inventory.model';
+import { Warehouse } from '../models/warehouse.model';
 import { DailyReport, MonthlyReport, YearlyReport } from '../models/report.model';
 import { Role } from '../models/role.model';
 import { Sale } from '../models/sale.model';
@@ -16,6 +21,7 @@ import { SupplierPurchaseHistory } from '../models/supplier-purchase-history.mod
 import { SupplierPayment } from '../models/supplier-payment.model';
 import { PurchaseOrder, SupplierInvoice } from '../models/purchase-order.model';
 import { User } from '../models/user.model';
+import { AuditLogEntry } from '../models/audit-log.model';
 
 type LoginBody = {
   username?: string;
@@ -50,6 +56,132 @@ let mockUsers: User[] = [
     fullName: 'Gestionnaire Stock',
     roles: ['GESTIONNAIRE'],
     isActive: true
+  }
+];
+
+const WAREHOUSE_HEADER = 'X-Warehouse-Id';
+const DEFAULT_WAREHOUSE_ID = 'wh_1';
+
+function warehouseIdFromReq(req: HttpRequest<unknown>): string {
+  return req.headers.get(WAREHOUSE_HEADER) ?? DEFAULT_WAREHOUSE_ID;
+}
+
+let mockInventorySessions: InventorySession[] = [];
+
+let mockAuditLogs: AuditLogEntry[] = [];
+
+let mockSeeded = false;
+
+function seedIfNeeded(): void {
+  if (mockSeeded) return;
+  mockSeeded = true;
+
+  if (mockSales.length > 0 && mockAuditLogs.length === 0) {
+    mockAuditLogs = [
+      {
+        id: 'al_1',
+        createdAt: new Date(Date.now() - 3600_000).toISOString(),
+        userId: 'u_cashier',
+        username: 'cashier',
+        action: 'CREATE',
+        entityType: 'SALE',
+        entityId: mockSales[0].id,
+        before: null,
+        after: mockSales[0],
+        meta: { warehouseId: DEFAULT_WAREHOUSE_ID }
+      }
+    ];
+  }
+
+  if (mockInventorySessions.length === 0) {
+    const wh = DEFAULT_WAREHOUSE_ID;
+    const p1 = mockProducts[0];
+    const p2 = mockProducts[1];
+
+    const lines: InventorySession['lines'] = [
+      {
+        productId: p1.id,
+        productSku: p1.sku,
+        productName: p1.name,
+        systemQuantity: getStock(wh, p1.id),
+        physicalQuantity: getStock(wh, p1.id),
+        difference: 0
+      },
+      {
+        productId: p2.id,
+        productSku: p2.sku,
+        productName: p2.name,
+        systemQuantity: getStock(wh, p2.id),
+        physicalQuantity: Math.max(0, getStock(wh, p2.id) - 1),
+        difference: Math.max(0, getStock(wh, p2.id) - 1) - getStock(wh, p2.id)
+      }
+    ];
+
+    const itemsCount = lines.length;
+    const totalDifference = lines.reduce((acc, l) => acc + l.difference, 0);
+
+    mockInventorySessions = [
+      {
+        id: 'inv_1',
+        createdAt: new Date(Date.now() - 2 * 86400_000).toISOString(),
+        createdByUserId: 'u_stock',
+        note: `Démo (${wh})`,
+        lines,
+        itemsCount,
+        totalDifference
+      }
+    ];
+  }
+
+  if (mockCashSessions.length === 0) {
+    const openedAt = new Date(Date.now() - 6 * 3600_000).toISOString();
+    mockCashSessions = [
+      computeCashSessionSummary({
+        id: 'cs_1',
+        openedAt,
+        openedByUserId: 'u_cashier',
+        openingBalance: 5000,
+        status: 'OPEN'
+      } as CashRegisterSession)
+    ];
+  }
+
+  if (mockCashOperations.length === 0) {
+    mockCashOperations = [
+      {
+        id: 'co_1',
+        sessionId: mockCashSessions[0].id,
+        type: 'OUT',
+        amount: 1000,
+        note: 'Dépense démo',
+        createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+        createdByUserId: 'u_cashier'
+      }
+    ];
+  }
+}
+
+function appendAudit(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
+  mockAuditLogs = [
+    {
+      id: `al_${Date.now()}_${Math.floor(Math.random() * 10_000)}`,
+      createdAt: new Date().toISOString(),
+      ...entry
+    },
+    ...mockAuditLogs
+  ].slice(0, 500);
+}
+
+let mockExpenses: Expense[] = [
+  {
+    id: 'e_1',
+    category: 'transport',
+    label: 'Taxi livraison',
+    amount: 2500,
+    expenseDateIso: new Date().toISOString().slice(0, 10),
+    createdAt: new Date().toISOString(),
+    createdByUserId: 'u_admin',
+    note: 'Centre-ville'
   }
 ];
 
@@ -132,9 +264,53 @@ let mockSupplierPurchases: SupplierPurchaseHistory[] = [
 ];
 
 let mockCustomers: Customer[] = [
-  { id: 'c_1', name: 'Client comptoir' },
-  { id: 'c_2', name: 'Optique Pro', phone: '+225 00 00 00 00' }
+  { id: 'c_1', name: 'Client comptoir', creditLimit: 0 },
+  { id: 'c_2', name: 'Optique Pro', phone: '+225 00 00 00 00', creditLimit: 100_000 }
 ];
+
+let mockCustomerPayments: CustomerPayment[] = [
+  {
+    id: 'cp_1',
+    customerId: 'c_2',
+    paymentDateIso: new Date(Date.now() - 5 * 86400_000).toISOString(),
+    amount: 10_000,
+    note: 'Règlement'
+  }
+];
+
+let mockCashSessions: CashRegisterSession[] = [];
+let mockCashOperations: CashOperation[] = [];
+
+function computeCashSessionSummary(session: CashRegisterSession): CashRegisterSession {
+  const openedTs = Date.parse(session.openedAt);
+  const closedTs = session.closedAt ? Date.parse(session.closedAt) : Number.NaN;
+  const endTs = Number.isNaN(closedTs) ? Date.now() : closedTs;
+
+  const cashSalesTotal = mockSales
+    .filter((s) => s.paymentMethod === 'CASH')
+    .filter((s) => {
+      const ts = Date.parse(s.createdAt);
+      return ts >= openedTs && ts <= endTs;
+    })
+    .reduce((acc, s) => acc + (Number(s.paidAmount) || 0), 0);
+
+  const ops = mockCashOperations.filter((o) => o.sessionId === session.id);
+  const totalIn = ops.filter((o) => o.type === 'IN').reduce((acc, o) => acc + (Number(o.amount) || 0), 0);
+  const totalOut = ops.filter((o) => o.type === 'OUT').reduce((acc, o) => acc + (Number(o.amount) || 0), 0);
+
+  const expectedCash = (Number(session.openingBalance) || 0) + cashSalesTotal + totalIn - totalOut;
+  const counted = Number(session.countedCash ?? expectedCash);
+  const difference = counted - expectedCash;
+
+  return {
+    ...session,
+    cashSalesTotal,
+    totalIn,
+    totalOut,
+    expectedCash,
+    difference
+  };
+}
 
 let mockAppointments: Appointment[] = [
   {
@@ -179,6 +355,7 @@ let mockSales: Sale[] = [
       }
     ],
     paymentMethod: 'CASH',
+    paidAmount: 1500,
     total: 1500,
     profit: 500,
     createdAt: new Date(Date.now() - 7200_000).toISOString(),
@@ -212,6 +389,33 @@ let mockProducts: Product[] = [
     alertThreshold: 5
   }
 ];
+
+let mockWarehouses: Warehouse[] = [
+  { id: 'wh_1', name: 'Magasin principal' },
+  { id: 'wh_2', name: 'Dépôt' }
+];
+
+let mockWarehouseStocks: Record<string, Record<string, number>> = {
+  wh_1: Object.fromEntries(mockProducts.map((p) => [p.id, p.stockQuantity])) as Record<string, number>,
+  wh_2: Object.fromEntries(
+    mockProducts.map((p) => [p.id, p.stockQuantity > 0 ? Math.max(1, Math.floor(p.stockQuantity / 2)) : 0])
+  ) as Record<string, number>
+};
+
+function getStock(warehouseId: string, productId: string): number {
+  return Number(mockWarehouseStocks[warehouseId]?.[productId] ?? 0);
+}
+
+function setStock(warehouseId: string, productId: string, quantity: number): void {
+  if (!mockWarehouseStocks[warehouseId]) mockWarehouseStocks[warehouseId] = {};
+  mockWarehouseStocks[warehouseId][productId] = quantity;
+}
+
+function adjustStock(warehouseId: string, productId: string, delta: number): number {
+  const next = getStock(warehouseId, productId) + delta;
+  setStock(warehouseId, productId, next);
+  return next;
+}
 
 const mockCategories: Category[] = [
   { id: 'cat_1', name: 'Verres' },
@@ -277,6 +481,19 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
   if (!environment.useMocks) return next(req);
 
   const url = normalizeUrl(req.url);
+  seedIfNeeded();
+
+  // Audit logs
+  if (url.endsWith('/api/audit-logs') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    if (!hasRole(user, ['ADMIN'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    return of(jsonResponse({ items: mockAuditLogs, total: mockAuditLogs.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
 
   // Auth
   if (url.endsWith('/api/auth/login') && req.method === 'POST') {
@@ -310,7 +527,10 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
   if (url.endsWith('/api/products') && req.method === 'GET') {
     const user = requireAuth(req);
     if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
-    return of(jsonResponse({ items: mockProducts, total: mockProducts.length })).pipe(delay(NETWORK_DELAY_MS));
+
+    const warehouseId = warehouseIdFromReq(req);
+    const items = mockProducts.map((p) => ({ ...p, stockQuantity: getStock(warehouseId, p.id) }));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   if (url.match(/\/api\/products\/[^/]+$/) && req.method === 'GET') {
@@ -321,7 +541,93 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
     const product = mockProducts.find((p) => p.id === id);
     if (!product) return httpError(404, 'Produit introuvable.').pipe(delay(NETWORK_DELAY_MS));
 
-    return of(jsonResponse(product)).pipe(delay(NETWORK_DELAY_MS));
+    const warehouseId = warehouseIdFromReq(req);
+    return of(jsonResponse({ ...product, stockQuantity: getStock(warehouseId, id) })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Warehouses
+  if (url.endsWith('/api/warehouses') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    return of(jsonResponse({ items: mockWarehouses, total: mockWarehouses.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/warehouses') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const body = (req.body ?? {}) as { name?: string };
+    const name = String(body.name ?? '').trim();
+    if (!name) return httpError(400, 'Nom requis.').pipe(delay(NETWORK_DELAY_MS));
+    if (mockWarehouses.some((w) => w.name.toLowerCase() === name.toLowerCase())) {
+      return httpError(400, 'Nom déjà utilisé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const created: Warehouse = { id: `wh_${Date.now()}`, name };
+    mockWarehouses = [...mockWarehouses, created];
+
+    for (const p of mockProducts) {
+      setStock(created.id, p.id, 0);
+    }
+
+    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/warehouses/transfer') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const body = (req.body ?? {}) as { fromWarehouseId?: string; toWarehouseId?: string; productId?: string; quantity?: number };
+    const fromWarehouseId = String(body.fromWarehouseId ?? '').trim();
+    const toWarehouseId = String(body.toWarehouseId ?? '').trim();
+    const productId = String(body.productId ?? '').trim();
+    const quantity = Number(body.quantity ?? 0);
+
+    if (!fromWarehouseId || !toWarehouseId) return httpError(400, 'Magasin requis.').pipe(delay(NETWORK_DELAY_MS));
+    if (fromWarehouseId === toWarehouseId) return httpError(400, 'Magasins identiques.').pipe(delay(NETWORK_DELAY_MS));
+    if (!productId) return httpError(400, 'Produit requis.').pipe(delay(NETWORK_DELAY_MS));
+    if (!Number.isFinite(quantity) || quantity <= 0) return httpError(400, 'Quantité invalide.').pipe(delay(NETWORK_DELAY_MS));
+
+    if (!mockWarehouses.some((w) => w.id === fromWarehouseId) || !mockWarehouses.some((w) => w.id === toWarehouseId)) {
+      return httpError(400, 'Magasin invalide.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const p = mockProducts.find((x) => x.id === productId);
+    if (!p) return httpError(404, 'Produit introuvable.').pipe(delay(NETWORK_DELAY_MS));
+
+    const available = getStock(fromWarehouseId, productId);
+    if (available - quantity < 0) return httpError(400, 'Stock insuffisant.').pipe(delay(NETWORK_DELAY_MS));
+
+    adjustStock(fromWarehouseId, productId, -quantity);
+    adjustStock(toWarehouseId, productId, quantity);
+
+    const outMovement: StockMovement = {
+      id: `sm_${Date.now()}_${Math.floor(Math.random() * 10_000)}`,
+      productId,
+      quantity: -quantity,
+      reason: 'ADJUSTMENT',
+      createdAt: new Date().toISOString(),
+      createdByUserId: user.id,
+      note: `Transfert ${fromWarehouseId} -> ${toWarehouseId}`
+    };
+    const inMovement: StockMovement = {
+      id: `sm_${Date.now()}_${Math.floor(Math.random() * 10_000)}`,
+      productId,
+      quantity,
+      reason: 'ADJUSTMENT',
+      createdAt: outMovement.createdAt,
+      createdByUserId: user.id,
+      note: `Transfert ${fromWarehouseId} -> ${toWarehouseId}`
+    };
+    mockStockMovements = [inMovement, outMovement, ...mockStockMovements];
+
+    return of(jsonResponse({ ok: true })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   // Categories
@@ -349,12 +655,22 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
       purchasePrice: Number(input.purchasePrice ?? 0),
       retailPrice: Number(input.retailPrice ?? 0),
       wholesalePrice: Number(input.wholesalePrice ?? 0),
-      stockQuantity: Number(input.stockQuantity ?? 0),
+      stockQuantity: 0,
       alertThreshold: Number(input.alertThreshold ?? 0)
     };
 
+    const warehouseId = warehouseIdFromReq(req);
+    for (const wh of mockWarehouses) {
+      setStock(wh.id, created.id, 0);
+    }
+
+    const initialQty = Number(input.stockQuantity ?? 0);
+    if (Number.isFinite(initialQty) && initialQty >= 0) {
+      setStock(warehouseId, created.id, initialQty);
+    }
+
     mockProducts = [created, ...mockProducts];
-    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
+    return of(jsonResponse({ ...created, stockQuantity: getStock(warehouseId, created.id) }, 201)).pipe(delay(NETWORK_DELAY_MS));
   }
 
   if (url.match(/\/api\/products\/[^/]+$/) && req.method === 'PUT') {
@@ -371,9 +687,31 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     if (idx === -1) return httpError(404, 'Produit introuvable.').pipe(delay(NETWORK_DELAY_MS));
 
-    const updated: Product = { ...mockProducts[idx], ...patch, id };
+    const before = { ...mockProducts[idx] };
+
+    const warehouseId = warehouseIdFromReq(req);
+
+    if (patch.stockQuantity !== undefined) {
+      const q = Number(patch.stockQuantity);
+      if (Number.isFinite(q) && q >= 0) setStock(warehouseId, id, q);
+    }
+
+    const { stockQuantity: _ignored, ...rest } = patch;
+    const updated: Product = { ...mockProducts[idx], ...rest, id };
     mockProducts = mockProducts.map((p) => (p.id === id ? updated : p));
-    return of(jsonResponse(updated)).pipe(delay(NETWORK_DELAY_MS));
+
+    appendAudit({
+      userId: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      entityType: 'PRODUCT',
+      entityId: id,
+      before,
+      after: { ...updated, stockQuantity: getStock(warehouseId, id) },
+      meta: { warehouseId }
+    });
+
+    return of(jsonResponse({ ...updated, stockQuantity: getStock(warehouseId, id) })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   if (url.match(/\/api\/products\/[^/]+$/) && req.method === 'DELETE') {
@@ -386,7 +724,103 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     const id = url.split('/').pop() as string;
     mockProducts = mockProducts.filter((p) => p.id !== id);
+    for (const wh of Object.keys(mockWarehouseStocks)) {
+      delete mockWarehouseStocks[wh]?.[id];
+    }
     return of(jsonResponse({ ok: true })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Inventory
+  if (url.endsWith('/api/inventory/sessions') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const items = [...mockInventorySessions].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/inventory\/sessions\/[^/]+$/) && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const id = url.split('/').pop() as string;
+    const s = mockInventorySessions.find((x) => x.id === id);
+    if (!s) return httpError(404, 'Inventaire introuvable.').pipe(delay(NETWORK_DELAY_MS));
+    return of(jsonResponse(s)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/inventory/sessions') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const body = (req.body ?? {}) as { note?: string; lines?: { productId?: string; physicalQuantity?: number }[] };
+    const linesInput = Array.isArray(body.lines) ? body.lines : [];
+    if (linesInput.length === 0) return httpError(400, 'Lignes requises.').pipe(delay(NETWORK_DELAY_MS));
+
+    const lines: InventorySession['lines'] = [];
+
+    const warehouseId = warehouseIdFromReq(req);
+
+    for (const l of linesInput) {
+      const productId = String(l.productId ?? '').trim();
+      const physicalQuantity = Number(l.physicalQuantity ?? Number.NaN);
+      if (!productId) return httpError(400, 'Produit requis.').pipe(delay(NETWORK_DELAY_MS));
+      if (!Number.isFinite(physicalQuantity) || physicalQuantity < 0) {
+        return httpError(400, 'Quantité physique invalide.').pipe(delay(NETWORK_DELAY_MS));
+      }
+
+      const p = mockProducts.find((x) => x.id === productId);
+      if (!p) return httpError(404, 'Produit introuvable.').pipe(delay(NETWORK_DELAY_MS));
+
+      const systemQuantity = getStock(warehouseId, productId);
+      const difference = physicalQuantity - systemQuantity;
+
+      lines.push({
+        productId,
+        productSku: p.sku,
+        productName: p.name,
+        systemQuantity,
+        physicalQuantity,
+        difference
+      });
+    }
+
+    // Apply adjustments + create stock movements
+    for (const ln of lines) {
+      if (ln.difference === 0) continue;
+
+      setStock(warehouseId, ln.productId, ln.physicalQuantity);
+
+      const movement: StockMovement = {
+        id: `sm_${Date.now()}_${Math.floor(Math.random() * 10_000)}`,
+        productId: ln.productId,
+        quantity: ln.difference,
+        reason: 'ADJUSTMENT',
+        createdAt: new Date().toISOString(),
+        createdByUserId: user.id,
+        note: `Inventaire (${warehouseId})`
+      };
+      mockStockMovements = [movement, ...mockStockMovements];
+    }
+
+    const itemsCount = lines.length;
+    const totalDifference = lines.reduce((acc, l) => acc + l.difference, 0);
+
+    const created: InventorySession = {
+      id: `inv_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      createdByUserId: user.id,
+      note: body.note ? String(body.note).trim() : undefined,
+      lines,
+      itemsCount,
+      totalDifference
+    };
+
+    mockInventorySessions = [created, ...mockInventorySessions];
+    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
   }
 
   // Suppliers
@@ -496,6 +930,133 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
       .sort((a, b) => (a.purchaseDateIso < b.purchaseDateIso ? 1 : -1));
 
     return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Cash register
+  if (url.endsWith('/api/cash-register/current') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const current = mockCashSessions.find((s) => s.status === 'OPEN') ?? null;
+    return of(jsonResponse(current ? computeCashSessionSummary(current) : null)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/cash-register/sessions') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const items = [...mockCashSessions]
+      .map((s) => computeCashSessionSummary(s))
+      .sort((a, b) => (a.openedAt < b.openedAt ? 1 : -1));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/cash-register/open') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE', 'CAISSIER'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const current = mockCashSessions.find((s) => s.status === 'OPEN');
+    if (current) return httpError(400, 'Caisse déjà ouverte.').pipe(delay(NETWORK_DELAY_MS));
+
+    const body = (req.body ?? {}) as { openingBalance?: number };
+    const openingBalance = Number(body.openingBalance ?? 0);
+    if (!Number.isFinite(openingBalance) || openingBalance < 0) {
+      return httpError(400, 'Fond de caisse invalide.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const created: CashRegisterSession = computeCashSessionSummary({
+      id: `cr_${Date.now()}`,
+      status: 'OPEN',
+      openedAt: new Date().toISOString(),
+      openedByUserId: user.id,
+      openingBalance,
+      cashSalesTotal: 0,
+      totalIn: 0,
+      totalOut: 0,
+      expectedCash: openingBalance,
+      difference: 0
+    });
+
+    mockCashSessions = [created, ...mockCashSessions];
+    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/cash-register/operations') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE', 'CAISSIER'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const current = mockCashSessions.find((s) => s.status === 'OPEN');
+    if (!current) return httpError(400, 'Aucune caisse ouverte.').pipe(delay(NETWORK_DELAY_MS));
+
+    const body = (req.body ?? {}) as { type?: string; amount?: number; note?: string };
+    const type = body.type === 'OUT' ? 'OUT' : body.type === 'IN' ? 'IN' : null;
+    const amount = Number(body.amount ?? 0);
+    const note = body.note ? String(body.note).trim() : undefined;
+
+    if (!type) return httpError(400, 'Type opération invalide.').pipe(delay(NETWORK_DELAY_MS));
+    if (!Number.isFinite(amount) || amount <= 0) return httpError(400, 'Montant invalide.').pipe(delay(NETWORK_DELAY_MS));
+
+    const op: CashOperation = {
+      id: `cro_${Date.now()}`,
+      sessionId: current.id,
+      type,
+      amount,
+      createdAt: new Date().toISOString(),
+      createdByUserId: user.id,
+      note
+    };
+
+    mockCashOperations = [op, ...mockCashOperations];
+    return of(jsonResponse(op, 201)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/cash-register\/sessions\/[^/]+\/operations$/) && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const sessionId = url.split('/').slice(-2)[0] as string;
+    const items = mockCashOperations
+      .filter((o) => o.sessionId === sessionId)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/cash-register/close') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE', 'CAISSIER'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const current = mockCashSessions.find((s) => s.status === 'OPEN');
+    if (!current) return httpError(400, 'Aucune caisse ouverte.').pipe(delay(NETWORK_DELAY_MS));
+
+    const body = (req.body ?? {}) as { countedCash?: number };
+    const countedCash = Number(body.countedCash ?? 0);
+    if (!Number.isFinite(countedCash) || countedCash < 0) {
+      return httpError(400, 'Montant compté invalide.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const closedBase: CashRegisterSession = {
+      ...current,
+      status: 'CLOSED',
+      closedAt: new Date().toISOString(),
+      closedByUserId: user.id,
+      countedCash
+    };
+
+    const closed = computeCashSessionSummary(closedBase);
+    mockCashSessions = mockCashSessions.map((s) => (s.id === current.id ? closed : s));
+    return of(jsonResponse(closed)).pipe(delay(NETWORK_DELAY_MS));
   }
 
   if (url.match(/\/api\/suppliers\/[^/]+\/payments$/) && req.method === 'GET') {
@@ -908,10 +1469,119 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
       id: `c_${Date.now()}`,
       name,
       phone: input.phone ? String(input.phone) : undefined,
-      email: input.email ? String(input.email) : undefined
+      email: input.email ? String(input.email) : undefined,
+      creditLimit: Number.isFinite(Number(input.creditLimit)) ? Number(input.creditLimit) : 0
     };
 
     mockCustomers = [created, ...mockCustomers];
+    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/customers\/[^/]+$/) && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const id = url.split('/').pop() as string;
+    const c = mockCustomers.find((x) => x.id === id);
+    if (!c) return httpError(404, 'Client introuvable.').pipe(delay(NETWORK_DELAY_MS));
+    return of(jsonResponse(c)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/customers\/[^/]+$/) && req.method === 'PATCH') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE', 'CAISSIER'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const id = url.split('/').pop() as string;
+    const idx = mockCustomers.findIndex((x) => x.id === id);
+    if (idx === -1) return httpError(404, 'Client introuvable.').pipe(delay(NETWORK_DELAY_MS));
+
+    const patch = (req.body ?? {}) as Partial<Customer>;
+    const name = patch.name !== undefined ? String(patch.name).trim() : mockCustomers[idx].name;
+    if (!name) return httpError(400, 'Nom client requis.').pipe(delay(NETWORK_DELAY_MS));
+
+    const creditLimitRaw = patch.creditLimit !== undefined ? Number(patch.creditLimit) : mockCustomers[idx].creditLimit;
+    const creditLimit = Number.isFinite(creditLimitRaw) && creditLimitRaw >= 0 ? creditLimitRaw : 0;
+
+    const updated: Customer = {
+      ...mockCustomers[idx],
+      ...patch,
+      id,
+      name,
+      phone: patch.phone ? String(patch.phone) : patch.phone === '' ? undefined : mockCustomers[idx].phone,
+      email: patch.email ? String(patch.email) : patch.email === '' ? undefined : mockCustomers[idx].email,
+      creditLimit
+    };
+
+    mockCustomers = mockCustomers.map((c) => (c.id === id ? updated : c));
+    return of(jsonResponse(updated)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/customers\/[^/]+$/) && req.method === 'DELETE') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const id = url.split('/').pop() as string;
+    mockCustomers = mockCustomers.filter((c) => c.id !== id);
+    mockCustomerPayments = mockCustomerPayments.filter((p) => p.customerId !== id);
+    return of(jsonResponse({ ok: true })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/customers\/[^/]+\/sales$/) && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const customerId = url.split('/').slice(-2)[0] as string;
+    const items = mockSales
+      .filter((s) => s.customerId === customerId)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/customers\/[^/]+\/payments$/) && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const customerId = url.split('/').slice(-2)[0] as string;
+    const items = mockCustomerPayments
+      .filter((p) => p.customerId === customerId)
+      .sort((a, b) => (a.paymentDateIso < b.paymentDateIso ? 1 : -1));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/customers\/[^/]+\/payments$/) && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE', 'CAISSIER'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const customerId = url.split('/').slice(-2)[0] as string;
+    const customer = mockCustomers.find((c) => c.id === customerId);
+    if (!customer) return httpError(404, 'Client introuvable.').pipe(delay(NETWORK_DELAY_MS));
+
+    const body = (req.body ?? {}) as { amount?: number; paymentDateIso?: string; note?: string };
+    const amount = Number(body.amount ?? 0);
+    const paymentDateIso = String(body.paymentDateIso ?? '').trim();
+    const note = body.note ? String(body.note).trim() : undefined;
+
+    if (!Number.isFinite(amount) || amount <= 0) return httpError(400, 'Montant invalide.').pipe(delay(NETWORK_DELAY_MS));
+    if (!paymentDateIso) return httpError(400, 'Date paiement requise.').pipe(delay(NETWORK_DELAY_MS));
+
+    const created: CustomerPayment = {
+      id: `cp_${Date.now()}`,
+      customerId,
+      paymentDateIso,
+      amount,
+      note
+    };
+
+    mockCustomerPayments = [created, ...mockCustomerPayments];
     return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
   }
 
@@ -956,7 +1626,8 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
     const product = mockProducts.find((p) => p.id === productId);
     if (!product) return httpError(404, 'Produit introuvable.').pipe(delay(NETWORK_DELAY_MS));
 
-    const updatedQty = product.stockQuantity + quantity;
+    const warehouseId = warehouseIdFromReq(req);
+    const updatedQty = getStock(warehouseId, productId) + quantity;
     if (updatedQty < 0) return httpError(400, 'Stock insuffisant.').pipe(delay(NETWORK_DELAY_MS));
 
     const movement: StockMovement = {
@@ -970,7 +1641,7 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
     };
 
     // Update stock
-    mockProducts = mockProducts.map((p) => (p.id === productId ? { ...p, stockQuantity: updatedQty } : p));
+    setStock(warehouseId, productId, updatedQty);
 
     // Add history
     mockStockMovements = [movement, ...mockStockMovements];
@@ -1006,19 +1677,45 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
     const total = items.reduce((acc, it) => acc + it.unitPrice * it.quantity, 0);
     const profit = items.reduce((acc, it) => acc + (it.unitPrice - it.purchasePrice) * it.quantity, 0);
 
+    const customerId = input.customerId ? String(input.customerId) : undefined;
+    const paidAmount = Number(input.paidAmount ?? total);
+    if (!Number.isFinite(paidAmount) || paidAmount < 0) return httpError(400, 'Montant payé invalide.').pipe(delay(NETWORK_DELAY_MS));
+    if (paidAmount > total) return httpError(400, 'Montant payé supérieur au total.').pipe(delay(NETWORK_DELAY_MS));
+
+    if (customerId) {
+      const customer = mockCustomers.find((c) => c.id === customerId);
+      if (!customer) return httpError(400, 'Client invalide.').pipe(delay(NETWORK_DELAY_MS));
+
+      const totalSales = mockSales.filter((s) => s.customerId === customerId).reduce((a, s) => a + s.total, 0);
+      const totalPaidSales = mockSales.filter((s) => s.customerId === customerId).reduce((a, s) => a + (s.paidAmount ?? s.total), 0);
+      const totalPayments = mockCustomerPayments.filter((p) => p.customerId === customerId).reduce((a, p) => a + p.amount, 0);
+
+      const currentDebt = totalSales - totalPaidSales - totalPayments;
+      const nextDebt = currentDebt + (total - paidAmount);
+
+      if (nextDebt > (customer.creditLimit ?? 0)) {
+        return httpError(400, 'Limite de crédit dépassée.').pipe(delay(NETWORK_DELAY_MS));
+      }
+    }
+
+    const warehouseId = warehouseIdFromReq(req);
+
     // Stock validation
     for (const it of items) {
       const p = mockProducts.find((x) => x.id === it.productId);
       if (!p) return httpError(404, 'Produit introuvable.').pipe(delay(NETWORK_DELAY_MS));
-      if (p.stockQuantity - it.quantity < 0) return httpError(400, 'Stock insuffisant.').pipe(delay(NETWORK_DELAY_MS));
+      if (getStock(warehouseId, it.productId) - it.quantity < 0) {
+        return httpError(400, 'Stock insuffisant.').pipe(delay(NETWORK_DELAY_MS));
+      }
     }
 
     const created: Sale = {
       id: `s_${Date.now()}`,
       type: (input.type ?? 'RETAIL') as Sale['type'],
-      customerId: input.customerId,
+      customerId,
       items: items as Sale['items'],
       paymentMethod: (input.paymentMethod ?? 'CASH') as Sale['paymentMethod'],
+      paidAmount,
       total,
       profit,
       createdAt: new Date().toISOString(),
@@ -1027,9 +1724,7 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     // Apply stock & history
     for (const it of items) {
-      const p = mockProducts.find((x) => x.id === it.productId) as Product;
-      const newQty = p.stockQuantity - it.quantity;
-      mockProducts = mockProducts.map((x) => (x.id === it.productId ? { ...x, stockQuantity: newQty } : x));
+      const newQty = adjustStock(warehouseId, it.productId, -it.quantity);
 
       const movement: StockMovement = {
         id: `sm_${Date.now()}_${Math.floor(Math.random() * 10_000)}`,
@@ -1038,12 +1733,24 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
         reason: 'SALE',
         createdAt: created.createdAt,
         createdByUserId: user.id,
-        note: `Vente ${created.id}`
+        note: `Vente ${created.id} (${warehouseId})`
       };
       mockStockMovements = [movement, ...mockStockMovements];
     }
 
     mockSales = [created, ...mockSales];
+
+    appendAudit({
+      userId: user.id,
+      username: user.username,
+      action: 'CREATE',
+      entityType: 'SALE',
+      entityId: created.id,
+      before: null,
+      after: created,
+      meta: { warehouseId }
+    });
+
     return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
   }
 
@@ -1061,16 +1768,75 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     const date = String(req.params.get('date') ?? new Date().toISOString().slice(0, 10));
 
+    const expenses = mockExpenses
+      .filter((e) => e.expenseDateIso === date)
+      .reduce((a, e) => a + (Number(e.amount) || 0), 0);
+
     const report: DailyReport = {
       date,
       totalSales: mockSales.reduce((a, s) => a + s.total, 0),
       transactionsCount: mockSales.length,
       profit: mockSales.reduce((a, s) => a + s.profit, 0),
-      expenses: 0,
+      expenses,
       stockAlertsCount: mockProducts.filter((p) => p.stockQuantity <= p.alertThreshold).length
     };
 
     return of(jsonResponse(report)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Expenses
+  if (url.endsWith('/api/expenses') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+
+    const items = [...mockExpenses].sort((a, b) => (a.expenseDateIso < b.expenseDateIso ? 1 : -1));
+    return of(jsonResponse({ items, total: items.length })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/expenses') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN', 'GESTIONNAIRE'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const body = (req.body ?? {}) as Partial<Expense>;
+    const category = String(body.category ?? '').trim();
+    const label = String(body.label ?? '').trim();
+    const amount = Number(body.amount ?? 0);
+    const expenseDateIso = String(body.expenseDateIso ?? '').trim();
+    const note = body.note ? String(body.note).trim() : undefined;
+
+    if (!category) return httpError(400, 'Catégorie requise.').pipe(delay(NETWORK_DELAY_MS));
+    if (!label) return httpError(400, 'Libellé requis.').pipe(delay(NETWORK_DELAY_MS));
+    if (!Number.isFinite(amount) || amount <= 0) return httpError(400, 'Montant invalide.').pipe(delay(NETWORK_DELAY_MS));
+    if (!expenseDateIso) return httpError(400, 'Date requise.').pipe(delay(NETWORK_DELAY_MS));
+
+    const created: Expense = {
+      id: `e_${Date.now()}`,
+      category,
+      label,
+      amount,
+      expenseDateIso,
+      createdAt: new Date().toISOString(),
+      createdByUserId: user.id,
+      note
+    };
+
+    mockExpenses = [created, ...mockExpenses];
+    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.match(/\/api\/expenses\/[^/]+$/) && req.method === 'DELETE') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN'])) {
+      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+    }
+
+    const id = url.split('/').pop() as string;
+    mockExpenses = mockExpenses.filter((e) => e.id !== id);
+    return of(jsonResponse({ ok: true })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   if (url.endsWith('/api/reports/monthly') && req.method === 'GET') {
@@ -1079,11 +1845,17 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     const month = String(req.params.get('month') ?? new Date().toISOString().slice(0, 7));
 
+    const expenses = mockExpenses
+      .filter((e) => e.expenseDateIso.slice(0, 7) === month)
+      .reduce((a, e) => a + (Number(e.amount) || 0), 0);
+
+    const profit = mockSales.reduce((a, s) => a + s.profit, 0);
+
     const report: MonthlyReport = {
       month,
       totalSales: mockSales.reduce((a, s) => a + s.total, 0),
-      profitNet: mockSales.reduce((a, s) => a + s.profit, 0),
-      expenses: 0,
+      profitNet: profit - expenses,
+      expenses,
       lossCount: 0
     };
 
@@ -1096,11 +1868,17 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     const year = Number(req.params.get('year') ?? new Date().getFullYear());
 
+    const expenses = mockExpenses
+      .filter((e) => Number(e.expenseDateIso.slice(0, 4)) === year)
+      .reduce((a, e) => a + (Number(e.amount) || 0), 0);
+
+    const profit = mockSales.reduce((a, s) => a + s.profit, 0);
+
     const report: YearlyReport = {
       year,
       totalSales: mockSales.reduce((a, s) => a + s.total, 0),
-      profitNet: mockSales.reduce((a, s) => a + s.profit, 0),
-      expenses: 0
+      profitNet: profit - expenses,
+      expenses
     };
 
     return of(jsonResponse(report)).pipe(delay(NETWORK_DELAY_MS));

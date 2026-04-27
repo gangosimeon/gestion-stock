@@ -1,0 +1,71 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 700;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.note {
+  width: min(720px, 100%);
+}
+
+.table {
+  margin-top: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.productCell {
+  display: grid;
+}
+
+.productCell .name {
+  font-weight: 800;
+}
+
+.productCell .sku {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.right {
+  text-align: right;
+}
+
+.qty {
+  width: 90px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 0 8px;
+  text-align: right;
+}
+
+.neg {
+  color: #b00020;
+  font-weight: 900;
+}
+
+.pos {
+  color: #1b5e20;
+  font-weight: 900;
+}

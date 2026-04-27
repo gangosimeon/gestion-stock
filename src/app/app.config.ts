@@ -7,6 +7,7 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { routes } from './app.routes';
 import { apiErrorInterceptor } from './core/interceptors/api-error.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { warehouseInterceptor } from './core/interceptors/warehouse.interceptor';
 import { mockBackendInterceptor } from './core/interceptors/mock-backend.interceptor';
 import { AuthService } from './core/services/auth.service';
 
@@ -15,7 +16,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideAnimations(),
     importProvidersFrom(MatSnackBarModule),
-    provideHttpClient(withInterceptors([apiErrorInterceptor, mockBackendInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([apiErrorInterceptor, warehouseInterceptor, mockBackendInterceptor, authInterceptor])),
     provideRouter(routes),
     provideAppInitializer(() => {
       const auth = inject(AuthService);

@@ -50,4 +50,16 @@ export class SalesApiService {
       .post<Customer>(`${environment.apiUrl}/customers`, payload)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
+
+  updateCustomer(id: string, payload: Omit<Customer, 'id'>): Observable<Customer> {
+    return this.http
+      .patch<Customer>(`${environment.apiUrl}/customers/${id}`, payload)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  deleteCustomer(id: string): Observable<{ ok: true } | { ok: boolean }> {
+    return this.http
+      .delete<{ ok: true } | { ok: boolean }>(`${environment.apiUrl}/customers/${id}`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
 }

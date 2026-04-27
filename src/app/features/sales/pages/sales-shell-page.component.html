@@ -69,7 +69,7 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Montant reçu</mat-label>
+              <mat-label>Montant payé</mat-label>
               <input matInput type="number" [formControl]="paidAmount" />
             </mat-form-field>
           </div>
@@ -147,10 +147,18 @@
               <div class="label">Bénéfice</div>
               <div class="value">{{ vm.totals.profit | number: '1.0-0' }}</div>
             </div>
-            <div class="kpi">
-              <div class="label">Rendu</div>
-              <div class="value">{{ (vm.form.paidAmount - vm.totals.total) | number: '1.0-0' }}</div>
-            </div>
+
+            @if (vm.form.paidAmount < vm.totals.total) {
+              <div class="kpi">
+                <div class="label">Reste à payer</div>
+                <div class="value due">{{ dueAmount() | number: '1.0-0' }}</div>
+              </div>
+            } @else {
+              <div class="kpi">
+                <div class="label">Rendu</div>
+                <div class="value">{{ changeAmount() | number: '1.0-0' }}</div>
+              </div>
+            }
           </div>
         </mat-card>
       </div>

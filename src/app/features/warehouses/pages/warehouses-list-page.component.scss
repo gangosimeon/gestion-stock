@@ -1,0 +1,36 @@
+.page {
+  padding: 16px;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.span2 {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.table {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 700;
+  margin-bottom: 10px;
+}

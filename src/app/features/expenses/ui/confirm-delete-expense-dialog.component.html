@@ -1,0 +1,10 @@
+<h2 mat-dialog-title>Supprimer dépense</h2>
+
+<div mat-dialog-content>
+  Supprimer la dépense <strong>{{ data.label }}</strong> ?
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Annuler</button>
+  <button mat-flat-button color="warn" type="button" (click)="confirm()">Supprimer</button>
+</div>

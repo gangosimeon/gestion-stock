@@ -14,6 +14,7 @@ export interface Sale {
   customerId?: string;
   items: SaleItem[];
   paymentMethod: PaymentMethod;
+  paidAmount: number;
   total: number;
   profit: number;
   createdAt: string;

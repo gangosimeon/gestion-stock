@@ -1,0 +1,65 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card--full {
+  grid-column: 1 / -1;
+}
+
+.info {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-weight: 800;
+  margin-right: 6px;
+}
+
+.table {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.right {
+  text-align: right;
+}
+
+.total {
+  font-weight: 800;
+}
+
+.debt {
+  font-weight: 900;
+  color: #b00020;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
