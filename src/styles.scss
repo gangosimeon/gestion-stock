@@ -116,7 +116,6 @@ $app-theme: mat.m2-define-light-theme((
 
 html {
   height: 100%;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -125,7 +124,6 @@ html {
 body {
   margin: 0;
   height: 100%;
-  overflow-x: hidden;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.6;
@@ -367,7 +365,8 @@ a {
 .table-container {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: var(--color-surface);
   animation: fadeIn var(--duration-slow) var(--ease-out) both;
 }
@@ -379,6 +378,7 @@ a {
 }
 
 .kpi-card {
+  min-width: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
