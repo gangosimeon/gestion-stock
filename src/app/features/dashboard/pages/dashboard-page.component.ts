@@ -1,6 +1,7 @@
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -9,7 +10,7 @@ import { DashboardFacade } from '../data/dashboard.facade';
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [AsyncPipe, DecimalPipe, MatCardModule],
+  imports: [AsyncPipe, DecimalPipe, MatCardModule, MatIconModule],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss'
 })
@@ -61,22 +62,28 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
           {
             label: 'Ventes',
             data,
-            borderColor: '#3f51b5',
-            backgroundColor: 'rgba(63, 81, 181, 0.15)',
+            borderColor: '#2563EB',
+            backgroundColor: 'rgba(37, 99, 235, 0.06)',
             fill: true,
-            tension: 0.35,
-            pointRadius: 3
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: '#2563EB'
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
         plugins: {
-          legend: { display: true }
+          legend: { display: false },
+          tooltip: { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10, titleFont: { size: 12 }, bodyFont: { size: 12 } }
         },
         scales: {
-          y: { beginAtZero: true }
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
+          y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
         }
       }
     };
@@ -103,7 +110,10 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
           {
             label: 'CA',
             data,
-            backgroundColor: 'rgba(76, 175, 80, 0.6)'
+            backgroundColor: '#10B981',
+            borderRadius: 4,
+            borderSkipped: false,
+            maxBarThickness: 32
           }
         ]
       },
@@ -111,10 +121,12 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          tooltip: { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10 }
         },
         scales: {
-          y: { beginAtZero: true }
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
+          y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
         }
       }
     };
@@ -141,22 +153,28 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
           {
             label: 'Stock total',
             data,
-            borderColor: '#ff9800',
-            backgroundColor: 'rgba(255, 152, 0, 0.15)',
+            borderColor: '#F59E0B',
+            backgroundColor: 'rgba(245, 158, 11, 0.06)',
             fill: true,
-            tension: 0.35,
-            pointRadius: 3
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: '#F59E0B'
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          tooltip: { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10 }
         },
         scales: {
-          y: { beginAtZero: true }
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
+          y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
         }
       }
     };

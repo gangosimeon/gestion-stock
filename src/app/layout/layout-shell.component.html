@@ -1,10 +1,50 @@
-<div class="layout">
-  <header class="topbar">
-    <div class="brand">Gestion Stock</div>
-    <div class="topbar__center">
+<mat-sidenav-container [class.sidebar-collapsed]="collapsed">
+  <!-- SIDEBAR -->
+  <mat-sidenav #sidenav mode="side" [opened]="true">
+    <div class="sidebar-inner">
+      <div class="sidebar__brand">
+        <mat-icon class="sidebar__logo">inventory</mat-icon>
+        @if (!collapsed) {
+          <span class="sidebar__title">GestStock</span>
+        }
+      </div>
+
+      <nav class="sidebar__nav">
+        @for (item of navItems; track item.route) {
+          <a class="nav-item"
+             [routerLink]="item.route"
+             routerLinkActive="nav-item--active"
+             [matTooltip]="collapsed ? item.label : ''"
+             matTooltipPosition="right">
+            <mat-icon class="nav-item__icon">{{ item.icon }}</mat-icon>
+            @if (!collapsed) {
+              <span class="nav-item__label">{{ item.label }}</span>
+            }
+          </a>
+        }
+      </nav>
+
+      <div class="sidebar__footer">
+        <button mat-icon-button class="collapse-btn" (click)="toggleSidenav()">
+          <mat-icon>{{ collapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+        </button>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <!-- MAIN CONTENT -->
+  <mat-sidenav-content class="main">
+    <!-- HEADER -->
+    <header class="header">
+      <button mat-icon-button class="header__toggle" (click)="toggleSidenav()">
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <div class="header__spacer"></div>
+
       @if (warehouses$ | async; as w) {
         @if (warehouseId$ | async; as wid) {
-          <mat-form-field appearance="outline" class="warehouse">
+          <mat-form-field appearance="outline" class="header__warehouse" subscriptSizing="dynamic">
             <mat-label>Magasin</mat-label>
             <mat-select [value]="wid" (valueChange)="setWarehouse($event)">
               @for (it of w.items; track it.id) {
@@ -14,11 +54,11 @@
           </mat-form-field>
         }
       }
-    </div>
-    <button type="button" class="btn" (click)="logout()">Déconnexion</button>
-  </header>
+    </header>
 
-  <main class="content">
-    <router-outlet />
-  </main>
-</div>
+    <!-- PAGE CONTENT -->
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

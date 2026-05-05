@@ -1,40 +1,572 @@
-
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+
+// ═══════════════════════════════════════════════════════════════════
+// CUSTOM THEME — SaaS Premium (Stripe / Notion inspired)
+// ═══════════════════════════════════════════════════════════════════
+
+$app-primary-palette: (
+  50: #eff6ff, 100: #dbeafe, 200: #bfdbfe, 300: #93c5fd, 400: #60a5fa,
+  500: #3B82F6, 600: #2563eb, 700: #1d4ed8, 800: #1E3A8A, 900: #1e3a5f,
+  contrast: (50: #111827, 100: #111827, 200: #111827, 300: #111827, 400: #fff,
+             500: #fff, 600: #fff, 700: #fff, 800: #fff, 900: #fff)
+);
+
+$app-accent-palette: (
+  50: #f0fdf4, 100: #dcfce7, 200: #bbf7d0, 300: #86efac, 400: #4ade80,
+  500: #16A34A, 600: #16a34a, 700: #15803d, 800: #166534, 900: #14532d,
+  contrast: (50: #111827, 100: #111827, 200: #111827, 300: #111827, 400: #111827,
+             500: #fff, 600: #fff, 700: #fff, 800: #fff, 900: #fff)
+);
+
+$app-warn-palette: (
+  50: #fef2f2, 100: #fee2e2, 200: #fecaca, 300: #fca5a5, 400: #f87171,
+  500: #DC2626, 600: #dc2626, 700: #b91c1c, 800: #991b1b, 900: #7f1d1d,
+  contrast: (50: #111827, 100: #111827, 200: #111827, 300: #111827, 400: #fff,
+             500: #fff, 600: #fff, 700: #fff, 800: #fff, 900: #fff)
+);
+
+$app-primary: mat.m2-define-palette($app-primary-palette, 600, 400, 800);
+$app-accent:  mat.m2-define-palette($app-accent-palette, 500, 300, 700);
+$app-warn:    mat.m2-define-palette($app-warn-palette, 500, 300, 700);
+
+$app-typography: mat.m2-define-typography-config(
+  $font-family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  $headline-1: mat.m2-define-typography-level(32px, 40px, 700),
+  $headline-5: mat.m2-define-typography-level(24px, 32px, 700),
+  $headline-6: mat.m2-define-typography-level(20px, 28px, 600),
+  $body-1: mat.m2-define-typography-level(14px, 22px, 400),
+  $body-2: mat.m2-define-typography-level(13px, 20px, 400),
+  $button: mat.m2-define-typography-level(13px, 13px, 500),
+);
+
+$app-theme: mat.m2-define-light-theme((
+  color: (primary: $app-primary, accent: $app-accent, warn: $app-warn),
+  typography: $app-typography,
+  density: -1,
+));
+
+@include mat.all-component-themes($app-theme);
+@include mat.typography-hierarchy($app-typography);
+
+// ═══════════════════════════════════════════════════════════════════
+// DESIGN TOKENS
+// ═══════════════════════════════════════════════════════════════════
+
+:root {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-secondary: #6366F1;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-border: #E2E8F0;
+  --color-border-light: #F1F5F9;
+  --color-text: #0F172A;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+
+  --color-sidebar: #0F172A;
+  --color-sidebar-hover: #1E293B;
+  --color-sidebar-text: #94A3B8;
+  --color-sidebar-text-active: #F8FAFC;
+  --color-sidebar-active: #3B82F6;
+  --color-sidebar-active-bg: rgba(59, 130, 246, 0.1);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+
+  --header-height: 56px;
+  --sidebar-width: 256px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RESET & BASE
+// ═══════════════════════════════════════════════════════════════════
+
+*, *::before, *::after { box-sizing: border-box; }
 
 html {
   height: 100%;
-  @include mat.theme((
-    color: (
-      primary: mat.$magenta-palette,
-      tertiary: mat.$violet-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
   height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
-/* You can add global styles to this file, and also import other style files */
 
-@import '@angular/material/prebuilt-themes/indigo-pink.css';
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-in-out);
+
+  &:hover {
+    color: var(--color-primary-hover);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ANIMATIONS
+// ═══════════════════════════════════════════════════════════════════
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--duration-slow) var(--ease-out) both;
+}
+
+.animate-slide-in {
+  animation: slideInLeft var(--duration-slow) var(--ease-out) both;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ANGULAR MATERIAL OVERRIDES (premium feel)
+// ═══════════════════════════════════════════════════════════════════
+
+.mat-mdc-card {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--color-border);
+  transition: box-shadow var(--duration-normal) var(--ease-in-out),
+              transform var(--duration-normal) var(--ease-in-out);
+
+  &:hover {
+    box-shadow: var(--shadow-md) !important;
+  }
+}
+
+.mat-mdc-raised-button,
+.mat-mdc-flat-button,
+.mat-mdc-unelevated-button {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: all var(--duration-fast) var(--ease-in-out) !important;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.mat-mdc-outlined-button {
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--color-border) !important;
+  transition: all var(--duration-fast) var(--ease-in-out) !important;
+
+  &:hover {
+    background: var(--color-surface-hover) !important;
+    border-color: var(--color-text-muted) !important;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.mat-mdc-icon-button {
+  transition: background var(--duration-fast) var(--ease-in-out),
+              transform var(--duration-fast) var(--ease-in-out) !important;
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.mat-mdc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+
+  .mat-mdc-header-row {
+    background: var(--color-border-light);
+    height: 40px;
+  }
+
+  .mat-mdc-header-cell {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 16px;
+  }
+
+  .mat-mdc-row {
+    height: 48px;
+    transition: background var(--duration-fast) var(--ease-in-out);
+
+    &:nth-child(even) {
+      background: rgba(248, 250, 252, 0.5);
+    }
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.03);
+    }
+  }
+
+  .mat-mdc-cell {
+    font-size: 13px;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border-light);
+    padding: 0 16px;
+  }
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+
+  .mdc-text-field--outlined .mdc-notched-outline {
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: var(--color-border) !important;
+    }
+  }
+}
+
+.mat-mdc-snack-bar-container {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+
+  &.snack-success {
+    --mdc-snackbar-container-color: #059669;
+    --mdc-snackbar-supporting-text-color: #fff;
+  }
+
+  &.snack-error {
+    --mdc-snackbar-container-color: #DC2626;
+    --mdc-snackbar-supporting-text-color: #fff;
+  }
+
+  &.snack-info {
+    --mdc-snackbar-container-color: #0F172A;
+    --mdc-snackbar-supporting-text-color: #fff;
+  }
+}
+
+.mat-mdc-dialog-container {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+.mat-mdc-menu-panel {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--color-border);
+}
+
+.mat-mdc-paginator {
+  background: transparent !important;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILITY CLASSES
+// ═══════════════════════════════════════════════════════════════════
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
+
+  &--success { background: #ECFDF5; color: #065F46; }
+  &--warning { background: #FFFBEB; color: #92400E; }
+  &--danger  { background: #FEF2F2; color: #991B1B; }
+  &--info    { background: #EFF6FF; color: #1E40AF; }
+  &--neutral { background: #F1F5F9; color: #475569; }
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  &__subtitle {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin: 2px 0 0;
+  }
+
+  &__spacer { flex: 1; }
+}
+
+.table-container {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+  animation: fadeIn var(--duration-slow) var(--ease-out) both;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow var(--duration-normal) var(--ease-in-out),
+              transform var(--duration-normal) var(--ease-out);
+  animation: fadeIn var(--duration-slow) var(--ease-out) both;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 2px;
+
+    &--blue    { background: #EFF6FF; color: #2563EB; }
+    &--green   { background: #ECFDF5; color: #059669; }
+    &--orange  { background: #FFFBEB; color: #D97706; }
+    &--red     { background: #FEF2F2; color: #DC2626; }
+    &--purple  { background: #F5F3FF; color: #7C3AED; }
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+  }
+
+  &__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
+  &__trend {
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+
+    &--up { color: #059669; }
+    &--down { color: #DC2626; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BUTTONS (premium variants)
+// ═══════════════════════════════════════════════════════════════════
+
+.btn-primary {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-in-out);
+
+  &:hover {
+    background: var(--color-primary-hover) !important;
+    box-shadow: var(--shadow-sm), var(--shadow-ring);
+  }
+
+  &:active { transform: scale(0.97); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-in-out);
+
+  &:hover {
+    background: var(--color-surface-hover) !important;
+    border-color: var(--color-text-muted);
+  }
+
+  &:active { transform: scale(0.97); }
+}
+
+.btn-danger {
+  background: var(--color-danger) !important;
+  color: #fff !important;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-in-out);
+
+  &:hover {
+    background: #DC2626 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  }
+
+  &:active { transform: scale(0.97); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EMPTY STATE
+// ═══════════════════════════════════════════════════════════════════
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-10) var(--spacing-6);
+  text-align: center;
+
+  &__icon {
+    font-size: 48px;
+    color: var(--color-text-muted);
+    margin-bottom: var(--spacing-4);
+    opacity: 0.5;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--spacing-2);
+  }
+
+  &__desc {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    max-width: 320px;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// SCROLLBARS (minimal)
+// ═══════════════════════════════════════════════════════════════════
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 99px;
+  &:hover { background: rgba(148, 163, 184, 0.7); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RESPONSIVE
+// ═══════════════════════════════════════════════════════════════════
+
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

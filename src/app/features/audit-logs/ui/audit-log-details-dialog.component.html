@@ -1,23 +1,66 @@
-<h2 mat-dialog-title>Détails log</h2>
+<h2 mat-dialog-title>
+  <mat-icon style="vertical-align: middle; margin-right: 8px;">history</mat-icon>
+  Détail de l'action
+</h2>
 
 <div mat-dialog-content>
-  <div><strong>Date:</strong> {{ data.log.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</div>
-  <div><strong>Utilisateur:</strong> {{ data.log.username }} ({{ data.log.userId }})</div>
-  <div><strong>Action:</strong> {{ data.log.action }}</div>
-  <div><strong>Entité:</strong> {{ data.log.entityType }} · {{ data.log.entityId }}</div>
+  <!-- Métadonnées -->
+  <div class="detail-grid">
+    <span class="detail-label">ID</span>
+    <span class="detail-value">{{ data.log.id }}</span>
 
-  <h3>Before</h3>
-  <pre class="json">{{ data.log.before | json }}</pre>
+    <span class="detail-label">Date</span>
+    <span class="detail-value">{{ data.log.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</span>
 
-  <h3>After</h3>
-  <pre class="json">{{ data.log.after | json }}</pre>
+    <span class="detail-label">Utilisateur</span>
+    <span class="detail-value">{{ data.log.username }} ({{ data.log.userRole }})</span>
 
-  @if (data.log.meta) {
-    <h3>Meta</h3>
-    <pre class="json">{{ data.log.meta | json }}</pre>
+    <span class="detail-label">IP</span>
+    <span class="detail-value">{{ data.log.ipAddress }}</span>
+
+    <span class="detail-label">Action</span>
+    <span class="detail-value">{{ data.log.action }}</span>
+
+    <span class="detail-label">Entité</span>
+    <span class="detail-value">{{ data.log.entityLabel }} ({{ data.log.entityType }} · {{ data.log.entityId }})</span>
+
+    <span class="detail-label">Statut</span>
+    <span class="detail-value">
+      <span [class]="'status-badge status-badge--' + data.log.status.toLowerCase()">
+        {{ data.log.status }}
+      </span>
+    </span>
+
+    @if (data.log.details) {
+      <span class="detail-label">Détails</span>
+      <span class="detail-value">{{ data.log.details }}</span>
+    }
+  </div>
+
+  <!-- Section Changements (diff) -->
+  @if (data.log.changes && data.log.changes.length > 0) {
+    <div class="changes-title">Changements effectués</div>
+    <table class="changes-table">
+      <thead>
+        <tr>
+          <th>Champ</th>
+          <th>Ancienne valeur</th>
+          <th>Nouvelle valeur</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (change of data.log.changes; track change.field) {
+          <tr>
+            <td><strong>{{ change.field }}</strong></td>
+            <td><span class="old-value">{{ change.oldValue }}</span></td>
+            <td><span class="new-value">{{ change.newValue }}</span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
   }
 </div>
 
 <div mat-dialog-actions align="end">
-  <button mat-button type="button" mat-dialog-close>Fermer</button>
+  <button mat-flat-button color="primary" type="button" mat-dialog-close>Fermer</button>
 </div>

@@ -1,70 +1,54 @@
 .page {
-  padding: 16px;
   display: grid;
-  gap: 16px;
+  gap: var(--spacing-6);
+  animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.kpis {
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.charts-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.kpi {
-  border-radius: 12px;
-}
-
-.kpi__label {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.kpi__value {
-  font-size: 22px;
-  font-weight: 800;
-  margin-top: 6px;
-}
-
-.kpi__hint {
-  font-size: 12px;
-  opacity: 0.7;
-  margin-top: 4px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1.6fr 1fr;
+  gap: var(--spacing-4);
   align-items: start;
 }
 
-.card {
-  border-radius: 12px;
+.chart-card {
+  padding: 4px 0;
+}
+
+.chart-card--wide {
+  grid-column: 1 / -1;
 }
 
 .chart {
   position: relative;
-  height: 320px;
+  height: 300px;
 }
 
-.chart--small {
-  height: 280px;
+.chart--sm {
+  height: 240px;
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 500;
+  padding: var(--spacing-4);
+  background: #FEF2F2;
+  border-radius: var(--radius-md);
+  border: 1px solid #FECACA;
 }
 
 @media (max-width: 900px) {
-  .kpis {
-    grid-template-columns: 1fr;
-  }
-
-  .grid {
+  .charts-grid {
     grid-template-columns: 1fr;
   }
 
   .chart {
-    height: 260px;
+    height: 220px;
   }
 }

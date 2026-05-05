@@ -76,21 +76,28 @@ function seedIfNeeded(): void {
   if (mockSeeded) return;
   mockSeeded = true;
 
-  if (mockSales.length > 0 && mockAuditLogs.length === 0) {
+  if (mockAuditLogs.length === 0) {
+    const now = Date.now();
     mockAuditLogs = [
-      {
-        id: 'al_1',
-        createdAt: new Date(Date.now() - 3600_000).toISOString(),
-        userId: 'u_cashier',
-        username: 'cashier',
-        action: 'CREATE',
-        entityType: 'SALE',
-        entityId: mockSales[0].id,
-        before: null,
-        after: mockSales[0],
-        meta: { warehouseId: DEFAULT_WAREHOUSE_ID }
-      }
-    ];
+      { id: 'al_1', createdAt: new Date(now - 300_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'LOGIN', entityType: 'SYSTEM', entityId: '-', entityLabel: 'Connexion', ipAddress: '192.168.1.10', status: 'SUCCESS', details: 'Connexion réussie' },
+      { id: 'al_2', createdAt: new Date(now - 600_000).toISOString(), userId: 'u_cashier', username: 'caissier', userRole: 'CAISSIER', action: 'CREATE', entityType: 'SALE', entityId: 's_1', entityLabel: 'Vente #001', ipAddress: '192.168.1.15', status: 'SUCCESS', details: 'Vente créée - 3 articles' },
+      { id: 'al_3', createdAt: new Date(now - 1_800_000).toISOString(), userId: 'u_stock', username: 'gestion', userRole: 'GESTIONNAIRE', action: 'UPDATE', entityType: 'PRODUCT', entityId: 'p_1', entityLabel: 'Ciment 50kg', ipAddress: '192.168.1.20', status: 'SUCCESS', changes: [{ field: 'price', oldValue: 5000, newValue: 5500 }, { field: 'name', oldValue: 'Ciment 50', newValue: 'Ciment 50kg' }] },
+      { id: 'al_4', createdAt: new Date(now - 3_600_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'DELETE', entityType: 'CUSTOMER', entityId: 'c_5', entityLabel: 'Client supprimé', ipAddress: '192.168.1.10', status: 'SUCCESS', details: 'Client inactif supprimé' },
+      { id: 'al_5', createdAt: new Date(now - 5_400_000).toISOString(), userId: 'u_cashier', username: 'caissier', userRole: 'CAISSIER', action: 'EXPORT', entityType: 'SALE', entityId: '-', entityLabel: 'Export ventes', ipAddress: '192.168.1.15', status: 'SUCCESS', details: 'Export CSV des ventes du mois' },
+      { id: 'al_6', createdAt: new Date(now - 7_200_000).toISOString(), userId: 'u_stock', username: 'gestion', userRole: 'GESTIONNAIRE', action: 'CREATE', entityType: 'PURCHASE_ORDER', entityId: 'po_3', entityLabel: 'Cmd #003', ipAddress: '192.168.1.20', status: 'SUCCESS' },
+      { id: 'al_7', createdAt: new Date(now - 10_800_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'UPDATE', entityType: 'USER', entityId: 'u_cashier', entityLabel: 'Caissier', ipAddress: '192.168.1.10', status: 'SUCCESS', changes: [{ field: 'isActive', oldValue: false, newValue: true }] },
+      { id: 'al_8', createdAt: new Date(now - 14_400_000).toISOString(), userId: 'u_cashier', username: 'caissier', userRole: 'CAISSIER', action: 'OPEN', entityType: 'CASH_REGISTER_SESSION', entityId: 'cs_1', entityLabel: 'Session caisse', ipAddress: '192.168.1.15', status: 'SUCCESS' },
+      { id: 'al_9', createdAt: new Date(now - 18_000_000).toISOString(), userId: 'u_stock', username: 'gestion', userRole: 'GESTIONNAIRE', action: 'RECEIVE', entityType: 'PURCHASE_ORDER', entityId: 'po_2', entityLabel: 'Réception Cmd #002', ipAddress: '192.168.1.20', status: 'SUCCESS', details: '15 articles réceptionnés' },
+      { id: 'al_10', createdAt: new Date(now - 21_600_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'LOGIN', entityType: 'SYSTEM', entityId: '-', entityLabel: 'Connexion', ipAddress: '10.0.0.5', status: 'FAILURE', details: 'Mot de passe incorrect' },
+      { id: 'al_11', createdAt: new Date(now - 86_400_000).toISOString(), userId: 'u_cashier', username: 'caissier', userRole: 'CAISSIER', action: 'CREATE', entityType: 'SALE', entityId: 's_2', entityLabel: 'Vente #002', ipAddress: '192.168.1.15', status: 'SUCCESS' },
+      { id: 'al_12', createdAt: new Date(now - 90_000_000).toISOString(), userId: 'u_stock', username: 'gestion', userRole: 'GESTIONNAIRE', action: 'TRANSFER', entityType: 'WAREHOUSE_TRANSFER', entityId: 'wt_1', entityLabel: 'Transfert Dépôt A→B', ipAddress: '192.168.1.20', status: 'SUCCESS', details: '5 produits transférés' },
+      { id: 'al_13', createdAt: new Date(now - 172_800_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'CREATE', entityType: 'PRODUCT', entityId: 'p_5', entityLabel: 'Fer à béton 12mm', ipAddress: '192.168.1.10', status: 'SUCCESS' },
+      { id: 'al_14', createdAt: new Date(now - 180_000_000).toISOString(), userId: 'u_cashier', username: 'caissier', userRole: 'CAISSIER', action: 'PAY', entityType: 'SALE', entityId: 's_3', entityLabel: 'Paiement Vente #003', ipAddress: '192.168.1.15', status: 'SUCCESS', details: 'Paiement espèces 25 000 FCFA' },
+      { id: 'al_15', createdAt: new Date(now - 259_200_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'DELETE', entityType: 'PRODUCT', entityId: 'p_old', entityLabel: 'Ancien produit', ipAddress: '192.168.1.10', status: 'FAILURE', details: 'Produit lié à des ventes existantes' },
+      { id: 'al_16', createdAt: new Date(now - 345_600_000).toISOString(), userId: 'u_stock', username: 'gestion', userRole: 'GESTIONNAIRE', action: 'CLOSE', entityType: 'INVENTORY_SESSION', entityId: 'inv_1', entityLabel: 'Inventaire #001', ipAddress: '192.168.1.20', status: 'SUCCESS', details: 'Inventaire clôturé, 2 écarts détectés' },
+      { id: 'al_17', createdAt: new Date(now - 400_000_000).toISOString(), userId: 'u_cashier', username: 'caissier', userRole: 'CAISSIER', action: 'LOGOUT', entityType: 'SYSTEM', entityId: '-', entityLabel: 'Déconnexion', ipAddress: '192.168.1.15', status: 'SUCCESS' },
+      { id: 'al_18', createdAt: new Date(now - 500_000_000).toISOString(), userId: 'u_admin', username: 'admin', userRole: 'ADMIN', action: 'EXPORT', entityType: 'PRODUCT', entityId: '-', entityLabel: 'Export produits', ipAddress: '192.168.1.10', status: 'SUCCESS', details: 'Export PDF catalogue' }
+    ] as AuditLogEntry[];
   }
 
   if (mockInventorySessions.length === 0) {
@@ -161,13 +168,17 @@ function seedIfNeeded(): void {
   }
 }
 
-function appendAudit(entry: Omit<AuditLogEntry, 'id' | 'createdAt'>): void {
+function appendAudit(entry: Partial<AuditLogEntry> & Pick<AuditLogEntry, 'userId' | 'username' | 'action' | 'entityType' | 'entityId'>): void {
   mockAuditLogs = [
     {
       id: `al_${Date.now()}_${Math.floor(Math.random() * 10_000)}`,
       createdAt: new Date().toISOString(),
+      userRole: entry.userRole ?? 'ADMIN',
+      entityLabel: entry.entityLabel ?? entry.entityId,
+      ipAddress: entry.ipAddress ?? '127.0.0.1',
+      status: entry.status ?? 'SUCCESS',
       ...entry
-    },
+    } as AuditLogEntry,
     ...mockAuditLogs
   ].slice(0, 500);
 }
@@ -483,16 +494,80 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
   const url = normalizeUrl(req.url);
   seedIfNeeded();
 
-  // Audit logs
+  // Audit logs - stats
+  if (url.endsWith('/api/audit-logs/stats') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN'])) return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
+    const totalToday = mockAuditLogs.filter(l => new Date(l.createdAt) >= todayStart).length;
+    const failuresLast7Days = mockAuditLogs.filter(l => l.status === 'FAILURE' && new Date(l.createdAt) >= sevenDaysAgo).length;
+    const userCounts: Record<string, number> = {};
+    const actionCounts: Record<string, number> = {};
+    mockAuditLogs.forEach(l => { userCounts[l.username] = (userCounts[l.username] || 0) + 1; actionCounts[l.action] = (actionCounts[l.action] || 0) + 1; });
+    const mostActiveUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '-';
+    const mostFrequentAction = Object.entries(actionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'CREATE';
+
+    return of(jsonResponse({ totalToday, failuresLast7Days, mostActiveUser, mostFrequentAction })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Audit logs - export CSV
+  if (url.endsWith('/api/audit-logs/export') && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN'])) return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+
+    const header = 'Date;Utilisateur;Rôle;Action;Entité;ID Entité;Label;IP;Statut;Détails\n';
+    const rows = mockAuditLogs.map(l => `${l.createdAt};${l.username};${l.userRole};${l.action};${l.entityType};${l.entityId};${l.entityLabel};${l.ipAddress};${l.status};${l.details || ''}`).join('\n');
+    const csv = header + rows;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    return of(new HttpResponse({ status: 200, body: blob })).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Audit logs - detail by ID
+  if (url.match(/\/api\/audit-logs\/[^/]+$/) && req.method === 'GET' && !url.endsWith('/stats') && !url.endsWith('/export')) {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN'])) return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
+
+    const id = url.split('/').pop()!;
+    const log = mockAuditLogs.find(l => l.id === id);
+    if (!log) return httpError(404, 'Log non trouvé.').pipe(delay(NETWORK_DELAY_MS));
+    return of(jsonResponse(log)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Audit logs - list with filters
   if (url.endsWith('/api/audit-logs') && req.method === 'GET') {
     const user = requireAuth(req);
     if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    if (!hasRole(user, ['ADMIN'])) return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
 
-    if (!hasRole(user, ['ADMIN'])) {
-      return httpError(403, 'Accès refusé.').pipe(delay(NETWORK_DELAY_MS));
-    }
+    let filtered = [...mockAuditLogs];
+    const params = req.params;
+    const dateFrom = params.get('dateFrom');
+    const dateTo = params.get('dateTo');
+    const actions = params.get('actions');
+    const entityTypes = params.get('entityTypes');
+    const userId = params.get('userId');
+    const status = params.get('status');
+    const search = params.get('search');
 
-    return of(jsonResponse({ items: mockAuditLogs, total: mockAuditLogs.length })).pipe(delay(NETWORK_DELAY_MS));
+    if (dateFrom) filtered = filtered.filter(l => new Date(l.createdAt) >= new Date(dateFrom));
+    if (dateTo) filtered = filtered.filter(l => new Date(l.createdAt) <= new Date(dateTo));
+    if (actions) { const arr = actions.split(','); filtered = filtered.filter(l => arr.includes(l.action)); }
+    if (entityTypes) { const arr = entityTypes.split(','); filtered = filtered.filter(l => arr.includes(l.entityType)); }
+    if (userId) filtered = filtered.filter(l => l.userId === userId);
+    if (status) filtered = filtered.filter(l => l.status === status);
+    if (search) { const s = search.toLowerCase(); filtered = filtered.filter(l => l.username.toLowerCase().includes(s) || l.entityLabel.toLowerCase().includes(s) || (l.details || '').toLowerCase().includes(s)); }
+
+    const page = parseInt(params.get('page') || '0', 10);
+    const size = parseInt(params.get('size') || '25', 10);
+    const total = filtered.length;
+    const items = filtered.slice(page * size, (page + 1) * size);
+
+    return of(jsonResponse({ items, total })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   // Auth
