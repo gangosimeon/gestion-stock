@@ -1,5 +1,134 @@
-<h1>Rendez-vous</h1>
+<mat-drawer-container class="container" autosize>
+  <mat-drawer-content>
+    <!-- TOOLBAR -->
+    <mat-toolbar color="primary">
+      <span class="toolbar__title">Rendez-vous</span>
+      <span class="spacer"></span>
+      <button mat-flat-button type="button" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        Nouveau Rendez-vous
+      </button>
+    </mat-toolbar>
 
-@if (appointments$ | async; as res) {
-  <pre>{{ res | json }}</pre>
-}
+    @if (isLoading) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    <div class="content">
+      <!-- ERREUR -->
+      @if (errorMessage) {
+        <div class="error-banner">
+          <mat-icon>warning</mat-icon>
+          {{ errorMessage }}
+        </div>
+      }
+
+      <!-- FILTRES -->
+      <div class="filters-card">
+        <form [formGroup]="filtersForm" class="filters-grid" (ngSubmit)="applyFilters()">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Recherche client</mat-label>
+            <input matInput formControlName="search" placeholder="Nom du client...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="">Tous</mat-option>
+              @for (s of statusOptions; track s) {
+                <mat-option [value]="s">{{ s }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Date</mat-label>
+            <input matInput type="date" formControlName="date">
+          </mat-form-field>
+
+          <div class="filters-actions">
+            <button mat-flat-button color="primary" type="submit">
+              <mat-icon>filter_list</mat-icon> Filtrer
+            </button>
+            <button mat-stroked-button type="button" (click)="resetFilters()">
+              <mat-icon>clear</mat-icon> Réinitialiser
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TABLEAU -->
+      <div class="table-container">
+        <table mat-table [dataSource]="dataSource">
+          <ng-container matColumnDef="dateTime">
+            <th mat-header-cell *matHeaderCellDef>Date & Heure</th>
+            <td mat-cell *matCellDef="let a">{{ a.dateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="customerName">
+            <th mat-header-cell *matHeaderCellDef>Client</th>
+            <td mat-cell *matCellDef="let a">{{ a.customerName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="phone">
+            <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+            <td mat-cell *matCellDef="let a">{{ a.phone }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let a">
+              <span [class]="statusBadgeClass(a.status)">{{ a.status }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="note">
+            <th mat-header-cell *matHeaderCellDef>Note</th>
+            <td mat-cell *matCellDef="let a">{{ a.note || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let a">
+              <button mat-icon-button (click)="openEdit(a)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="confirmDelete(a)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        @if (dataSource.data.length === 0 && !isLoading) {
+          <div class="empty-state">
+            <mat-icon>event_busy</mat-icon>
+            <p>Aucun rendez-vous trouvé</p>
+          </div>
+        }
+
+        <mat-paginator
+          [length]="total"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="[10, 25, 50]"
+          (page)="onPage($event)"
+          showFirstLastButtons>
+        </mat-paginator>
+      </div>
+    </div>
+  </mat-drawer-content>
+
+  <!-- DRAWER FORMULAIRE -->
+  <mat-drawer #drawer position="end" mode="over">
+    <app-appointment-drawer
+      [context]="drawerCtx"
+      (close)="closeDrawer()"
+      (saved)="onSaved()">
+    </app-appointment-drawer>
+  </mat-drawer>
+</mat-drawer-container>

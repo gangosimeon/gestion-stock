@@ -12,7 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
+import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
 
@@ -56,7 +56,7 @@ export class SuppliersShellPageComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild('drawer') drawer!: MatSidenav;
+  @ViewChild('drawer') drawer!: MatDrawer;
 
   readonly search = new FormControl<string>('', { nonNullable: true });
 

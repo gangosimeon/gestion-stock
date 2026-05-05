@@ -116,6 +116,7 @@ $app-theme: mat.m2-define-light-theme((
 
 html {
   height: 100%;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -124,6 +125,7 @@ html {
 body {
   margin: 0;
   height: 100%;
+  overflow-x: hidden;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.6;
@@ -372,7 +374,7 @@ a {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: var(--spacing-4);
 }
 
@@ -569,4 +571,16 @@ a {
   .kpi-grid {
     grid-template-columns: 1fr;
   }
+}
+
+// ─── DRAWER CONTENU (formulaires) ───────────────────────────────
+// Les drawers de contenu (formulaires, panneaux) doivent être blancs.
+// Seule la sidebar (mat-sidenav) doit rester sombre.
+
+.mat-drawer:not(.mat-sidenav) {
+  width: 45vw !important;
+  background: #ffffff !important;
+  color: inherit !important;
+  border-left: 1px solid #E2E8F0 !important;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08) !important;
 }

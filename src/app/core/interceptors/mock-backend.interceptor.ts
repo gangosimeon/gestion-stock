@@ -331,6 +331,30 @@ let mockAppointments: Appointment[] = [
     dateTime: new Date(Date.now() + 3600_000).toISOString(),
     status: 'SCHEDULED',
     note: 'Contrôle'
+  },
+  {
+    id: 'a_2',
+    customerName: 'Jean Dupont',
+    phone: '0601020304',
+    dateTime: new Date(Date.now() + 86400_000).toISOString(),
+    status: 'SCHEDULED',
+    note: 'Premier rendez-vous'
+  },
+  {
+    id: 'a_3',
+    customerName: 'Marie Martin',
+    phone: '0702030405',
+    dateTime: new Date(Date.now() - 86400_000).toISOString(),
+    status: 'COMPLETED',
+    note: 'Suivi commande'
+  },
+  {
+    id: 'a_4',
+    customerName: 'Pierre Durand',
+    phone: '0803040506',
+    dateTime: new Date(Date.now() - 172800_000).toISOString(),
+    status: 'CANCELLED',
+    note: 'Annulé par client'
   }
 ];
 
@@ -1829,11 +1853,100 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
     return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
   }
 
-  // Appointments
+  // Appointments - DELETE
+  if (url.match(/\/api\/appointments\/[^/]+$/) && req.method === 'DELETE') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    const id = url.split('/').pop()!;
+    mockAppointments = mockAppointments.filter(a => a.id !== id);
+    return of(jsonResponse(null, 204)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Appointments - PATCH status
+  if (url.match(/\/api\/appointments\/[^/]+\/status$/) && req.method === 'PATCH') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    const id = url.split('/')[4];
+    const body = req.body as { status: Appointment['status'] };
+    const appointment = mockAppointments.find(a => a.id === id);
+    if (appointment) {
+      appointment.status = body.status;
+      return of(jsonResponse(appointment)).pipe(delay(NETWORK_DELAY_MS));
+    }
+    return httpError(404, 'Rendez-vous non trouvé.').pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Appointments - PUT
+  if (url.match(/\/api\/appointments\/[^/]+$/) && req.method === 'PUT') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    const id = url.split('/').pop()!;
+    const body = req.body as Partial<Appointment>;
+    const idx = mockAppointments.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      mockAppointments[idx] = { ...mockAppointments[idx], ...body };
+      return of(jsonResponse(mockAppointments[idx])).pipe(delay(NETWORK_DELAY_MS));
+    }
+    return httpError(404, 'Rendez-vous non trouvé.').pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Appointments - GET by ID
+  if (url.match(/\/api\/appointments\/[^/]+$/) && req.method === 'GET') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    const id = url.split('/').pop()!;
+    const appointment = mockAppointments.find(a => a.id === id);
+    if (appointment) {
+      return of(jsonResponse(appointment)).pipe(delay(NETWORK_DELAY_MS));
+    }
+    return httpError(404, 'Rendez-vous non trouvé.').pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Appointments - POST (create)
+  if (url.endsWith('/api/appointments') && req.method === 'POST') {
+    const user = requireAuth(req);
+    if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
+    const body = req.body as Omit<Appointment, 'id'>;
+    const created: Appointment = {
+      id: `a_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      ...body
+    };
+    mockAppointments = [created, ...mockAppointments];
+    return of(jsonResponse(created, 201)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  // Appointments - GET list with filters
   if (url.endsWith('/api/appointments') && req.method === 'GET') {
     const user = requireAuth(req);
     if (!user) return httpError(401, 'Non authentifié.').pipe(delay(NETWORK_DELAY_MS));
-    return of(jsonResponse({ items: mockAppointments, total: mockAppointments.length })).pipe(delay(NETWORK_DELAY_MS));
+
+    let filtered = [...mockAppointments];
+    const params = req.params;
+    const search = params.get('search');
+    const status = params.get('status');
+    const dateFrom = params.get('dateFrom');
+    const dateTo = params.get('dateTo');
+    const page = parseInt(params.get('page') || '0', 10);
+    const size = parseInt(params.get('size') || '25', 10);
+
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(a => a.customerName.toLowerCase().includes(s));
+    }
+    if (status) {
+      filtered = filtered.filter(a => a.status === status);
+    }
+    if (dateFrom) {
+      filtered = filtered.filter(a => new Date(a.dateTime) >= new Date(dateFrom));
+    }
+    if (dateTo) {
+      filtered = filtered.filter(a => new Date(a.dateTime) <= new Date(dateTo + 'T23:59:59'));
+    }
+
+    const total = filtered.length;
+    const items = filtered.slice(page * size, (page + 1) * size);
+
+    return of(jsonResponse({ items, total })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   // Reports

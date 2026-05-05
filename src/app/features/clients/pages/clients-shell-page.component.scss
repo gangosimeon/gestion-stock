@@ -1,5 +1,13 @@
 .container {
-  height: calc(100vh - 56px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mat-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .spacer {
@@ -7,9 +15,11 @@
 }
 
 .content {
+  flex: 1;
   padding: 16px;
   display: grid;
   gap: 12px;
+  overflow-y: auto;
 }
 
 .toolbar {

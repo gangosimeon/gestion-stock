@@ -1,0 +1,47 @@
+<h2 mat-dialog-title>
+  <mat-icon style="vertical-align: middle; margin-right: 8px;">event</mat-icon>
+  {{ data.mode === 'create' ? 'Nouveau Rendez-vous' : 'Modifier Rendez-vous' }}
+</h2>
+
+<div mat-dialog-content>
+  <form [formGroup]="form" class="form-grid">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Nom du client</mat-label>
+      <input matInput formControlName="customerName" required>
+      <mat-error>Le nom du client est requis</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Téléphone</mat-label>
+      <input matInput formControlName="phone" required>
+      <mat-error>Le téléphone doit être numérique</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Date et Heure</mat-label>
+      <input matInput type="datetime-local" formControlName="dateTime" required>
+      <mat-error>La date et l'heure sont requises</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Statut</mat-label>
+      <mat-select formControlName="status" required>
+        @for (s of statusOptions; track s) {
+          <mat-option [value]="s">{{ s }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span2">
+      <mat-label>Note</mat-label>
+      <textarea matInput formControlName="note" rows="3"></textarea>
+    </mat-form-field>
+  </form>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" (click)="onCancel()">Annuler</button>
+  <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="form.invalid">
+    Enregistrer
+  </button>
+</div>

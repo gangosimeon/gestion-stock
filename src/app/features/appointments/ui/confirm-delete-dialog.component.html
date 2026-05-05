@@ -1,0 +1,10 @@
+<h2 mat-dialog-title>Confirmer la suppression</h2>
+
+<div mat-dialog-content>
+  <p>Voulez-vous vraiment supprimer le rendez-vous de <strong>{{ data.customerName }}</strong> ?</p>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" (click)="onCancel()">Annuler</button>
+  <button mat-flat-button color="warn" type="button" (click)="onConfirm()">Supprimer</button>
+</div>

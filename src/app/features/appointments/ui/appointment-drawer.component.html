@@ -1,0 +1,63 @@
+<div class="drawer">
+  <!-- HEADER -->
+  <div class="drawer__header">
+    <mat-icon class="drawer__icon">event</mat-icon>
+    <span class="drawer__title">
+      {{ context?.mode === 'create' ? 'Nouveau Rendez-vous' : 'Modifier Rendez-vous' }}
+    </span>
+    <span class="spacer"></span>
+    <button mat-icon-button type="button" (click)="close.emit()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- FORMULAIRE -->
+  <form class="form" [formGroup]="form" (ngSubmit)="onSave()">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Nom du client</mat-label>
+      <mat-icon matPrefix>person</mat-icon>
+      <input matInput formControlName="customerName" placeholder="Ex: Jean Dupont">
+      <mat-error>Le nom du client est requis</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Téléphone</mat-label>
+      <mat-icon matPrefix>phone</mat-icon>
+      <input matInput formControlName="phone" placeholder="Ex: 0600000000">
+      <mat-error>Numéro de téléphone invalide</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Date et Heure</mat-label>
+      <mat-icon matPrefix>schedule</mat-icon>
+      <input matInput type="datetime-local" formControlName="dateTime">
+      <mat-error>La date et l'heure sont requises</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Statut</mat-label>
+      <mat-select formControlName="status">
+        @for (s of statusOptions; track s) {
+          <mat-option [value]="s">{{ s }}</mat-option>
+        }
+      </mat-select>
+      <mat-error>Le statut est requis</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Note</mat-label>
+      <mat-icon matPrefix>notes</mat-icon>
+      <textarea matInput formControlName="note" rows="3" placeholder="Remarques éventuelles..."></textarea>
+    </mat-form-field>
+  </form>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button mat-stroked-button type="button" (click)="close.emit()">Annuler</button>
+    <button mat-flat-button color="primary" type="button"
+            (click)="onSave()"
+            [disabled]="form.invalid || isSubmitting">
+      {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+    </button>
+  </div>
+</div>

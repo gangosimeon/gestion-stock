@@ -1,5 +1,13 @@
-.page {
-  display: grid;
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mat-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .toolbar {
@@ -17,7 +25,9 @@
 }
 
 .content {
+  flex: 1;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .filters {
@@ -55,6 +65,3 @@
   opacity: 0.72;
 }
 
-.sidenav {
-  min-height: calc(100vh - 64px);
-}

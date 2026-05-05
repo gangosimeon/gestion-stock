@@ -78,8 +78,13 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
       this.vmSnapshot = vm;
       this.syncControls(vm);
 
-      this.renderSales(vm.salesSeries.map((p) => p.label), vm.salesSeries.map((p) => p.value));
-      this.renderProfit(vm.profitSeries.map((p) => p.label), vm.profitSeries.map((p) => p.value));
+      // setTimeout(0) ensures Angular's CD has updated @ViewChild references
+      // before we try to access the canvas (which lives inside @if (vm$ | async))
+      setTimeout(() => {
+        if (!this.salesCanvas || !this.profitCanvas) return;
+        this.renderSales(vm.salesSeries.map((p) => p.label), vm.salesSeries.map((p) => p.value));
+        this.renderProfit(vm.profitSeries.map((p) => p.label), vm.profitSeries.map((p) => p.value));
+      }, 50);
     });
   }
 
@@ -165,14 +170,8 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
       }
     };
 
-    if (!this.salesChart) {
-      this.salesChart = new Chart(this.salesCanvas.nativeElement, config);
-      return;
-    }
-
-    this.salesChart.data.labels = labels;
-    this.salesChart.data.datasets[0].data = data;
-    this.salesChart.update();
+    this.salesChart?.destroy();
+    this.salesChart = new Chart(this.salesCanvas.nativeElement, config);
   }
 
   private renderProfit(labels: string[], data: number[]): void {
@@ -196,14 +195,8 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
       }
     };
 
-    if (!this.profitChart) {
-      this.profitChart = new Chart(this.profitCanvas.nativeElement, config);
-      return;
-    }
-
-    this.profitChart.data.labels = labels;
-    this.profitChart.data.datasets[0].data = data;
-    this.profitChart.update();
+    this.profitChart?.destroy();
+    this.profitChart = new Chart(this.profitCanvas.nativeElement, config);
   }
 
   private buildYears(): number[] {

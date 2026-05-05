@@ -1,7 +1,9 @@
 .drawer {
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .drawer__header {
@@ -19,9 +21,11 @@
 }
 
 .content {
+  flex: 1;
   padding: 12px;
   display: grid;
   gap: 12px;
+  overflow-y: auto;
 }
 
 .lineAdd {
