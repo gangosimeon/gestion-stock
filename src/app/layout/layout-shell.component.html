@@ -54,6 +54,43 @@
           </mat-form-field>
         }
       }
+
+      <!-- ─── Menu utilisateur ─── -->
+      @if (currentUser$ | async; as user) {
+        <div class="user-menu">
+          <button class="user-menu__trigger" (click)="toggleUserMenu()" type="button">
+            <span class="user-avatar">{{ user.username[0].toUpperCase() }}</span>
+            <div class="user-info">
+              <span class="user-info__name">{{ user.username }}</span>
+              <span class="user-info__role user-info__role--{{ user.role ? user.role.toLowerCase() : 'employee' }}">
+                {{ roleLabel(user.role) }}
+              </span>
+            </div>
+            <mat-icon class="user-menu__chevron" [class.user-menu__chevron--open]="userMenuOpen">
+              expand_more
+            </mat-icon>
+          </button>
+
+          @if (userMenuOpen) {
+            <div class="user-dropdown-overlay" (click)="closeUserMenu()"></div>
+            <div class="user-dropdown">
+              <div class="user-dropdown__header">
+                <span class="user-avatar user-avatar--lg">{{ user.username[0].toUpperCase() }}</span>
+                <div>
+                  <div class="user-dropdown__name">{{ user.username }}</div>
+                  <div class="user-dropdown__email">{{ user.email }}</div>
+                </div>
+              </div>
+              <div class="user-dropdown__divider"></div>
+              <button class="user-dropdown__item user-dropdown__item--danger" (click)="logout()" type="button">
+                <mat-icon>logout</mat-icon>
+                Déconnexion
+              </button>
+            </div>
+          }
+        </div>
+      }
+
     </header>
 
     <!-- PAGE CONTENT -->

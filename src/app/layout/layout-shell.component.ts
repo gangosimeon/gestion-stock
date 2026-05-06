@@ -10,7 +10,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatListModule } from '@angular/material/list';
 
-import { AuthService } from '../core/services/auth.service';
+import { AuthService as CoreAuthService } from '../core/services/auth.service';
+import { AuthService } from '../auth/services/auth.service';
 import { WarehouseContextService } from '../core/services/warehouse-context.service';
 import { WarehousesApiService } from '../core/services/warehouses-api.service';
 
@@ -43,6 +44,7 @@ export interface NavItem {
   encapsulation: ViewEncapsulation.None
 })
 export class LayoutShellComponent {
+  private readonly coreAuth = inject(CoreAuthService);
   private readonly auth = inject(AuthService);
   private readonly warehousesApi = inject(WarehousesApiService);
   private readonly warehouseCtx = inject(WarehouseContextService);
@@ -50,6 +52,9 @@ export class LayoutShellComponent {
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
   collapsed = false;
+  userMenuOpen = false;
+
+  readonly currentUser$ = this.auth.currentUser$;
 
   readonly warehouses$ = this.warehousesApi.list();
   readonly warehouseId$ = this.warehouseCtx.warehouseId$;
@@ -74,6 +79,22 @@ export class LayoutShellComponent {
 
   logout(): void {
     this.auth.logout();
+  }
+
+  toggleUserMenu(): void {
+    this.userMenuOpen = !this.userMenuOpen;
+  }
+
+  closeUserMenu(): void {
+    this.userMenuOpen = false;
+  }
+
+  roleLabel(role: string): string {
+    switch (role) {
+      case 'ADMIN': return 'Admin';
+      case 'MANAGER': return 'Manager';
+      default: return 'Employé';
+    }
   }
 
   setWarehouse(id: string): void {

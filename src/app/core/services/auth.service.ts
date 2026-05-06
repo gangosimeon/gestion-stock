@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, map, of } from 'rxjs';
 
-import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
 import { TokenStorageService } from './token-storage.service';
+import { AuthService as NewAuthService } from '../../auth/services/auth.service';
 
 export interface LoginRequest {
   username: string;
@@ -21,12 +21,30 @@ export interface LoginResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly http = inject(HttpClient);
   private readonly tokenStorage = inject(TokenStorageService);
   private readonly router = inject(Router);
 
+  private readonly newAuth = inject(NewAuthService);
+
   private readonly userSubject = new BehaviorSubject<User | null>(null);
   readonly user$ = this.userSubject.asObservable();
+
+  constructor() {
+    this.newAuth.currentUser$.subscribe((u) => {
+      if (u) {
+        this.userSubject.next({
+          id: u.id,
+          username: u.username,
+          fullName: u.username,
+          email: u.email,
+          roles: u.role ? [u.role as unknown as any] : [],
+          isActive: true
+        } as User);
+      } else {
+        this.userSubject.next(null);
+      }
+    });
+  }
 
   get accessToken(): string | null {
     return this.tokenStorage.getAccessToken();
@@ -36,20 +54,10 @@ export class AuthService {
     return !!this.accessToken;
   }
 
-  login(payload: LoginRequest): Observable<User> {
-    return this.http
-      .post<LoginResponse>(`${environment.apiUrl}/auth/login`, payload)
-      .pipe(
-        tap((res) => this.tokenStorage.setAccessToken(res.accessToken)),
-        tap((res) => this.userSubject.next(res.user)),
-        map((res) => res.user)
-      );
-  }
-
   logout(): void {
     this.tokenStorage.clear();
     this.userSubject.next(null);
-    void this.router.navigateByUrl('/auth/login');
+    void this.router.navigateByUrl('/login');
   }
 
   hasAnyRole(required: readonly string[]): Observable<boolean> {
@@ -69,15 +77,6 @@ export class AuthService {
   }
 
   hydrateUserFromApi(): Observable<User | null> {
-    if (!this.accessToken) return of(null);
-
-    return this.http.get<User>(`${environment.apiUrl}/auth/me`).pipe(
-      tap((u) => this.userSubject.next(u)),
-      catchError(() => {
-        this.tokenStorage.clear();
-        this.userSubject.next(null);
-        return of(null);
-      })
-    );
+    return of(null);
   }
 }

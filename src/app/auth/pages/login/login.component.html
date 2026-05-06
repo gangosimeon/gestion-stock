@@ -1,0 +1,134 @@
+<div class="login-layout">
+
+  <!-- ═══ Panneau marque (gauche) ═══ -->
+  <div class="brand-panel">
+    <div class="brand-panel__inner">
+      <div class="brand-panel__logo">
+        <mat-icon>inventory</mat-icon>
+        <span>GestStock</span>
+      </div>
+
+      <h2 class="brand-panel__slogan">
+        Gérez votre stock<br>en toute simplicité
+      </h2>
+
+      <p class="brand-panel__desc">
+        Solution complète de gestion d'inventaire, ventes et achats pour votre entreprise.
+      </p>
+
+      <ul class="brand-panel__features">
+        <li>
+          <mat-icon>check_circle</mat-icon>
+          <span>Suivi en temps réel</span>
+        </li>
+        <li>
+          <mat-icon>check_circle</mat-icon>
+          <span>Rapports et analyses</span>
+        </li>
+        <li>
+          <mat-icon>check_circle</mat-icon>
+          <span>Gestion multi-magasins</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="brand-panel__circle brand-panel__circle--1"></div>
+    <div class="brand-panel__circle brand-panel__circle--2"></div>
+  </div>
+
+  <!-- ═══ Panneau formulaire (droite) ═══ -->
+  <div class="form-panel">
+    <div class="form-panel__inner">
+
+      <div class="form-panel__header">
+        <div class="form-panel__logo-mobile">
+          <mat-icon>inventory</mat-icon>
+          <span>GestStock</span>
+        </div>
+        <h1>Connexion</h1>
+        <p>Entrez vos identifiants pour accéder à votre espace</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="on">
+
+        <!-- Nom d'utilisateur -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Nom d'utilisateur</mat-label>
+          <mat-icon matPrefix>person</mat-icon>
+          <input
+            matInput
+            formControlName="username"
+            autocomplete="username"
+            placeholder="ex: admin" />
+          @if (f['username'].invalid && f['username'].touched) {
+            <mat-error>Ce champ est requis</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Mot de passe -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Mot de passe</mat-label>
+          <mat-icon matPrefix>lock</mat-icon>
+          <input
+            matInput
+            [type]="showPwd ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            placeholder="••••••••" />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="showPwd = !showPwd"
+            [attr.aria-label]="showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
+            <mat-icon>{{ showPwd ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (f['password'].invalid && f['password'].touched) {
+            <mat-error>Ce champ est requis</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Options -->
+        <div class="form__options">
+          <mat-checkbox formControlName="rememberMe" color="primary">
+            Se souvenir de moi
+          </mat-checkbox>
+          <a routerLink="/forgot-password" class="form__forgot">
+            Mot de passe oublié ?
+          </a>
+        </div>
+
+        <!-- Erreur inline -->
+        @if (errorMessage) {
+          <div class="form__error" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
+        <!-- Bouton soumettre -->
+        <button
+          mat-flat-button
+          color="primary"
+          class="form__submit"
+          type="submit"
+          [disabled]="form.invalid || isLoading">
+          @if (isLoading) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>login</mat-icon>
+          }
+          <span>{{ isLoading ? 'Connexion en cours…' : 'Se connecter' }}</span>
+        </button>
+      </form>
+
+      <!-- Hint demo -->
+      <div class="form-panel__hint">
+        <mat-icon>info_outline</mat-icon>
+        <span>Démo : <strong>admin</strong> / <strong>admin</strong></span>
+      </div>
+
+    </div>
+  </div>
+
+</div>

@@ -30,6 +30,8 @@ type LoginBody = {
 
 type LoginResponse = {
   accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
   user: User;
 };
 
@@ -39,23 +41,32 @@ let mockUsers: User[] = [
   {
     id: 'u_admin',
     username: 'admin',
-    fullName: 'Admin',
+    fullName: 'Admin Principal',
+    email: 'admin@geststock.com',
     roles: ['ADMIN'],
-    isActive: true
+    role: 'ADMIN',
+    isActive: true,
+    magasin: 'Dépôt Central'
   },
   {
     id: 'u_cashier',
     username: 'caissier',
     fullName: 'Caissier',
+    email: 'caissier@geststock.com',
     roles: ['CAISSIER'],
-    isActive: true
+    role: 'EMPLOYEE',
+    isActive: true,
+    magasin: 'Boutique Nord'
   },
   {
     id: 'u_stock',
     username: 'gestion',
     fullName: 'Gestionnaire Stock',
+    email: 'gestion@geststock.com',
     roles: ['GESTIONNAIRE'],
-    isActive: true
+    role: 'MANAGER',
+    isActive: true,
+    magasin: 'Dépôt Central'
   }
 ];
 
@@ -610,10 +621,38 @@ export const mockBackendInterceptor: HttpInterceptorFn = (
 
     const response: LoginResponse = {
       accessToken: `mock-token::${user.username}`,
+      refreshToken: `mock-refresh::${user.username}`,
+      expiresIn: 3600,
       user
     };
 
     return of(jsonResponse(response)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/auth/refresh') && req.method === 'POST') {
+    const body = (req.body ?? {}) as { refreshToken?: string };
+    const refreshToken = String(body.refreshToken ?? '');
+    if (!refreshToken.startsWith('mock-refresh::')) {
+      return httpError(401, 'Refresh token invalide.').pipe(delay(NETWORK_DELAY_MS));
+    }
+    const uname = refreshToken.replace('mock-refresh::', '');
+    const user = mockUsers.find((u) => u.username === uname);
+    if (!user) return httpError(401, 'Session expirée.').pipe(delay(NETWORK_DELAY_MS));
+    const refreshResponse: LoginResponse = {
+      accessToken: `mock-token::${user.username}`,
+      refreshToken: `mock-refresh::${user.username}`,
+      expiresIn: 3600,
+      user
+    };
+    return of(jsonResponse(refreshResponse)).pipe(delay(NETWORK_DELAY_MS));
+  }
+
+  if (url.endsWith('/api/auth/forgot-password') && req.method === 'POST') {
+    const body = (req.body ?? {}) as { email?: string };
+    const email = String(body.email ?? '');
+    const user = mockUsers.find((u) => u.email === email);
+    if (!user) return httpError(404, 'Aucun compte associé à cet email.').pipe(delay(NETWORK_DELAY_MS));
+    return of(jsonResponse({ message: 'Email de réinitialisation envoyé.' })).pipe(delay(NETWORK_DELAY_MS));
   }
 
   if (url.endsWith('/api/auth/me') && req.method === 'GET') {
