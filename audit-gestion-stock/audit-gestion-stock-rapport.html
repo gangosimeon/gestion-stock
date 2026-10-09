@@ -1,0 +1,3041 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit gestion de stock</title><style>
+@page { size: A4; margin: 16mm 14mm 18mm 14mm;
+  @bottom-center { content: "Audit — Application de gestion de stock  ·  page " counter(page) " / " counter(pages);
+    font: 8pt 'Segoe UI', Arial, sans-serif; color: #6b7280; } }
+@page :first { @bottom-center { content: none; } }
+:root { --ink:#1f2937; --muted:#6b7280; --line:#d8dde5; --brand:#1e3a5f; --accent:#2f6fb0; --soft:#f3f6fa; }
+* { box-sizing: border-box; }
+body { font: 9.4pt/1.4 'Segoe UI', Arial, sans-serif; color: var(--ink); background:#fff; margin:0; }
+h2 { font-size: 16pt; color: var(--brand); border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin: 0 0 10px; break-after: avoid; }
+h3 { font-size: 11.5pt; color: var(--accent); margin: 14px 0 6px; break-after: avoid; }
+h4 { margin: 0 0 6px; font-size: 10pt; }
+p { margin: 5px 0 8px; }
+ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+li { margin: 2px 0; }
+code { font-family: Consolas, 'Courier New', monospace; font-size: 8.4pt; background: #eef1f5; padding: 0 3px; border-radius: 3px; word-break: break-word; }
+blockquote { margin: 8px 0; padding: 6px 10px; border-left: 4px solid var(--accent); background: var(--soft); color: #374151; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 8.4pt; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { background: var(--brand); color: #fff; text-align: left; padding: 4px 5px; font-weight: 600; }
+td { border-bottom: 1px solid var(--line); padding: 3px 5px; vertical-align: top; }
+tbody tr:nth-child(even) td { background: #f8fafc; }
+.pb { break-after: page; height: 0; }
+.b { display: inline-block; font-size: 7pt; font-weight: 700; padding: 1px 5px; border-radius: 3px; letter-spacing: .02em; white-space: nowrap; }
+.ex { background: #dcfce7; color: #166534; } .pa { background: #fef3c7; color: #92400e; }
+.ab { background: #e5e7eb; color: #374151; } .b.pr { background: #fee2e2; color: #991b1b; }
+.ac { background: #e0e7ff; color: #3730a3; }
+.diagram { break-inside: avoid; margin: 8px 0 12px; }
+.diagram pre { font: 7.4pt/1.25 Consolas, 'Courier New', monospace; background: var(--soft); border: 1px solid var(--line); padding: 10px; border-radius: 4px; white-space: pre; overflow: hidden; }
+.flow { break-inside: avoid; background: var(--soft); border-left: 4px solid var(--accent); padding: 7px 10px; margin: 0 0 8px; }
+.matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.q { border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; break-inside: avoid; }
+.q ul { margin: 0; } .q1 { border-top: 5px solid #16a34a; } .q2 { border-top: 5px solid #2563eb; }
+.q3 { border-top: 5px solid #d97706; } .q4 { border-top: 5px solid #9ca3af; }
+/* cover */
+.cover { height: 255mm; display: flex; flex-direction: column; justify-content: center; padding: 0 6mm; break-after: page; }
+.cover-kicker { text-transform: uppercase; letter-spacing: .15em; font-size: 8.5pt; color: var(--accent); font-weight: 700; }
+.cover-title { font-size: 28pt; line-height: 1.15; color: var(--brand); margin: 10px 0 8px; border: 0; }
+.cover-sub { font-size: 12pt; color: #374151; margin-bottom: 26px; }
+table.cover-meta { font-size: 9.5pt; width: 100%; }
+table.cover-meta td { border-bottom: 1px solid var(--line); background: #fff !important; padding: 6px 4px; }
+table.cover-meta td:first-child { width: 32%; color: var(--muted); font-weight: 600; }
+.cover-score { margin-top: 28px; border: 2px solid var(--brand); border-radius: 8px; padding: 14px 18px; display: grid; grid-template-columns: auto 1fr; column-gap: 18px; align-items: center; }
+.cover-score span { grid-column: 1; font-size: 10pt; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.cover-score strong { grid-column: 1; font-size: 30pt; color: #b91c1c; }
+.cover-score em { grid-column: 2; grid-row: 1 / span 2; font-style: normal; font-size: 11pt; color: #374151; }
+</style></head><body><div class="cover">
+<div class="cover-kicker">Rapport d'audit — confidentiel</div>
+<h1 class="cover-title">AUDIT — APPLICATION DE GESTION DE STOCK</h1>
+<div class="cover-sub">Audit technique, fonctionnel, métier, UX/UI, sécurité et architecture<br>Vision cible et feuille de route d'évolution</div>
+<table class="cover-meta">
+<tr><td>Application</td><td>gestion-stock (« GestStock ») — magasin d'optique multi-dépôts</td></tr>
+<tr><td>Dépôt analysé</td><td>branche <code>main</code>, commit <code>3945251</code> (« revu data et logique »)</td></tr>
+<tr><td>Date de l'audit</td><td>3 octobre 2026</td></tr>
+<tr><td>Périmètre</td><td>257 fichiers suivis, ~18 800 lignes (TS 12 624, HTML 3 381, SCSS 2 837)</td></tr>
+<tr><td>Méthode</td><td>Lecture intégrale du code, build de production, exécution des tests, <code>npm audit</code>. Aucun fichier du projet n'a été modifié.</td></tr>
+</table>
+<div class="cover-score"><span>Maturité actuelle</span><strong>31 / 100</strong><em>Prototype fonctionnel avancé — non exploitable en production en l'état</em></div>
+</div>
+
+<h2>Sommaire</h2>
+<ol>
+<li>Résumé exécutif</li>
+<li>Présentation de l'application</li>
+<li>Architecture actuelle</li>
+<li>Cartographie des modules</li>
+<li>Audit fonctionnel (métier)</li>
+<li>Audit technique</li>
+<li>Audit base de données</li>
+<li>Audit API</li>
+<li>Audit UX/UI</li>
+<li>Audit sécurité</li>
+<li>Audit performance</li>
+<li>Audit tests</li>
+<li>Audit qualité du code</li>
+<li>Fonctionnalités manquantes</li>
+<li>Recommandations</li>
+<li>Architecture cible</li>
+<li>Modèle métier cible</li>
+<li>Workflows recommandés</li>
+<li>Matrice Existant / Cible</li>
+<li>Score de maturité</li>
+<li>Registre des risques</li>
+<li>Roadmap</li>
+<li>Priorisation Impact / Effort</li>
+<li>Conclusion</li>
+<li>Annexes (conventions, preuves, méthode)</li>
+</ol>
+<p><strong>Conventions de statut</strong> : <span class="b ex">EXISTE</span> vérifié dans le code · <span class="b pa">PARTIEL</span> commencé mais incomplet · <span class="b ab">ABSENT</span> non trouvé · <span class="b pr">PROBLÉMATIQUE</span> présent mais défaillant · <span class="b ac">À CONFIRMER</span> invérifiable avec les éléments disponibles.</p>
+<p><strong>Abréviation utilisée dans les preuves</strong> : <strong>MBI</strong> = <code>src/app/core/interceptors/mock-backend.interceptor.ts</code> (le « backend simulé », 1 976 lignes). Les numéros de ligne sont ceux du commit <code>3945251</code>.</p>
+<div class="pb"></div>
+
+<h2>1. Résumé exécutif</h2>
+<p><strong>Ce qu'est réellement l'application.</strong> GestStock est une <strong>application Angular 21 sans backend réel</strong>. Toute la logique métier (stock, ventes, achats, caisse, crédit client, permissions) est exécutée <strong>dans le navigateur</strong>, par un intercepteur HTTP qui simule une API (<code>MBI</code>, 69 routes). Les données sont <strong>en mémoire</strong> : elles sont perdues à chaque rechargement de page et ne sont pas partagées entre postes. En production (<code>environment.prod.ts</code>), les mocks sont désactivés et l'application pointe vers <code>https://api.example.com/api</code>, <strong>qui n'existe pas</strong> : l'application de production est donc non fonctionnelle.</p>
+<p><strong>Ce qui est solide.</strong> Le périmètre fonctionnel couvert par l'interface est large et cohérent pour un commerce d'optique : produits, stock multi-dépôts, ventes détail/gros avec crédit client, commandes fournisseurs (réception, facture, paiements partiels), caisse (ouverture, opérations, clôture avec écart), inventaire, dépenses, rapports, journal d'audit, utilisateurs. L'architecture front (composants standalone, lazy loading, pattern <em>Feature → Facade → ApiService</em>) est propre et réutilisable. Le contrat d'API est déjà esquissé, et des schémas PostgreSQL/MongoDB existent (<code>src/app/core/mocks/seeds/</code>, <code>DATABASE_SCHEMA.md</code>).</p>
+<p><strong>Ce qui bloque.</strong></p>
+<ol>
+<li><strong>Aucun backend, aucune persistance</strong> : c'est le chantier n°1, préalable à tout le reste.</li>
+<li><strong>Sécurité inexistante dans les faits</strong> : aucune route n'est protégée par un guard. En mode mock, toutes les requêtes s'exécutent avec les droits <strong>admin</strong>, car l'intercepteur JWT est placé après le mock. Le mot de passe est <code>admin</code> pour tous les comptes.</li>
+<li><strong>Bug de stock critique</strong> : la réception d'une commande fournisseur <strong>n'augmente pas</strong> le stock réellement utilisé (stock par dépôt). Le stock affiché et celui contrôlé à la vente divergent dès la première réception.</li>
+<li><strong>Intégrité métier fragile</strong> : prix et prix d'achat d'une vente envoyés par le client (marge falsifiable). Stock modifiable directement depuis la fiche produit, sans mouvement. Mouvements, ventes et inventaires sans dépôt rattaché. Ni annulation ni retour.</li>
+<li><strong>Traçabilité de façade</strong> : l'écran d'audit est riche, mais seules 2 actions sur 69 écrivent réellement dans le journal. Les 50 entrées visibles sont des données de démonstration.</li>
+<li><strong>Tests quasi inexistants</strong> : 2 tests, dont 1 en échec.</li>
+</ol>
+<p><strong>Verdict.</strong> L'existant est une <strong>excellente maquette fonctionnelle</strong> et une bonne base front. Il <strong>n'est pas une application de gestion exploitable</strong>. Une réécriture n'est pas nécessaire : il faut <strong>construire le backend</strong> (en transposant les règles déjà codées dans <code>MBI</code>), <strong>brancher le front dessus</strong> et <strong>corriger le modèle de stock</strong>. Effort estimé pour une V1 exploitable (phases 0 à 2) : <strong>12 à 17 semaines-développeur</strong>.</p>
+<p><strong>Prochaine étape concrète</strong> : valider la stack backend (recommandation : NestJS + PostgreSQL + Prisma, cohérent avec TypeScript et avec <code>sql-seed.sql</code>), puis réaliser en 2 semaines le « socle » (auth réelle, produits, stock par dépôt avec mouvements, transactions).</p>
+<div class="pb"></div>
+
+<h2>2. Présentation de l'application</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Constat</th>
+<th>Preuve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Domaine</td>
+<td>Magasin d'optique (montures, verres, lentilles, accessoires, solutions) en Côte d'Ivoire, montants en FCFA</td>
+<td><code>src/app/core/mocks/mock-db.ts:29-35</code>, données clients/fournisseurs</td>
+</tr>
+<tr>
+<td>Type</td>
+<td>SPA Angular, interface en français</td>
+<td><code>package.json</code>, templates</td>
+</tr>
+<tr>
+<td>Utilisateurs cibles</td>
+<td>Admin, Gestionnaire, Caissier</td>
+<td><code>src/app/core/models/role.model.ts</code></td>
+</tr>
+<tr>
+<td>Multi-dépôts</td>
+<td>2 dépôts de démonstration (<code>wh_1</code> Magasin principal, <code>wh_2</code> Dépôt secondaire), sélecteur dans l'en-tête</td>
+<td><code>layout-shell.component.html</code>, <code>warehouse.interceptor.ts</code></td>
+</tr>
+<tr>
+<td>Backend</td>
+<td><strong>Simulé</strong> dans le navigateur (intercepteur HTTP)</td>
+<td>MBI:388-392</td>
+</tr>
+<tr>
+<td>Persistance</td>
+<td><strong>Mémoire uniquement</strong> (variables <code>let mock…</code>), réinitialisée au rechargement</td>
+<td>MBI:49-329</td>
+</tr>
+<tr>
+<td>Production</td>
+<td><code>useMocks: false</code> + <code>apiUrl: https://api.example.com/api</code> (factice)</td>
+<td><code>src/environments/environment.prod.ts</code></td>
+</tr>
+<tr>
+<td>Historique Git</td>
+<td>8 commits du 26/04/2026 au 12/05/2026</td>
+<td><code>git log</code></td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td><code>README.md</code> (générique Angular CLI), <code>TECHNICAL_AUDIT.md</code> (audit antérieur, mai 2026), <code>DATABASE_SCHEMA.md</code> (schéma MongoDB <em>reconstruit</em>)</td>
+<td>racine du dépôt</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note sur l'audit antérieur (<code>TECHNICAL_AUDIT.md</code>).</strong> Il a été relu mais <strong>pas pris pour acquis</strong>. Chaque point a été revérifié. Plusieurs bugs qu'il signale sont <strong>toujours présents</strong> (B1, B3, B5, B6, B8, B10, B11, B12, B14, A1, A4, A5). D'autres ont évolué : <code>transactionsCount</code> est désormais renseigné (MBI:1865, mais non filtré par date), et <code>isAuthenticated()</code> vérifie maintenant l'expiration (<code>auth/services/auth.service.ts:77-86</code>), sans qu'aucun guard ne l'utilise.</p>
+</blockquote>
+<div class="pb"></div>
+
+<h2>3. Architecture actuelle</h2>
+<h3>3.1 Stack technique</h3>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Technologie</th>
+<th>Version installée</th>
+<th>Remarque</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework</td>
+<td>Angular (standalone, control flow <code>@if/@for</code>)</td>
+<td>21.2.10</td>
+<td>Récent ; <strong>vulnérabilités HIGH</strong> signalées par <code>npm audit</code> pour &lt; 21.2.19</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>Angular Material + CDK</td>
+<td>21.2.8</td>
+<td>Tables, paginator, sort, drawers, dialogs</td>
+</tr>
+<tr>
+<td>État</td>
+<td>RxJS <code>BehaviorSubject</code> + <code>combineLatest</code> (ViewModel observable)</td>
+<td>rxjs 7.8</td>
+<td>Pas de store global ; signals marginaux</td>
+</tr>
+<tr>
+<td>Graphiques</td>
+<td>Chart.js</td>
+<td>4.4.x</td>
+<td>Dashboard, rapports</td>
+</tr>
+<tr>
+<td>Exports</td>
+<td>xlsx (SheetJS) 0.18.5, jsPDF 4.2.1</td>
+<td>—</td>
+<td><strong>xlsx : vulnérabilités HIGH sans correctif npm</strong></td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>Vitest + jsdom via <code>@angular/build:unit-test</code></td>
+<td>vitest 4</td>
+<td>1 fichier de test</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td><strong>Aucun</strong> — intercepteur <code>mockBackendInterceptor</code></td>
+<td>—</td>
+<td>69 routes simulées</td>
+</tr>
+<tr>
+<td>Base de données</td>
+<td><strong>Aucune</strong> — schémas proposés non branchés</td>
+<td>—</td>
+<td><code>sql-seed.sql</code> (20 tables, 11 index), <code>mongo-seed.js</code></td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 Schéma d'architecture actuel</h3>
+<div class="diagram">
+<pre>
+┌───────────────────────────── NAVIGATEUR ────────────────────────────────┐
+│                                                                         │
+│  Pages (15 features, lazy)  ──►  Facades (BehaviorSubject VM)           │
+│                                       │                                 │
+│                                       ▼                                 │
+│                          ApiServices (HttpClient, 14)                   │
+│                                       │                                 │
+│        Chaîne d'intercepteurs (ordre réel, app.config.ts:21)           │
+│        apiError ─► warehouse ─► mockBackend ─╳─► jwt (jamais atteint)   │
+│                                       │                                 │
+│                                       ▼                                 │
+│        MBI : 69 routes, règles métier, RBAC, données EN MÉMOIRE         │
+│        (mock-db.ts : 35 produits, 66 ventes, 2 dépôts, 4 utilisateurs)  │
+└─────────────────────────────────────────────────────────────────────────┘
+        Production : useMocks=false ─► https://api.example.com (inexistant)
+</pre>
+</div>
+
+<h3>3.3 Patterns et stratégies</h3>
+<table>
+<thead>
+<tr>
+<th>Sujet</th>
+<th>Stratégie actuelle</th>
+<th>Évaluation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Séparation front/back</td>
+<td>Contrat HTTP propre, mais le « back » vit dans le front</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+</tr>
+<tr>
+<td>Organisation</td>
+<td><code>core/</code> (models, services, guards, interceptors, mocks) + <code>features/&lt;module&gt;/{data,pages,ui}</code></td>
+<td><span class="b ex">EXISTE</span> bonne structure</td>
+</tr>
+<tr>
+<td>Gestion d'état</td>
+<td>Facade par feature, <code>vm$</code> combiné</td>
+<td><span class="b ex">EXISTE</span> cohérent mais verbeux</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Reactive Forms côté UI + contrôles ad hoc dans MBI</td>
+<td><span class="b pa">PARTIEL</span> pas de schéma partagé</td>
+</tr>
+<tr>
+<td>Authentification</td>
+<td>JWT simulé non signé (<code>jwt.sim.ts</code>), tokens en <code>localStorage</code>/<code>sessionStorage</code></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+</tr>
+<tr>
+<td>Autorisation</td>
+<td><code>hasRole()</code> dans MBI ; guards écrits mais <strong>jamais branchés</strong></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+</tr>
+<tr>
+<td>Contexte dépôt</td>
+<td>En-tête <code>X-Warehouse-Id</code> injecté sur toutes les requêtes</td>
+<td><span class="b ex">EXISTE</span> bonne idée, mal exploitée côté données</td>
+</tr>
+<tr>
+<td>Erreurs</td>
+<td><code>apiErrorInterceptor</code> (snackbar global) + <code>toApiError</code> dupliqué dans 11 services</td>
+<td><span class="b pa">PARTIEL</span></td>
+</tr>
+<tr>
+<td>Persistance</td>
+<td>Aucune</td>
+<td><span class="b ab">ABSENT</span></td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>4. Cartographie des modules</h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Route</th>
+<th>Existence</th>
+<th>État</th>
+<th>Complétude</th>
+<th>Observations (preuves)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Authentification</td>
+<td><code>/login</code>, <code>/forgot-password</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>35 %</td>
+<td>Login fonctionnel en mock ; mot de passe <code>admin</code> universel (MBI:485) ; « mot de passe oublié » simulé ; <strong>aucun guard</strong> sur les routes (<code>layout.routes.ts</code>)</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td><code>/dashboard</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>40 %</td>
+<td>3 KPI (CA du jour, marge du jour, unités en stock) ; courbe « évolution du stock » <strong>fictive</strong> (<code>dashboard.facade.ts:152-165</code>)</td>
+</tr>
+<tr>
+<td>Produits</td>
+<td><code>/products</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>55 %</td>
+<td>CRUD + recherche/tri/pagination client ; stock éditable dans la fiche (contourne les mouvements)</td>
+</tr>
+<tr>
+<td>Catégories</td>
+<td>—</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Lecture seule</td>
+<td>15 %</td>
+<td>Seul <code>GET /categories</code> existe (MBI:632) ; 5 catégories figées, pas d'écran</td>
+</tr>
+<tr>
+<td>Stock / mouvements</td>
+<td><code>/stock</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>45 %</td>
+<td>Historique + saisie manuelle ; mouvements <strong>sans dépôt</strong> ; aucun contrôle de rôle (MBI:1610)</td>
+</tr>
+<tr>
+<td>Dépôts / transferts</td>
+<td><code>/warehouses</code>, <code>/warehouses/transfer</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>40 %</td>
+<td>Création + transfert immédiat mono-produit ; pas de modification/suppression ni d'emplacements</td>
+</tr>
+<tr>
+<td>Ventes (POS)</td>
+<td><code>/sales</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>50 %</td>
+<td>Panier, détail/gros, crédit, facture PDF ; prix fournis par le client ; ni annulation, ni retour, ni remise, ni TVA</td>
+</tr>
+<tr>
+<td>Clients</td>
+<td><code>/clients</code>, <code>/clients/:id</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>60 %</td>
+<td>CRUD, plafond de crédit, paiements, historique ; surpaiement possible</td>
+</tr>
+<tr>
+<td>Achats</td>
+<td><code>/purchases</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>50 %</td>
+<td>Commande → réception → facture → paiement ; <strong>réception sans effet sur le stock réel</strong> (MBI:1219-1229)</td>
+</tr>
+<tr>
+<td>Fournisseurs</td>
+<td><code>/suppliers</code>, <code>/suppliers/:id</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>60 %</td>
+<td>CRUD, historique, paiements ; suppression laisse des commandes orphelines (MBI:916-917)</td>
+</tr>
+<tr>
+<td>Caisse</td>
+<td><code>/cash-register/{open,close,history}</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>55 %</td>
+<td>Session unique <strong>globale</strong> (tous postes, tous dépôts) ; ventes non rattachées à la session</td>
+</tr>
+<tr>
+<td>Dépenses</td>
+<td><code>/expenses</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>50 %</td>
+<td>Création/suppression ; pas de modification ; catégorie en texte libre</td>
+</tr>
+<tr>
+<td>Inventaire</td>
+<td><code>/inventory/{count,history}</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>35 %</td>
+<td>Application immédiate, sans brouillon ni validation ; quantités pré-remplies = théorique ; sessions sans dépôt</td>
+</tr>
+<tr>
+<td>Rapports</td>
+<td><code>/reports</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>40 %</td>
+<td>Jour/mois/année calculés côté client (corrects) ; endpoints <code>/reports/*</code> faux mais inutilisés ; export Excel</td>
+</tr>
+<tr>
+<td>Rendez-vous (optique)</td>
+<td><code>/appointments</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>50 %</td>
+<td>CRUD ; aucun contrôle de rôle ; endpoint statut bogué (MBI:1768) mais non appelé par l'UI</td>
+</tr>
+<tr>
+<td>Journal d'audit</td>
+<td><code>/audit-logs</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>25 %</td>
+<td>Belle UI (filtres, stats, export CSV) ; <strong>2 actions réellement tracées</strong> ; 50 entrées de démonstration</td>
+</tr>
+<tr>
+<td>Utilisateurs</td>
+<td><code>/users</code></td>
+<td><span class="b ex">EXISTE</span></td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>45 %</td>
+<td>CRUD + activation ; pas de mot de passe ; un utilisateur désactivé peut se connecter</td>
+</tr>
+<tr>
+<td>Notifications / alertes</td>
+<td>—</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Indicateur visuel</td>
+<td>10 %</td>
+<td>Uniquement le libellé « Stock faible / Rupture » dans la liste produits</td>
+</tr>
+<tr>
+<td>Paramètres (société, TVA, numérotation)</td>
+<td>—</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+<td>0 %</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Retours clients / fournisseurs</td>
+<td>—</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+<td>0 %</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Lots / péremption</td>
+<td>—</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+<td>0 %</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Code-barres / QR</td>
+<td>—</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+<td>0 %</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Code mort</td>
+<td><code>ReportsPageComponent</code>, <code>SalesPageComponent</code>, <code>StockPageComponent</code>, <code>UsersPageComponent</code>, <code>query.engine</code>, <code>network.sim</code>, <code>mock-factory</code>, <code>mock-db-large</code>, <code>core/guards/*</code>, <code>CoreModule</code>, <code>SharedModule</code></td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>—</td>
+<td>—</td>
+<td>Jamais référencés par le routing ni par d'autres modules</td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>5. Audit fonctionnel (métier)</h2>
+<h3>5.A Produits</h3>
+<table>
+<thead>
+<tr>
+<th>Attribut / fonction</th>
+<th>Statut</th>
+<th>Preuve / commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Création / modification</td>
+<td><span class="b ex">EXISTE</span></td>
+<td><code>product-drawer.component.ts</code>, MBI:638-713</td>
+</tr>
+<tr>
+<td>Suppression</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Suppression physique, sans contrôle des ventes/mouvements liés, ni audit (MBI:715-729)</td>
+</tr>
+<tr>
+<td>Référence / SKU</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Requis côté UI ; côté API auto-généré <code>SKU-XXXX</code> aléatoire, <strong>sans contrôle d'unicité</strong> (MBI:649)</td>
+</tr>
+<tr>
+<td>Code-barres (EAN/GTIN)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Champ inexistant dans <code>product.model.ts</code></td>
+</tr>
+<tr>
+<td>Nom</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Validé côté UI ; l'API accepte un nom vide (défaut « Nouveau produit », MBI:650)</td>
+</tr>
+<tr>
+<td>Description</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Catégorie</td>
+<td><span class="b ex">EXISTE</span></td>
+<td><code>categoryId</code> ; défaut silencieux <code>cat_1</code> côté API</td>
+</tr>
+<tr>
+<td>Marque</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Présente seulement dans le libellé (« Ray-Ban… ») — critique en optique</td>
+</tr>
+<tr>
+<td>Unité / conditionnement</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Pas de notion de boîte de lentilles, de paire, etc.</td>
+</tr>
+<tr>
+<td>Prix d'achat</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Écrasé par le <strong>dernier</strong> prix reçu (MBI:1227) ; pas de CUMP</td>
+</tr>
+<tr>
+<td>Prix de vente détail / gros</td>
+<td><span class="b ex">EXISTE</span></td>
+<td><code>retailPrice</code>, <code>wholesalePrice</code></td>
+</tr>
+<tr>
+<td>Marge</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Calculée à la vente uniquement ; aucun contrôle « prix de vente &lt; prix d'achat »</td>
+</tr>
+<tr>
+<td>TVA</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Aucun champ ni calcul</td>
+</tr>
+<tr>
+<td>Seuil minimum</td>
+<td><span class="b ex">EXISTE</span></td>
+<td><code>alertThreshold</code></td>
+</tr>
+<tr>
+<td>Seuil maximum / surstock</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Stock actuel</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Champ <code>stockQuantity</code> dénormalisé <strong>et</strong> stock par dépôt : deux sources de vérité (voir 5.C)</td>
+</tr>
+<tr>
+<td>Stock réservé / disponible</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Image</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Statut actif / inactif</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Seule la suppression physique existe</td>
+</tr>
+<tr>
+<td>Variantes (couleur, taille, puissance)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Indispensable pour montures et lentilles (dioptrie, rayon, diamètre)</td>
+</tr>
+<tr>
+<td>Historique des prix</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Seul l'audit d'un <code>UPDATE</code> produit conserve <code>before/after</code> (MBI:701)</td>
+</tr>
+</tbody>
+</table>
+<h3>5.B Catégories</h3>
+<p><span class="b pa">PARTIEL</span> — Seule la lecture est possible (<code>GET /categories</code>, MBI:632-636). Il n'y a ni création, ni modification, ni suppression, ni hiérarchie, ni contrôle d'unicité, ni activation. Le modèle se limite à <code>{id, name}</code> (<code>category.model.ts</code>). <strong>Risque</strong> : impossible d'ajouter une gamme sans modifier le code.</p>
+<h3>5.C Stock — analyse approfondie</h3>
+<p><strong>Mécanisme réel.</strong> Le stock est <strong>stocké directement</strong> dans une table <code>Record&lt;warehouseId, Record&lt;productId, qty&gt;&gt;</code> (MBI:309-327), modifiée par <code>setStock</code>/<code>adjustStock</code>. Des mouvements sont <strong>en plus</strong> journalisés, mais le stock <strong>n'est jamais recalculé</strong> à partir d'eux. Parallèlement, <code>Product.stockQuantity</code> existe comme champ propre. Il est mis à jour par la réception (seulement), puis <strong>écrasé à l'affichage</strong> par la valeur du dépôt courant (MBI:530).</p>
+<table>
+<thead>
+<tr>
+<th>Opération</th>
+<th>Statut</th>
+<th>Effet sur stock dépôt</th>
+<th>Mouvement créé</th>
+<th>Problème</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stock initial</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Oui (dépôt courant)</td>
+<td><strong>Non</strong></td>
+<td>Pas de mouvement « stock initial » → historique incomplet (MBI:665-668)</td>
+</tr>
+<tr>
+<td>Entrée par réception fournisseur</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td><strong>Non</strong></td>
+<td>Oui (<code>SUPPLY</code>)</td>
+<td><strong>Bug critique</strong> : seul <code>product.stockQuantity</code> est incrémenté (MBI:1224-1229), valeur ignorée ensuite. Le mouvement existe, mais pas le stock.</td>
+</tr>
+<tr>
+<td>Sortie par vente</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Oui</td>
+<td>Oui (<code>SALE</code>)</td>
+<td>Mouvement sans <code>warehouseId</code> (dépôt seulement dans la note)</td>
+</tr>
+<tr>
+<td>Mouvement manuel (entrée, perte, ajustement)</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Oui</td>
+<td>Oui</td>
+<td>Aucun contrôle de rôle ; motif <code>LOSS</code>/<code>ADJUSTMENT</code> sans justification obligatoire (MBI:1610-1648)</td>
+</tr>
+<tr>
+<td>Modification via fiche produit</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Oui (<code>setStock</code>)</td>
+<td><strong>Non</strong></td>
+<td>Contournement total de la traçabilité (MBI:692-695, champ <code>stockQuantity</code> du formulaire)</td>
+</tr>
+<tr>
+<td>Transfert inter-dépôts</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Oui (2 dépôts)</td>
+<td>Oui (2 × <code>ADJUSTMENT</code>)</td>
+<td>Motif <code>TRANSFER</code> absent ; immédiat (pas de « en transit ») ; mono-produit</td>
+</tr>
+<tr>
+<td>Inventaire</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Oui (<code>setStock</code>)</td>
+<td>Oui (<code>ADJUSTMENT</code>)</td>
+<td>Voir 5.H</td>
+</tr>
+<tr>
+<td>Stock réservé / théorique / disponible</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Utilisateur responsable</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>—</td>
+<td><code>createdByUserId</code></td>
+<td>En mock, toujours <code>u_admin</code> (voir sécurité S2)</td>
+</tr>
+<tr>
+<td>Date / heure</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>—</td>
+<td><code>createdAt</code> ISO</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Risques d'incohérence identifiés.</strong></p>
+<ol>
+<li>Divergence <strong>stock affiché / stock vendable</strong> après chaque réception (critique).</li>
+<li>Σ mouvements ≠ stock (stock initial et modifications par fiche sans mouvement) : <strong>aucune réconciliation possible</strong>.</li>
+<li>Mouvements non rattachés à un dépôt : impossible de reconstituer le stock d'un dépôt ou de filtrer l'historique par dépôt.</li>
+<li>Aucune atomicité : en backend réel, une vente multi-lignes pourrait décrémenter une partie du stock puis échouer.</li>
+<li>Concurrence non gérée (deux caisses vendant le dernier article).</li>
+<li>Suppression d'un produit : ventes et mouvements orphelins (le nom n'est plus résolu, <code>stock.facade.ts:112</code>).</li>
+</ol>
+<h3>5.D Entrepôts / magasins</h3>
+<table>
+<thead>
+<tr>
+<th>Capacité</th>
+<th>Statut</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plusieurs dépôts</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Création par nom (MBI:553-575) ; modèle <code>{id, name}</code> seulement</td>
+</tr>
+<tr>
+<td>Stock par dépôt</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Mais vue globale « tous dépôts » absente</td>
+</tr>
+<tr>
+<td>Transfert entre dépôts</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Immédiat, sans bon de transfert, validation ni réception</td>
+</tr>
+<tr>
+<td>Emplacements, zones, rayons</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Restriction utilisateur ↔ dépôt</td>
+<td><span class="b ab">ABSENT</span></td>
+<td><code>User.magasin</code> est un libellé libre jamais utilisé pour filtrer ; le sélecteur d'en-tête est libre</td>
+</tr>
+<tr>
+<td>Modifier / désactiver un dépôt</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Ventes, caisse, inventaires par dépôt</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td><code>Sale</code>, <code>InventorySession</code>, <code>CashRegisterSession</code> n'ont pas de <code>warehouseId</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Intérêt d'aller plus loin</strong> : pour un opticien à 2 sites, les emplacements fins (rayons) sont <strong>P3</strong>. En revanche, le rattachement systématique au dépôt de chaque document (vente, mouvement, inventaire, caisse) et la vue consolidée sont <strong>P0/P1</strong>.</p>
+<h3>5.E Achats</h3>
+<p>Processus cible : <em>Fournisseur → commande → réception → contrôle → stock → facture → paiement</em>.</p>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Statut</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fournisseurs</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>CRUD, délai de livraison</td>
+</tr>
+<tr>
+<td>Commande d'achat + lignes</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Statuts <code>PENDING → DELIVERED</code> uniquement</td>
+</tr>
+<tr>
+<td>Modification / annulation de commande</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Pas de statut <code>CANCELLED</code>, ni de brouillon</td>
+</tr>
+<tr>
+<td>Réception complète</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Sans effet sur le stock dépôt (bug critique) ; dépôt de réception non choisi</td>
+</tr>
+<tr>
+<td>Réception partielle</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Tout ou rien</td>
+</tr>
+<tr>
+<td>Contrôle qualité / écarts à réception</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Prix d'achat / historique</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Dernier prix écrase l'ancien ; pas d'historique ni de CUMP</td>
+</tr>
+<tr>
+<td>Facture fournisseur</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Numéro + date ; montant = total commande (pas d'écart facture/commande, ni de TVA)</td>
+</tr>
+<tr>
+<td>Paiements partiels</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Contrôle « ≤ reste à payer »</td>
+</tr>
+<tr>
+<td>Dettes fournisseurs</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Calculables par commande ; pas de balance âgée ni d'échéances</td>
+</tr>
+<tr>
+<td>Retours fournisseurs / avoirs</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Commande déclenchée par seuil</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3>5.F Ventes</h3>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>Statut</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clients</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Nom, téléphone, email, plafond de crédit</td>
+</tr>
+<tr>
+<td>Vente comptoir (panier → paiement)</td>
+<td><span class="b ex">EXISTE</span></td>
+<td><code>sales.facade.ts</code>, MBI:1657-1753</td>
+</tr>
+<tr>
+<td>Détail / gros</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Re-tarification du panier au changement de type</td>
+</tr>
+<tr>
+<td>Vente à crédit + plafond</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Plafond contrôlé ; <strong>crédit sans client accepté par l'API</strong> (UI seule bloque, <code>sales-shell-page.component.ts:181</code>)</td>
+</tr>
+<tr>
+<td>Modes de paiement</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td><code>CASH</code>, <code>MOBILE_MONEY</code>, <code>BANK_TRANSFER</code> ; pas de paiement mixte</td>
+</tr>
+<tr>
+<td>Prix de vente</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td><code>unitPrice</code> et <code>purchasePrice</code> <strong>viennent du client</strong> (MBI:1663-1676) : prix et marge falsifiables</td>
+</tr>
+<tr>
+<td>Facture</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>PDF généré côté navigateur (jsPDF) ; pas de numérotation légale séquentielle, de mentions légales ni de TVA</td>
+</tr>
+<tr>
+<td>Commande client / devis / préparation / livraison</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Pas de cycle commande → livraison</td>
+</tr>
+<tr>
+<td>Remise (ligne / globale)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>TVA</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Annulation de vente</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Aucune route <code>DELETE</code>/<code>cancel</code></td>
+</tr>
+<tr>
+<td>Retours</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Marge / bénéfice</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Calculés sur le prix d'achat envoyé par le client</td>
+</tr>
+<tr>
+<td>Stock après vente</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Décrément dépôt + mouvement <code>SALE</code></td>
+</tr>
+<tr>
+<td>Lien vente ↔ session de caisse</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Une vente cash est possible caisse fermée ; rattachement par fenêtre horaire seulement (MBI:273-279)</td>
+</tr>
+<tr>
+<td>Ordonnance / prescription (optique)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>À considérer : verres correcteurs sur prescription</td>
+</tr>
+</tbody>
+</table>
+<h3>5.G Clients et crédit</h3>
+<p><span class="b pa">PARTIEL</span> — La dette est calculée à la volée : Σ ventes − Σ payé à la vente − Σ paiements (MBI:1687-1691). Points faibles :</p>
+<ul>
+<li><strong>surpaiement accepté</strong>, aucune comparaison avec la dette (MBI:1571) ;</li>
+<li>la <strong>suppression d'un client efface ses paiements</strong> mais conserve ses ventes, ce qui fausse les historiques (MBI:1528-1529) ;</li>
+<li>pas d'échéance, de relance ni de balance âgée ;</li>
+<li>le paiement d'une dette en espèces n'entre pas dans la caisse.</li>
+</ul>
+<h3>5.H Inventaire</h3>
+<table>
+<thead>
+<tr>
+<th>Exigence</th>
+<th>Statut</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inventaire manuel</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Saisie des quantités physiques dans un tableau</td>
+</tr>
+<tr>
+<td>Inventaire global</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Tous les produits sont listés <strong>et pré-remplis avec la quantité théorique</strong> (<code>inventory-count-page.component.ts:61</code>). Un article non compté est réputé conforme, ce qui masque les pertes.</td>
+</tr>
+<tr>
+<td>Inventaire partiel (catégorie, zone)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Écart théorique / réel</td>
+<td><span class="b ex">EXISTE</span></td>
+<td><code>difference</code> par ligne</td>
+</tr>
+<tr>
+<td>Ouverture → comptage → validation</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Une seule action applique immédiatement les ajustements (MBI:789-805)</td>
+</tr>
+<tr>
+<td>Gel du stock / ventes pendant comptage</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Justification des écarts</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Note globale uniquement</td>
+</tr>
+<tr>
+<td>Valorisation de l'écart</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Historique / responsable / date</td>
+<td><span class="b pa">PARTIEL</span></td>
+<td>Oui, mais <strong>dépôt non enregistré</strong> dans la session (<code>inventory.model.ts</code>)</td>
+</tr>
+<tr>
+<td>Double comptage / validation par un tiers</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3>5.I Retours</h3>
+<p><span class="b ab">ABSENT</span> — Aucun retour client (total ou partiel, motif, remboursement, avoir, remise en stock, produit défectueux), aucun retour fournisseur. Le motif de mouvement <code>RETURN</code> n'existe pas (<code>stock-movement.model.ts</code>).</p>
+<h3>5.J Alertes</h3>
+<table>
+<thead>
+<tr>
+<th>Alerte</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stock faible (≤ seuil)</td>
+<td><span class="b pa">PARTIEL</span> — libellé dans la liste produits, pour le dépôt courant seulement ; ni notification ni liste dédiée</td>
+</tr>
+<tr>
+<td>Rupture</td>
+<td><span class="b pa">PARTIEL</span> — libellé « Rupture »</td>
+</tr>
+<tr>
+<td>Surstock</td>
+<td><span class="b ab">ABSENT</span></td>
+</tr>
+<tr>
+<td>Produit expiré / proche expiration</td>
+<td><span class="b ab">ABSENT</span></td>
+</tr>
+<tr>
+<td>Commande fournisseur en retard</td>
+<td><span class="b ab">ABSENT</span> (le <code>deliveryLeadTimeDays</code> existe mais n'est pas exploité)</td>
+</tr>
+<tr>
+<td>Paiement client en retard</td>
+<td><span class="b ab">ABSENT</span></td>
+</tr>
+<tr>
+<td>Inventaire nécessaire</td>
+<td><span class="b ab">ABSENT</span></td>
+</tr>
+</tbody>
+</table>
+<h3>5.K Lots et dates d'expiration</h3>
+<p><span class="b ab">ABSENT</span> — Il n'y a ni numéro de lot, ni dates de fabrication ou de péremption, ni quantité par lot, ni FIFO/FEFO. <strong>Pertinence élevée pour ce commerce</strong> : les lentilles de contact et les solutions d'entretien sont périmables et soumises à traçabilité (rappels de lots fabricant). Ailleurs, c'est indispensable en pharmacie, agroalimentaire, cosmétique et pièces détachées réglementées. <strong>Recommandation : P2</strong>, limitée aux catégories « Lentilles » et « Solutions » (flag <code>trackBatches</code> par produit), avec sortie FEFO.</p>
+<h3>5.L Code-barres / QR</h3>
+<p><span class="b ab">ABSENT</span> — Il n'y a ni champ, ni scan, ni impression d'étiquettes. <strong>Stratégie réaliste</strong> :</p>
+<ol>
+<li>ajouter <code>barcode</code> (EAN-13) sur le produit, avec index unique ;</li>
+<li>au POS et à l'inventaire, utiliser une <strong>douchette USB/Bluetooth en émulation clavier</strong> (aucun SDK, un champ texte focalisé suffit) ;</li>
+<li>générer des étiquettes internes (Code 128) pour les produits sans EAN, en PDF A4 multi-étiquettes ;</li>
+<li>la caméra mobile (lib <code>@zxing/browser</code>) vient seulement en phase 5.</li>
+</ol>
+<h3>5.M Utilisateurs, rôles, permissions</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Statut</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CRUD utilisateurs</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Admin uniquement côté API</td>
+</tr>
+<tr>
+<td>Mot de passe</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Aucun champ ; <code>admin</code> pour tous (MBI:485)</td>
+</tr>
+<tr>
+<td>Rôles</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td><strong>Deux modèles concurrents</strong> : <code>Role = ADMIN/CAISSIER/GESTIONNAIRE</code> (<code>core/models/role.model.ts</code>) et <code>UserRole = ADMIN/MANAGER/EMPLOYEE</code> (<code>auth/models/user.model.ts</code>), ponts via <code>as unknown as any</code> (<code>core/services/auth.service.ts:40</code>)</td>
+</tr>
+<tr>
+<td>Permissions fines (lecture/création/modif/suppression/validation)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Rôles codés en dur par route</td>
+</tr>
+<tr>
+<td>Accès par module (menu)</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>Menu identique pour tous (<code>layout-shell.component.ts:62-78</code>)</td>
+</tr>
+<tr>
+<td>Restriction par dépôt / entreprise</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Désactivation effective</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td><code>isActive</code> non vérifié au login (MBI:482-489)</td>
+</tr>
+<tr>
+<td>Auto-suppression de l'admin</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td>Rien n'empêche de supprimer le dernier admin (MBI:1438-1449)</td>
+</tr>
+</tbody>
+</table>
+<h3>5.N Audit et traçabilité</h3>
+<p><span class="b pr">PROBLÉMATIQUE</span>. Le modèle <code>AuditLogEntry</code> est bien conçu (utilisateur, rôle, action, entité, <code>before/after</code>, <code>changes</code>, IP, statut). L'écran est complet. <strong>Mais</strong> :</p>
+<ul>
+<li><code>appendAudit()</code> n'est appelé que <strong>2 fois</strong> : mise à jour produit (MBI:701) et création de vente (MBI:1741) ;</li>
+<li>les 50 entrées affichées sont <strong>codées en dur</strong> (MBI:70-121) ;</li>
+<li>l'IP vaut <code>127.0.0.1</code> et le rôle <code>ADMIN</code> par défaut ;</li>
+<li>le journal est plafonné à 500 entrées en mémoire ;</li>
+<li>il n'y a ni immuabilité, ni horodatage serveur ;</li>
+<li>connexions, déconnexions, suppressions, réceptions, paiements, inventaires et transferts <strong>ne sont pas tracés</strong>.</li>
+</ul>
+<h3>5.O Tableau de bord</h3>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Statut</th>
+<th>Fiabilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CA du jour</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Moyenne : calcul client sur <strong>toutes</strong> les ventes, tous dépôts confondus, date UTC</td>
+</tr>
+<tr>
+<td>Marge du jour</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Faible : dépend du prix d'achat envoyé par le client</td>
+</tr>
+<tr>
+<td>Unités en stock</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Faible : dépôt courant seulement, en unités (pas en valeur), faussé par le bug de réception</td>
+</tr>
+<tr>
+<td>Ventes 14 jours, top 8 produits</td>
+<td><span class="b ex">EXISTE</span></td>
+<td>Correct sur les données disponibles</td>
+</tr>
+<tr>
+<td>Évolution du stock</td>
+<td><span class="b pr">PROBLÉMATIQUE</span></td>
+<td><strong>Fictive</strong> : stock actuel × (1 − 0,02·i) (<code>dashboard.facade.ts:160</code>). Trompeuse, à retirer.</td>
+</tr>
+<tr>
+<td>Valeur du stock, ruptures, produits sous seuil, achats, créances, dettes, rotation</td>
+<td><span class="b ab">ABSENT</span></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3>5.P Rapports</h3>
+<p><span class="b pa">PARTIEL</span>. La page <code>/reports</code> filtre correctement par jour, mois ou année <strong>côté client</strong> (<code>reports.facade.ts:110-121</code>). Elle affiche CA, marge brute, nombre de transactions et top produits, avec export Excel. Les dépenses ne sont <strong>pas déduites</strong> : il n'y a pas de bénéfice net. Les endpoints <code>/api/reports/daily|monthly|yearly</code> sont <strong>faux</strong> (totaux non filtrés, <code>lossCount: 0</code>, MBI:1862-1970) mais <strong>inutilisés</strong> : le seul consommateur, <code>ReportsPageComponent</code>, n'est pas routé. Absents : état et valorisation du stock, mouvements, achats, inventaires, produits dormants, rotation, créances, dettes, historique des prix, performance par dépôt ou par vendeur.</p>
+<h3>5.Q Finance / gestion commerciale</h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chiffre d'affaires, marge brute</td>
+<td><span class="b pa">PARTIEL</span></td>
+</tr>
+<tr>
+<td>Coût d'achat (CUMP / FIFO)</td>
+<td><span class="b ab">ABSENT</span> (dernier prix)</td>
+</tr>
+<tr>
+<td>TVA, remises</td>
+<td><span class="b ab">ABSENT</span></td>
+</tr>
+<tr>
+<td>Paiements clients / fournisseurs</td>
+<td><span class="b ex">EXISTE</span></td>
+</tr>
+<tr>
+<td>Crédits clients, dettes fournisseurs</td>
+<td><span class="b pa">PARTIEL</span></td>
+</tr>
+<tr>
+<td>Dépenses</td>
+<td><span class="b ex">EXISTE</span> (simples)</td>
+</tr>
+<tr>
+<td>Caisse</td>
+<td><span class="b pa">PARTIEL</span> (globale, non rattachée aux ventes)</td>
+</tr>
+<tr>
+<td>Bénéfice net (marge − dépenses)</td>
+<td><span class="b ab">ABSENT</span> dans l'UI</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Frontière recommandée.</strong> Restent <strong>dans le périmètre (gestion commerciale)</strong> : CA, marge, CUMP, TVA collectée/déductible <em>calculée</em>, remises, encaissements, créances, dettes, caisse, dépenses opérationnelles, exports. Restent <strong>hors périmètre (comptabilité)</strong> : plan comptable, écritures en partie double, grand livre, bilan, liasse fiscale, rapprochement bancaire. Prévoir plutôt un <strong>export comptable</strong> (journal des ventes, achats et encaissements au format CSV/FEC-like) vers le logiciel du cabinet comptable.</p>
+<h3>5.R Multi-entreprise / multi-magasin</h3>
+<p><strong>Multi-magasin</strong> : l'en-tête <code>X-Warehouse-Id</code> est une bonne base. Il manque le rattachement des documents au dépôt, les droits par dépôt et la consolidation. L'évolution est <strong>faisable</strong> sans refonte. <strong>Multi-entreprise</strong> : rien n'existe (pas de <code>companyId</code>, pas d'isolation). C'est faisable si le backend est conçu <strong>dès le départ</strong> avec un <code>companyId</code> sur chaque table et un filtrage systématique (row-level security PostgreSQL ou middleware). Ce n'est <strong>pas prioritaire</strong> pour un opticien mono-société : <strong>P3</strong>, mais la colonne est à prévoir dès la phase 1 pour éviter une migration lourde.</p>
+<div class="pb"></div>
+
+<h2>6. Audit technique</h2>
+<table>
+<thead>
+<tr>
+<th>Constat</th>
+<th>Gravité</th>
+<th>Preuve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logique métier exécutée dans le navigateur (intercepteur de 1 976 lignes, 69 routes en <code>if</code> successifs)</td>
+<td>CRITIQUE</td>
+<td>MBI</td>
+</tr>
+<tr>
+<td>Données en mémoire, perdues au rechargement, non partagées entre postes</td>
+<td>CRITIQUE</td>
+<td>MBI:49-329</td>
+</tr>
+<tr>
+<td>Build de production sans backend (<code>api.example.com</code>)</td>
+<td>CRITIQUE</td>
+<td><code>environment.prod.ts</code></td>
+</tr>
+<tr>
+<td>Données mock (noms, emails, téléphones) <strong>incluses dans le bundle de production</strong></td>
+<td>MOYEN</td>
+<td>Bundle <code>main-*.js</code> contient <code>optivision.ci</code> (import statique de <code>mock-db.ts</code> par MBI)</td>
+</tr>
+<tr>
+<td>Ordre des intercepteurs : <code>jwt</code> après <code>mockBackend</code></td>
+<td>ÉLEVÉ</td>
+<td><code>app.config.ts:21</code></td>
+</tr>
+<tr>
+<td>Deux <code>AuthService</code>, deux modèles <code>User</code>, deux jeux de guards</td>
+<td>MOYEN</td>
+<td><code>auth/services</code>, <code>core/services</code>, <code>auth/guards</code>, <code>core/guards</code></td>
+</tr>
+<tr>
+<td>Aucune transaction ni atomicité dans les opérations multi-étapes</td>
+<td>ÉLEVÉ (en backend réel)</td>
+<td>Vente, réception, inventaire</td>
+</tr>
+<tr>
+<td>Identifiants générés par <code>Date.now()</code> : collisions possibles en rafale</td>
+<td>FAIBLE</td>
+<td>Ex. MBI:609 et 617 (in/out même ms)</td>
+</tr>
+<tr>
+<td>Gestion des dates en UTC via <code>toISOString().slice(0,10)</code> : décalage possible hors GMT</td>
+<td>FAIBLE (GMT en CI)</td>
+<td><code>dashboard.facade.ts:102</code>, <code>reports.facade.ts:113</code></td>
+</tr>
+<tr>
+<td>Build OK ; avertissements CommonJS (jspdf/canvg)</td>
+<td>FAIBLE</td>
+<td><code>ng build</code></td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>7. Audit base de données</h2>
+<p>Il n'y a <strong>pas de base de données</strong>. L'analyse porte sur les <strong>modèles TypeScript</strong> (le contrat de fait) et sur les <strong>schémas proposés mais non branchés</strong> (<code>sql-seed.sql</code> : 20 tables, 11 index, extension <code>pgcrypto</code> ; <code>mongo-seed.js</code> ; <code>DATABASE_SCHEMA.md</code>, « reconstruit depuis le code source »).</p>
+<table>
+<thead>
+<tr>
+<th>Problème structurel</th>
+<th>Gravité</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pas de <code>warehouseId</code> sur <code>StockMovement</code>, <code>Sale</code>, <code>InventorySession</code>, <code>CashRegisterSession</code></td>
+<td>CRITIQUE</td>
+<td>Traçabilité par dépôt impossible</td>
+</tr>
+<tr>
+<td>Double source de vérité du stock (<code>Product.stockQuantity</code> vs table dépôt)</td>
+<td>CRITIQUE</td>
+<td>Cause directe du bug de réception</td>
+</tr>
+<tr>
+<td>Lignes de vente sans snapshot (nom/SKU)</td>
+<td>MOYEN</td>
+<td>Historique illisible après suppression produit</td>
+</tr>
+<tr>
+<td>Aucune contrainte d'unicité appliquée (SKU, nom de catégorie, n° facture)</td>
+<td>ÉLEVÉ</td>
+<td>Doublons possibles</td>
+</tr>
+<tr>
+<td>Suppressions physiques en cascade incohérentes (client → paiements supprimés, ventes conservées ; fournisseur → historique supprimé, commandes conservées)</td>
+<td>ÉLEVÉ</td>
+<td>MBI:1528, 916</td>
+</tr>
+<tr>
+<td>Pas de soft delete, pas de <code>updatedAt</code>/<code>updatedBy</code></td>
+<td>MOYEN</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Montants en <code>number</code> JS (flottants)</td>
+<td>MOYEN</td>
+<td>En SQL : <code>NUMERIC(14,2)</code> ou entiers en FCFA</td>
+</tr>
+<tr>
+<td>Énumérations incomplètes (<code>TRANSFER</code>, <code>RETURN</code>, <code>INITIAL</code>, <code>CANCELLED</code>)</td>
+<td>MOYEN</td>
+<td><code>stock-movement.model.ts</code>, <code>purchase-order.model.ts</code></td>
+</tr>
+<tr>
+<td>Mot de passe par défaut <code>password123</code> dans le seed SQL</td>
+<td>ÉLEVÉ si exécuté en prod</td>
+<td><code>sql-seed.sql:51</code></td>
+</tr>
+<tr>
+<td><code>DATABASE_SCHEMA.md</code> décrit MongoDB, <code>sql-seed.sql</code> décrit PostgreSQL</td>
+<td>FAIBLE</td>
+<td>Choix de SGBD non tranché</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommandation</strong> : <strong>PostgreSQL</strong>. Les données sont fortement relationnelles et transactionnelles (stock, argent), avec besoin de contraintes, de <code>SELECT … FOR UPDATE</code> et d'agrégations de reporting. Le <code>sql-seed.sql</code> existant est un bon point de départ, à corriger selon la section 17.</p>
+<div class="pb"></div>
+
+<h2>8. Audit API</h2>
+<p>Contrat actuel : REST JSON, préfixe <code>/api</code>, réponses de liste <code>{items, total}</code>, erreurs <code>{message}</code> avec codes 400/401/403/404. <strong>69 routes</strong> simulées, <strong>32 contrôles de rôle</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Endpoints existants</th>
+<th>Problèmes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auth</td>
+<td><code>POST /auth/login</code>, <code>/auth/refresh</code>, <code>/auth/forgot-password</code>, <code>GET /auth/me</code></td>
+<td>Pas de logout serveur ni de révocation ; refresh sans vérification d'expiration ni de signature ; énumération d'emails via forgot-password (404 si inconnu, MBI:514)</td>
+</tr>
+<tr>
+<td>Produits</td>
+<td><code>GET/POST /products</code>, <code>GET/PUT/DELETE /products/:id</code></td>
+<td>Pas de pagination, recherche ni filtre serveur ; <code>PUT</code> modifie le stock ; <code>POST</code> sans validation</td>
+</tr>
+<tr>
+<td>Catégories</td>
+<td><code>GET /categories</code></td>
+<td>CRUD manquant</td>
+</tr>
+<tr>
+<td>Dépôts</td>
+<td><code>GET/POST /warehouses</code>, <code>POST /warehouses/transfer</code></td>
+<td><code>PUT/DELETE</code> manquants ; transfert non idempotent</td>
+</tr>
+<tr>
+<td>Stock</td>
+<td><code>GET/POST /stock/movements</code></td>
+<td>Pas de filtre dépôt ni de pagination ; <strong>pas de contrôle de rôle</strong> sur <code>POST</code> ; pas de <code>GET /stock</code> (niveaux par dépôt)</td>
+</tr>
+<tr>
+<td>Ventes</td>
+<td><code>GET/POST /sales</code></td>
+<td><strong>Prix fournis par le client</strong> ; pas de <code>GET /sales/:id</code>, <code>cancel</code>, <code>returns</code> ; pas de pagination</td>
+</tr>
+<tr>
+<td>Clients</td>
+<td>CRUD + <code>/customers/:id/sales</code>, <code>/payments</code></td>
+<td>Pas de <code>GET /customers/:id/balance</code> ; surpaiement</td>
+</tr>
+<tr>
+<td>Fournisseurs</td>
+<td>CRUD + <code>/purchases</code>, <code>/payments</code></td>
+<td>Suppression destructive</td>
+</tr>
+<tr>
+<td>Achats</td>
+<td><code>GET/POST /purchases/orders</code>, <code>/:id</code>, <code>/:id/receive</code>, <code>/:id/invoice</code>, <code>/:id/pay</code></td>
+<td>Pas d'annulation ni de réception partielle (payload <code>deliveredAtIso</code> ignoré) ; <strong>deux routes de paiement</strong> (<code>/purchases/orders/:id/pay</code> et <code>/suppliers/:id/payments</code> avec <code>orderId</code>) : doublon</td>
+</tr>
+<tr>
+<td>Caisse</td>
+<td><code>current</code>, <code>sessions</code>, <code>open</code>, <code>operations</code>, <code>close</code></td>
+<td>Session globale, non liée à l'utilisateur ni au dépôt</td>
+</tr>
+<tr>
+<td>Inventaire</td>
+<td><code>GET/POST /inventory/sessions</code>, <code>GET /:id</code></td>
+<td>Pas de cycle ouverture/validation</td>
+</tr>
+<tr>
+<td>Dépenses</td>
+<td><code>GET/POST /expenses</code>, <code>DELETE /:id</code></td>
+<td>Pas de <code>PUT</code> ni de filtres de période</td>
+</tr>
+<tr>
+<td>Rapports</td>
+<td><code>GET /reports/daily|monthly|yearly</code></td>
+<td><strong>Résultats faux</strong> (non filtrés) ; inutilisés</td>
+</tr>
+<tr>
+<td>Utilisateurs</td>
+<td>CRUD + <code>PATCH /:id/active</code></td>
+<td>Pas de gestion de mot de passe</td>
+</tr>
+<tr>
+<td>Audit</td>
+<td><code>GET /audit-logs</code>, <code>/:id</code>, <code>/stats</code>, <code>/export</code></td>
+<td>Seul domaine paginé ; export ignore <code>search</code></td>
+</tr>
+<tr>
+<td>RDV</td>
+<td>CRUD + <code>PATCH /:id/status</code></td>
+<td>Aucun contrôle de rôle ; <code>PATCH status</code> extrait l'id au mauvais index (<code>split('/')[4]</code> = <code>"status"</code>) → toujours 404 (MBI:1768)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Endpoints manquants prioritaires</strong> : <code>GET /stock/levels?warehouseId=</code>, <code>POST /sales/:id/cancel</code>, <code>POST /sales/:id/returns</code>, <code>POST /purchases/orders/:id/receipts</code> (partielle), <code>POST /purchases/orders/:id/cancel</code>, CRUD <code>/categories</code>, <code>PUT/DELETE /warehouses/:id</code>, cycle <code>/inventory/sessions/:id/{lines,validate}</code>, <code>/transfers</code> (cycle), <code>/reports/stock-valuation</code>, <code>/reports/receivables</code>, <code>/reports/payables</code>, <code>POST /auth/logout</code>, <code>POST /users/:id/password</code>.</p>
+<p><strong>Règles transverses à imposer côté backend</strong> : pagination <code>?page&amp;size&amp;sort&amp;q</code>, validation par DTO (class-validator/Zod), prix et coûts toujours relus en base, clés d'idempotence sur les écritures financières, codes d'erreur métier stables (<code>STOCK_INSUFFICIENT</code>, <code>CREDIT_LIMIT_EXCEEDED</code>…).</p>
+<div class="pb"></div>
+
+<h2>9. Audit UX/UI</h2>
+<p><strong>Points forts.</strong></p>
+<ul>
+<li>Interface Angular Material cohérente, avec thème global (<code>styles.scss</code>, 586 lignes).</li>
+<li>Navigation latérale repliable et sélecteur de magasin visible dans l'en-tête.</li>
+<li>Drawers latéraux pour création et détail, qui conservent le contexte de la liste.</li>
+<li>Dialogues de confirmation pour les suppressions (produits, clients, fournisseurs, dépenses, utilisateurs, RDV) et la réception.</li>
+<li>Tables avec tri et pagination (8 écrans), recherche avec debounce, snackbar d'erreur global.</li>
+<li>Facture PDF et export Excel.</li>
+</ul>
+<p><strong>Points faibles.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Constat</th>
+<th>Impact</th>
+<th>Recommandation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Menu identique pour tous les rôles ; un caissier voit « Utilisateurs », « Audit »…</td>
+<td>Confusion, erreurs 403</td>
+<td>Menu filtré par permission</td>
+</tr>
+<tr>
+<td>Sidenav en <code>mode="side"</code> toujours ouverte, pas de <code>BreakpointObserver</code></td>
+<td>Inutilisable sur mobile/tablette (inventaire en rayon, vente tablette)</td>
+<td>Mode <code>over</code> &lt; 960 px</td>
+</tr>
+<tr>
+<td>Inventaire : un tableau de <strong>tous</strong> les produits sans pagination ni recherche, pré-rempli</td>
+<td>Ingérable au-delà de ~200 articles ; erreurs silencieuses</td>
+<td>Comptage par scan ou recherche, lignes « non comptées » distinctes</td>
+</tr>
+<tr>
+<td>POS : recherche produit par liste, sans scan ni raccourcis clavier</td>
+<td>Lenteur en caisse</td>
+<td>Champ scan focalisé, raccourcis (F2 paiement, Échap annuler)</td>
+</tr>
+<tr>
+<td>Stock modifiable depuis la fiche produit</td>
+<td>Erreur de manipulation non tracée</td>
+<td>Champ en lecture seule + bouton « Ajuster » qui crée un mouvement motivé</td>
+</tr>
+<tr>
+<td>Pas d'annulation ni de correction de vente</td>
+<td>Les erreurs de caisse sont irréparables</td>
+<td>Annulation motivée avec droit dédié</td>
+</tr>
+<tr>
+<td>Graphique d'évolution du stock fictif</td>
+<td>Décision sur de fausses données</td>
+<td>Retirer ou baser sur les mouvements</td>
+</tr>
+<tr>
+<td>Pas d'actions groupées ni d'export sur les listes</td>
+<td>Productivité</td>
+<td>Export CSV/Excel par liste, sélection multiple</td>
+</tr>
+<tr>
+<td>Messages techniques bruts (« Articles invalides. »)</td>
+<td>Compréhension</td>
+<td>Messages métier contextualisés</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Montée en charge des écrans</strong> (toutes les listes chargent l'intégralité des données puis filtrent dans le navigateur) :</p>
+<table>
+<thead>
+<tr>
+<th>Écran</th>
+<th>10 produits</th>
+<th>1 000 produits</th>
+<th>10 000 produits</th>
+<th>100 000 mouvements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Produits</td>
+<td>OK</td>
+<td>OK</td>
+<td>Lent (chargement complet + filtre client)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>POS (sélection produit)</td>
+<td>OK</td>
+<td>Difficile (liste déroulante)</td>
+<td>Inutilisable</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Inventaire</td>
+<td>OK</td>
+<td>Inutilisable (1 000 champs)</td>
+<td>Inutilisable</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Stock / mouvements</td>
+<td>OK</td>
+<td>OK</td>
+<td>Lent</td>
+<td>Inutilisable (tout chargé)</td>
+</tr>
+<tr>
+<td>Dashboard / rapports</td>
+<td>OK</td>
+<td>OK (ventes chargées en totalité)</td>
+<td>—</td>
+<td>Lent à inutilisable (agrégations client sur toutes les ventes)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Solutions</strong> : pagination et recherche <strong>serveur</strong>, filtres avancés persistés dans l'URL, autocomplete avec scan au POS, vues compactes, export serveur, agrégations pré-calculées pour le reporting.</p>
+<div class="pb"></div>
+
+<h2>10. Audit sécurité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Problème</th>
+<th>Gravité</th>
+<th>Preuve</th>
+<th>Recommandation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td><strong>Aucune route protégée</strong> : aucun <code>canActivate</code>/<code>canMatch</code> n'est déclaré, toute l'application est accessible sans connexion</td>
+<td>CRITIQUE</td>
+<td><code>routing.ts</code>, <code>layout.routes.ts</code>, <code>features/*/*.routes.ts</code></td>
+<td>Brancher <code>authGuard</code> sur le layout + <code>permissionGuard</code> par route</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>En mock, <strong>toutes les requêtes sont exécutées en admin</strong> : l'intercepteur JWT est après le mock, donc aucun token n'est transmis et le fallback <code>mockUsers[0]</code> s'applique. Contrôles de rôle inopérants, audit toujours au nom de <code>admin</code>.</td>
+<td>CRITIQUE</td>
+<td><code>app.config.ts:21</code>, MBI:377-382</td>
+<td>Placer <code>jwt</code> avant <code>mockBackend</code> ; supprimer le fallback</td>
+</tr>
+<tr>
+<td>S3</td>
+<td>Pas de backend : toute règle de sécurité côté client est contournable (console, modification du JS)</td>
+<td>CRITIQUE</td>
+<td>Architecture</td>
+<td>Backend avec autorisation serveur</td>
+</tr>
+<tr>
+<td>S4</td>
+<td>Mot de passe universel <code>admin</code>, affiché sur l'écran de login</td>
+<td>CRITIQUE (si déployé)</td>
+<td>MBI:485, <code>login.component.html:129-130</code></td>
+<td>Hash Argon2/bcrypt, politique de mot de passe</td>
+</tr>
+<tr>
+<td>S5</td>
+<td>JWT non signé (signature factice) ; refresh accepté sans vérification d'expiration</td>
+<td>ÉLEVÉ</td>
+<td><code>jwt.sim.ts:128</code>, MBI:497-499</td>
+<td>JWT signé côté serveur, rotation des refresh tokens</td>
+</tr>
+<tr>
+<td>S6</td>
+<td>Tokens en <code>localStorage</code>/<code>sessionStorage</code> (exposés en cas de XSS)</td>
+<td>ÉLEVÉ</td>
+<td><code>auth/services/auth.service.ts:40-47</code></td>
+<td>Refresh token en cookie <code>HttpOnly; Secure; SameSite=Strict</code>, access token en mémoire</td>
+</tr>
+<tr>
+<td>S7</td>
+<td>Prix de vente et prix d'achat fournis par le client</td>
+<td>ÉLEVÉ</td>
+<td>MBI:1663-1676</td>
+<td>Relire les prix en base ; remise soumise à droit et plafond</td>
+</tr>
+<tr>
+<td>S8</td>
+<td>Utilisateur désactivé peut se connecter ; pas de verrouillage après échecs</td>
+<td>ÉLEVÉ</td>
+<td>MBI:482-489</td>
+<td>Contrôle <code>isActive</code>, rate limiting, verrouillage temporaire</td>
+</tr>
+<tr>
+<td>S9</td>
+<td>Mouvement de stock créable par tout utilisateur authentifié ; RDV sans contrôle de rôle</td>
+<td>ÉLEVÉ</td>
+<td>MBI:1610, 1756-1849</td>
+<td>Permissions explicites par action</td>
+</tr>
+<tr>
+<td>S10</td>
+<td>Dépendances vulnérables : <code>@angular/*</code> &lt; 21.2.19 (HIGH), <code>xlsx</code> 0.18.5 (HIGH, pas de correctif npm), <code>dompurify</code>, <code>fflate</code> (MODERATE) — 10 vulnérabilités</td>
+<td>ÉLEVÉ</td>
+<td><code>npm audit --omit=dev</code></td>
+<td>Mettre à jour Angular ; remplacer <code>xlsx</code> npm par la distribution SheetJS CDN ≥ 0.20.2 ou par <code>exceljs</code></td>
+</tr>
+<tr>
+<td>S11</td>
+<td>Énumération des comptes via « mot de passe oublié » (404 si email inconnu)</td>
+<td>MOYEN</td>
+<td>MBI:514</td>
+<td>Réponse identique dans tous les cas</td>
+</tr>
+<tr>
+<td>S12</td>
+<td>Données de démonstration (emails, téléphones) embarquées dans le bundle de production</td>
+<td>MOYEN</td>
+<td>Bundle <code>main-*.js</code></td>
+<td>Charger les mocks via import dynamique conditionné à l'environnement</td>
+</tr>
+<tr>
+<td>S13</td>
+<td>Suppression du dernier administrateur possible</td>
+<td>MOYEN</td>
+<td>MBI:1438-1449</td>
+<td>Garde-fou serveur</td>
+</tr>
+<tr>
+<td>S14</td>
+<td>Pas de CSP, ni d'en-têtes de sécurité, ni de config CORS (pas de serveur)</td>
+<td>MOYEN</td>
+<td>—</td>
+<td>À définir avec le backend (helmet, CORS restreint)</td>
+</tr>
+<tr>
+<td>S15</td>
+<td>Seed SQL avec mot de passe par défaut <code>password123</code></td>
+<td>MOYEN</td>
+<td><code>sql-seed.sql:51</code></td>
+<td>Seed de dev uniquement, forcer le changement au 1er login</td>
+</tr>
+<tr>
+<td>S16</td>
+<td>Pas d'upload de fichiers aujourd'hui</td>
+<td>—</td>
+<td>—</td>
+<td>À sécuriser lors de l'ajout des images (type MIME, taille, stockage objet)</td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>11. Audit performance</h2>
+<table>
+<thead>
+<tr>
+<th>Risque</th>
+<th>Gravité</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Listes non paginées côté serveur (produits, ventes, mouvements, clients, commandes)</td>
+<td>ÉLEVÉ</td>
+<td>Tout est chargé puis filtré par <code>MatTableDataSource</code></td>
+</tr>
+<tr>
+<td>Dashboard et rapports agrègent <strong>toutes les ventes</strong> dans le navigateur</td>
+<td>ÉLEVÉ</td>
+<td><code>dashboard.facade.ts:82</code>, <code>reports.facade.ts:42-45</code></td>
+</tr>
+<tr>
+<td>Recherches linéaires <code>find()</code> dans des boucles (enrichissement des mouvements, O(n×m))</td>
+<td>MOYEN</td>
+<td><code>stock.facade.ts:111-112</code></td>
+</tr>
+<tr>
+<td>Double appel API au rafraîchissement de l'inventaire</td>
+<td>FAIBLE</td>
+<td><code>inventory.facade.ts:41-45</code></td>
+</tr>
+<tr>
+<td>Souscriptions sans désabonnement dans des constructeurs</td>
+<td>FAIBLE</td>
+<td><code>inventory-count-page.component.ts:58</code></td>
+</tr>
+<tr>
+<td><code>OnPush</code> sur 16 composants sur 51</td>
+<td>FAIBLE</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Bundle initial raisonnable (lazy loading par feature) ; xlsx/jspdf chargés à la demande</td>
+<td>OK</td>
+<td><code>reports-shell-page.component.ts:95</code>, <code>invoice-drawer.component.ts:31</code></td>
+</tr>
+<tr>
+<td>Index base de données</td>
+<td>À CONCEVOIR</td>
+<td>Prévoir <code>(warehouse_id, product_id)</code> unique sur les niveaux de stock ; <code>(product_id, created_at)</code> et <code>(warehouse_id, created_at)</code> sur les mouvements ; <code>(created_at)</code>, <code>(customer_id)</code> sur les ventes ; <code>sku</code> et <code>barcode</code> uniques</td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>12. Audit tests</h2>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Existant</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unitaires</td>
+<td><code>src/app/app.spec.ts</code> (2 tests générés par le CLI)</td>
+<td><strong>1 échec</strong> : attend un <code>&lt;h1&gt;Hello, gestion-stock&lt;/h1&gt;</code> qui n'existe plus</td>
+</tr>
+<tr>
+<td>Intégration / API</td>
+<td>Aucun</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Frontend (composants, facades)</td>
+<td>Aucun</td>
+<td>—</td>
+</tr>
+<tr>
+<td>E2E</td>
+<td>Aucun (pas de framework installé)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Zones critiques sans tests</strong> : calcul et contrôle du stock (vente, réception, transfert, inventaire), crédit client, paiement fournisseur (reste à payer), réconciliation de caisse, permissions.</p>
+<p><strong>Stratégie proposée</strong> :</p>
+<ol>
+<li>tests unitaires des <strong>services de domaine backend</strong> (règles de stock et d'argent), objectif ≥ 80 % sur ces modules ;</li>
+<li>tests d'<strong>intégration API</strong> sur base PostgreSQL éphémère (Testcontainers), incluant la concurrence (deux ventes simultanées du dernier article) ;</li>
+<li>tests de facades front (Vitest, déjà configuré) ;</li>
+<li><strong>5 à 8 parcours E2E Playwright</strong> : connexion, vente cash, vente à crédit, réception, inventaire, clôture de caisse ;</li>
+<li>exécution en CI à chaque PR.</li>
+</ol>
+<div class="pb"></div>
+
+<h2>13. Audit qualité du code</h2>
+<table>
+<thead>
+<tr>
+<th>Constat</th>
+<th>Mesure</th>
+<th>Gravité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intercepteur monolithique : 69 handlers en <code>if</code> successifs, logique métier + données + RBAC mélangées</td>
+<td>1 976 lignes</td>
+<td>ÉLEVÉ (dette, mais destiné à être remplacé)</td>
+</tr>
+<tr>
+<td>Mutations typées <code>unknown</code>, puis castées <code>as any</code> à l'usage</td>
+<td>27 méthodes ; 33 <code>any</code></td>
+<td>MOYEN</td>
+</tr>
+<tr>
+<td>Fonction <code>toApiError</code> copiée dans 11 services</td>
+<td>11 copies</td>
+<td>FAIBLE</td>
+</tr>
+<tr>
+<td>Doublons d'authentification (2 services, 2 modèles, 2 guards)</td>
+<td>—</td>
+<td>MOYEN</td>
+</tr>
+<tr>
+<td>Code mort (4 pages non routées, moteur de mock non utilisé, <code>CoreModule</code>/<code>SharedModule</code> vides)</td>
+<td>~1 000 lignes</td>
+<td>FAIBLE</td>
+</tr>
+<tr>
+<td>Mutation directe d'objet partagé (RDV)</td>
+<td>MBI:1772, 1786</td>
+<td>FAIBLE</td>
+</tr>
+<tr>
+<td>Conventions homogènes, TypeScript <code>strict</code>, templates stricts, nommage clair (FR métier / EN technique)</td>
+<td>—</td>
+<td>Point fort</td>
+</tr>
+<tr>
+<td>Pattern Facade/VM régulier et lisible d'une feature à l'autre</td>
+<td>—</td>
+<td>Point fort</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pas de refonte front justifiée.</strong> La structure des features est saine. La dette se concentre dans <code>MBI</code> (à remplacer par le backend), dans le double système d'auth et dans le typage des facades.</p>
+<div class="pb"></div>
+
+<h2>14. Fonctionnalités manquantes</h2>
+<p>Complexité : S (≤ 3 j), M (≤ 2 sem.), L (≤ 1 mois), XL (&gt; 1 mois).</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fonctionnalité</th>
+<th>Priorité</th>
+<th>Justification (pourquoi / problème résolu / impact métier)</th>
+<th>Complexité</th>
+<th>Dépendances</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Backend API + base PostgreSQL</td>
+<td><strong>P0</strong></td>
+<td>Sans persistance ni serveur, aucune donnée n'est conservée ni partagée : l'outil est inutilisable</td>
+<td>XL</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Authentification réelle (hash, JWT signé, refresh HttpOnly, guards)</td>
+<td><strong>P0</strong></td>
+<td>Accès libre et droits admin pour tous aujourd'hui</td>
+<td>M</td>
+<td>1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Modèle de stock unique par dépôt + mouvements obligatoires et transactionnels</td>
+<td><strong>P0</strong></td>
+<td>Corrige le bug de réception et rend le stock auditable</td>
+<td>L</td>
+<td>1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Prix et coûts calculés côté serveur</td>
+<td><strong>P0</strong></td>
+<td>Empêche la falsification du CA et des marges</td>
+<td>S</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Rattachement au dépôt de toutes les pièces (vente, mouvement, inventaire, caisse)</td>
+<td><strong>P0</strong></td>
+<td>Traçabilité et reporting par magasin</td>
+<td>M</td>
+<td>3</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Journal d'audit réel, systématique, immuable</td>
+<td><strong>P0</strong></td>
+<td>Lutte contre la fraude et litiges</td>
+<td>M</td>
+<td>1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Permissions RBAC (rôle → permissions) + menu filtré</td>
+<td><strong>P1</strong></td>
+<td>Séparation des tâches caissier/gestionnaire/admin</td>
+<td>M</td>
+<td>2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Annulation de vente et retours clients (avoir, remise en stock)</td>
+<td><strong>P1</strong></td>
+<td>Situations quotidiennes en boutique, impossibles aujourd'hui</td>
+<td>M</td>
+<td>3, 6</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Réception partielle et annulation de commande fournisseur</td>
+<td><strong>P1</strong></td>
+<td>Les livraisons partielles sont la norme</td>
+<td>M</td>
+<td>3</td>
+</tr>
+<tr>
+<td>10</td>
+<td>CUMP (coût unitaire moyen pondéré) + historique des prix</td>
+<td><strong>P1</strong></td>
+<td>Marge exacte, valorisation du stock</td>
+<td>M</td>
+<td>3</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Inventaire en workflow (ouverture → comptage → validation)</td>
+<td><strong>P1</strong></td>
+<td>Fiabilité du stock, contrôle des écarts</td>
+<td>M</td>
+<td>3, 5</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Caisse par poste/utilisateur/dépôt, liée aux ventes et encaissements</td>
+<td><strong>P1</strong></td>
+<td>Réconciliation fiable, responsabilité des caissiers</td>
+<td>M</td>
+<td>5</td>
+</tr>
+<tr>
+<td>13</td>
+<td>TVA et remises (avec plafond par rôle)</td>
+<td><strong>P1</strong></td>
+<td>Factures conformes, gestion commerciale</td>
+<td>M</td>
+<td>4</td>
+</tr>
+<tr>
+<td>14</td>
+<td>CRUD catégories + marques + statut actif produit</td>
+<td><strong>P1</strong></td>
+<td>Autonomie de gestion du catalogue</td>
+<td>S</td>
+<td>1</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Pagination, recherche et filtres serveur</td>
+<td><strong>P1</strong></td>
+<td>Tenue à la volumétrie</td>
+<td>M</td>
+<td>1</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Code-barres (champ + scan POS/inventaire + étiquettes)</td>
+<td><strong>P2</strong></td>
+<td>Vitesse en caisse, fiabilité inventaire</td>
+<td>M</td>
+<td>14</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Alertes (seuil, rupture, retard fournisseur, créance échue)</td>
+<td><strong>P2</strong></td>
+<td>Anticipation des ruptures et impayés</td>
+<td>M</td>
+<td>3, 12</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Tableau de bord fiable + rapports (valorisation, rotation, dormants, créances, dettes)</td>
+<td><strong>P2</strong></td>
+<td>Pilotage</td>
+<td>L</td>
+<td>3, 10</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Transferts en workflow (demande → expédition → réception)</td>
+<td><strong>P2</strong></td>
+<td>Gestion du stock en transit</td>
+<td>M</td>
+<td>5</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Lots et péremption (lentilles, solutions), FEFO</td>
+<td><strong>P2</strong></td>
+<td>Rappels fabricant, pertes sur périmés</td>
+<td>L</td>
+<td>3</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Variantes produit (couleur, taille, dioptrie)</td>
+<td><strong>P2</strong></td>
+<td>Catalogue optique réaliste</td>
+<td>L</td>
+<td>14</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Fiche patient / ordonnance liée à la vente (optique)</td>
+<td><strong>P2</strong></td>
+<td>Cœur de métier opticien</td>
+<td>M</td>
+<td>8</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Export comptable (ventes, achats, encaissements)</td>
+<td><strong>P2</strong></td>
+<td>Lien avec le cabinet comptable</td>
+<td>S</td>
+<td>13</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Proposition de réapprovisionnement automatique</td>
+<td><strong>P3</strong></td>
+<td>Gain de temps achats</td>
+<td>M</td>
+<td>17, 18</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Multi-entreprise (isolation <code>companyId</code>)</td>
+<td><strong>P3</strong></td>
+<td>Commercialisation SaaS éventuelle</td>
+<td>L</td>
+<td>1 (à prévoir dès le schéma)</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Emplacements fins (zones, rayons)</td>
+<td><strong>P3</strong></td>
+<td>Utile en entrepôt, peu en boutique</td>
+<td>M</td>
+<td>5</td>
+</tr>
+<tr>
+<td>27</td>
+<td>PWA / mode hors-ligne POS, scan caméra mobile</td>
+<td><strong>P3</strong></td>
+<td>Coupures réseau, mobilité</td>
+<td>L</td>
+<td>15, 16</td>
+</tr>
+<tr>
+<td>28</td>
+<td>Notifications (email/SMS/WhatsApp)</td>
+<td><strong>P3</strong></td>
+<td>Relances clients, alertes</td>
+<td>M</td>
+<td>17</td>
+</tr>
+</tbody>
+</table>
+<h2>15. Recommandations</h2>
+<p>Chaque recommandation répond à : <em>Pourquoi ? Quel problème ? Impact métier ? Complexité ? Dépendance ? Priorité ?</em></p>
+<p><strong>R1 — Construire le backend en transposant <code>MBI</code>, pas en repartant de zéro.</strong> <em>Pourquoi</em> : les 69 routes et leurs règles sont un cahier des charges exécutable. <em>Problème résolu</em> : absence de persistance et de sécurité. <em>Impact</em> : l'outil devient exploitable. <em>Complexité</em> : XL. <em>Dépendance</em> : aucune. <em>Priorité</em> : P0. Garder le mock comme environnement de démo, après avoir corrigé l'ordre des intercepteurs.</p>
+<p><strong>R2 — Un seul modèle de stock.</strong> La table <code>stock_levels(warehouse_id, product_id, quantity)</code> est mise à jour <strong>uniquement</strong> par un service <code>StockService.applyMovement()</code> transactionnel, qui écrit toujours un <code>stock_movement</code> (avec <code>warehouse_id</code>, motif, document source, utilisateur, coût unitaire). Supprimer <code>Product.stockQuantity</code> du modèle persistant. <em>Problème</em> : bug de réception et divergences. <em>Impact</em> : confiance dans le stock. <em>Complexité</em> : L. <em>Dépendance</em> : R1. <em>P0</em>.</p>
+<p><strong>R3 — Le serveur fait foi pour les prix.</strong> La vente envoie <code>productId</code>, <code>quantity</code> et éventuellement <code>discount</code>. Le serveur relit prix, coût (CUMP) et TVA. <em>Problème</em> : fraude et marges fausses. <em>Complexité</em> : S. <em>P0</em>.</p>
+<p><strong>R4 — Sécurité de base.</strong> Guards sur toutes les routes, RBAC serveur, mots de passe hachés, refresh token en cookie HttpOnly, contrôle <code>isActive</code>, rate limiting du login, mise à jour d'Angular et remplacement de <code>xlsx</code>. <em>Complexité</em> : M. <em>P0</em>.</p>
+<p><strong>R5 — Audit systématique</strong> par intercepteur ou middleware serveur sur toute écriture, plus événements métier (vente, réception, paiement, inventaire, connexion). Table en ajout seul. <em>Complexité</em> : M. <em>P0</em>.</p>
+<p><strong>R6 — Pièces commerciales à états.</strong> Vente : <code>DRAFT → CONFIRMED → CANCELLED/RETURNED</code>. Commande : <code>DRAFT → ORDERED → PARTIALLY_RECEIVED → RECEIVED → CLOSED/CANCELLED</code>. Inventaire : <code>OPEN → COUNTING → VALIDATED</code>. Pas de suppression physique des pièces : annulation motivée. <em>Complexité</em> : M à L. <em>P1</em>.</p>
+<p><strong>R7 — Nettoyage front ciblé</strong> (sans refonte) : un seul <code>AuthService</code>, un seul modèle <code>User</code>, typage <code>Observable&lt;T&gt;</code> des facades, <code>toApiError</code> mutualisé, suppression du code mort, menu par permission, sidenav responsive. <em>Complexité</em> : S à M. <em>P1</em>.</p>
+<p><strong>R8 — Retirer les indicateurs trompeurs</strong> (évolution de stock fictive) et corriger les libellés (« marge brute » au lieu de « bénéfice »). <em>Complexité</em> : S. <em>P0</em> (quick win).</p>
+<div class="pb"></div>
+
+<h2>16. Architecture cible</h2>
+<p>Principe : <strong>conserver le front Angular</strong> (structure, features, facades, Material) et <strong>ajouter un backend modulaire</strong> qui reprend le contrat d'API existant, enrichi.</p>
+<div class="diagram">
+<pre>
+┌──────────── Front Angular 21 (existant, nettoyé) ───────────┐
+│ Features ─► Facades ─► ApiServices ─► Interceptors          │
+│ (auth ─► warehouse ─► error)  ·  Guards auth + permissions  │
+│ Mode démo : mockBackend conservé (env. "demo" uniquement)   │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ HTTPS · JSON · JWT court + cookie refresh
+┌───────────────────────────▼─────────────────────────────────┐
+│ API NestJS (TypeScript) — monolithe modulaire               │
+│ Modules : auth · users/rbac · catalog · inventory(stock)    │
+│           sales · purchasing · cash · customers · suppliers │
+│           reporting · audit · notifications · settings      │
+│ Transverse : validation DTO · transactions · idempotence    │
+│              audit middleware · pagination · OpenAPI        │
+├──────────────┬───────────────┬───────────────┬──────────────┤
+│ PostgreSQL   │ Stockage objet│ Jobs planifiés│ Emails/SMS   │
+│ (Prisma ORM, │ (images,      │ (BullMQ/cron :│ (alertes,    │
+│ migrations,  │ PDF factures) │ alertes, agré-│ relances)    │
+│ vues/agrégats)│              │ gats, backups)│              │
+└──────────────┴───────────────┴───────────────┴──────────────┘
+</pre>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Brique</th>
+<th>Choix recommandé</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td><strong>NestJS</strong> (TypeScript)</td>
+<td>Même langage que le front, modèles partageables, structure modulaire proche des features Angular</td>
+</tr>
+<tr>
+<td>ORM / migrations</td>
+<td>Prisma (ou TypeORM)</td>
+<td>Migrations versionnées, typage</td>
+</tr>
+<tr>
+<td>Base</td>
+<td><strong>PostgreSQL 16</strong></td>
+<td>Transactions, contraintes, <code>NUMERIC</code>, verrous, vues matérialisées pour le reporting</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>JWT d'accès 15 min + refresh rotatif en cookie HttpOnly ; Argon2id</td>
+<td>Standard, résistant au vol de token XSS</td>
+</tr>
+<tr>
+<td>Permissions</td>
+<td>RBAC rôle → permissions (<code>stock.adjust</code>, <code>sales.cancel</code>…) + portée dépôt</td>
+<td>Souplesse sans multiplier les rôles</td>
+</tr>
+<tr>
+<td>Fichiers</td>
+<td>Stockage S3-compatible (MinIO en local)</td>
+<td>Images produits, factures PDF archivées</td>
+</tr>
+<tr>
+<td>Rapports</td>
+<td>Requêtes SQL agrégées + vues matérialisées rafraîchies par job ; PDF de facture générés <strong>côté serveur</strong></td>
+<td>Exactitude, numérotation légale, performance</td>
+</tr>
+<tr>
+<td>Audit</td>
+<td>Table <code>audit_logs</code> en ajout seul, écrite dans la même transaction que l'action</td>
+<td>Non-répudiation</td>
+</tr>
+<tr>
+<td>Tâches planifiées</td>
+<td>Alertes de seuil, retards fournisseurs, créances échues, sauvegardes</td>
+<td>Automatisation</td>
+</tr>
+<tr>
+<td>Intégrations</td>
+<td>Export comptable CSV ; Mobile Money (P3) ; SMS/WhatsApp (P3)</td>
+<td>Selon besoin</td>
+</tr>
+<tr>
+<td>Déploiement</td>
+<td>Docker Compose (api, db, minio) ; CI GitHub Actions (lint, tests, build)</td>
+<td>Simple à exploiter pour une PME</td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>17. Modèle métier cible</h2>
+<table>
+<thead>
+<tr>
+<th>Entité</th>
+<th>Statut</th>
+<th>Commentaire / changements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>+ <code>passwordHash</code>, <code>lastLoginAt</code>, <code>failedAttempts</code> ; un seul modèle</td>
+</tr>
+<tr>
+<td>Role</td>
+<td><span class="b ex">EXISTANTE</span> (type) → À MODIFIER</td>
+<td>Devient une table, liée à des permissions</td>
+</tr>
+<tr>
+<td>Permission</td>
+<td>À CRÉER</td>
+<td>Codes <code>module.action</code></td>
+</tr>
+<tr>
+<td>UserWarehouseAccess</td>
+<td>À CRÉER</td>
+<td>Portée par dépôt</td>
+</tr>
+<tr>
+<td>Company</td>
+<td>À CRÉER (colonne seulement)</td>
+<td><code>companyId</code> prévu, sans UI multi-société (P3)</td>
+</tr>
+<tr>
+<td>Warehouse (magasin/dépôt)</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>+ <code>code</code>, <code>type</code> (boutique/dépôt), <code>address</code>, <code>isActive</code></td>
+</tr>
+<tr>
+<td>Location (emplacement)</td>
+<td>NON NÉCESSAIRE à court terme</td>
+<td>P3</td>
+</tr>
+<tr>
+<td>Product</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>+ <code>barcode</code>, <code>brandId</code>, <code>unit</code>, <code>vatRate</code>, <code>isActive</code>, <code>trackBatches</code>, <code>maxThreshold</code>, <code>description</code>, <code>imageUrl</code>, <code>avgCost</code> ; − <code>stockQuantity</code></td>
+</tr>
+<tr>
+<td>ProductVariant</td>
+<td>À CRÉER (P2)</td>
+<td>Couleur/taille/dioptrie</td>
+</tr>
+<tr>
+<td>Category</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>+ <code>parentId</code>, <code>isActive</code>, unicité du nom</td>
+</tr>
+<tr>
+<td>Brand</td>
+<td>À CRÉER</td>
+<td>Clé en optique</td>
+</tr>
+<tr>
+<td>StockLevel</td>
+<td><span class="b pa">PARTIELLE</span> (map mock) → À CRÉER</td>
+<td><code>(warehouseId, productId)</code> unique, <code>quantity</code>, <code>reserved</code></td>
+</tr>
+<tr>
+<td>StockMovement</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>+ <code>warehouseId</code>, <code>unitCost</code>, <code>sourceType/sourceId</code>, motifs <code>INITIAL/TRANSFER_IN/TRANSFER_OUT/RETURN/INVENTORY</code></td>
+</tr>
+<tr>
+<td>StockTransfer (+ lignes)</td>
+<td>À CRÉER</td>
+<td>Workflow avec état « en transit »</td>
+</tr>
+<tr>
+<td>Inventory / InventoryLine</td>
+<td><span class="b ex">EXISTANTES</span> → À MODIFIER</td>
+<td>+ <code>warehouseId</code>, <code>status</code>, <code>countedBy</code>, <code>validatedBy</code>, justification par ligne</td>
+</tr>
+<tr>
+<td>ProductBatch</td>
+<td>À CRÉER (P2)</td>
+<td>Lot, dates de fabrication et de péremption, quantité par dépôt</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td><span class="b ex">EXISTANTE</span></td>
+<td>+ <code>isActive</code>, conditions de paiement</td>
+</tr>
+<tr>
+<td>PurchaseOrder / PurchaseOrderLine</td>
+<td><span class="b ex">EXISTANTES</span> → À MODIFIER</td>
+<td>Statuts étendus, <code>warehouseId</code>, <code>receivedQty</code> par ligne</td>
+</tr>
+<tr>
+<td>GoodsReceipt (+ lignes)</td>
+<td>À CRÉER</td>
+<td>Réceptions partielles multiples</td>
+</tr>
+<tr>
+<td>SupplierInvoice</td>
+<td><span class="b pa">PARTIELLE</span> (objet imbriqué) → À MODIFIER</td>
+<td>Entité propre, montants HT/TVA/TTC, échéance</td>
+</tr>
+<tr>
+<td>Customer</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>+ adresse, type (particulier/institution), <code>isActive</code></td>
+</tr>
+<tr>
+<td>Patient / Prescription</td>
+<td>À CRÉER (P2, optique)</td>
+<td>Lien client ↔ ordonnance ↔ vente</td>
+</tr>
+<tr>
+<td>Sale / SaleItem</td>
+<td><span class="b ex">EXISTANTES</span> → À MODIFIER</td>
+<td>+ <code>number</code> séquentiel, <code>warehouseId</code>, <code>cashSessionId</code>, <code>status</code>, remises, TVA, snapshot produit</td>
+</tr>
+<tr>
+<td>Return (+ lignes)</td>
+<td>À CRÉER</td>
+<td>Client et fournisseur, motif, destination (stock/rebut)</td>
+</tr>
+<tr>
+<td>Payment</td>
+<td><span class="b pa">PARTIELLE</span> (2 modèles) → À MODIFIER</td>
+<td>Unifier <code>CustomerPayment</code>/<code>SupplierPayment</code> ou garder deux tables cohérentes ; + mode et session de caisse</td>
+</tr>
+<tr>
+<td>Invoice / CreditNote</td>
+<td>À CRÉER</td>
+<td>Facture et avoir numérotés, générés côté serveur</td>
+</tr>
+<tr>
+<td>CashRegisterSession / CashOperation</td>
+<td><span class="b ex">EXISTANTES</span> → À MODIFIER</td>
+<td>+ <code>warehouseId</code>, <code>registerId</code>, opérateur</td>
+</tr>
+<tr>
+<td>Expense</td>
+<td><span class="b ex">EXISTANTE</span> → À MODIFIER</td>
+<td>Catégories référencées, <code>warehouseId</code>, modification</td>
+</tr>
+<tr>
+<td>Appointment</td>
+<td><span class="b ex">EXISTANTE</span></td>
+<td>Lier au <code>Customer</code> (aujourd'hui nom libre)</td>
+</tr>
+<tr>
+<td>Notification / Alert</td>
+<td>À CRÉER (P2)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>AuditLog</td>
+<td><span class="b ex">EXISTANTE</span> (modèle)</td>
+<td>Modèle conservé ; alimentation à généraliser</td>
+</tr>
+<tr>
+<td>Setting (société, TVA, numérotation)</td>
+<td>À CRÉER</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2>18. Workflows recommandés</h2>
+<div class="flow"><strong>Achat</strong> : Fournisseur → Commande (brouillon) → Commande envoyée → Réception(s) partielle(s) au dépôt choisi (contrôle des quantités et écarts) → Mouvements <code>SUPPLY</code> + recalcul CUMP → Facture fournisseur (rapprochement commande/réception/facture) → Paiement(s) → Clôture</div>
+
+<div class="flow"><strong>Vente comptoir</strong> : Caisse ouverte (poste, dépôt) → Panier (scan) → Prix et TVA serveur, remise selon droit → Paiement (mixte possible) ou crédit si client et plafond OK → Sortie de stock transactionnelle → Facture numérotée → Rattachement à la session de caisse</div>
+
+<div class="flow"><strong>Vente sur commande (optique)</strong> : Client + ordonnance → Devis → Commande (acompte) → Commande fournisseur des verres → Réception → Montage → Retrait par le client → Solde → Facture</div>
+
+<div class="flow"><strong>Retour client</strong> : Vente d'origine → Sélection des lignes et quantités → Motif → Destination (remise en stock / rebut / retour fournisseur) → Avoir ou remboursement (caisse) → Mouvement <code>RETURN</code> → Audit</div>
+
+<div class="flow"><strong>Inventaire</strong> : Ouverture (dépôt, périmètre, gel optionnel) → Comptage (scan, lignes non comptées distinctes) → Comparaison et valorisation des écarts → Justification des écarts significatifs → Validation par un responsable → Ajustements <code>INVENTORY</code> → Historique</div>
+
+<div class="flow"><strong>Transfert</strong> : Demande (dépôt B) → Validation → Expédition depuis A (<code>TRANSFER_OUT</code>, stock « en transit ») → Réception en B (<code>TRANSFER_IN</code>, écarts signalés) → Clôture</div>
+
+<div class="flow"><strong>Caisse</strong> : Ouverture (fond, opérateur, poste) → Ventes et encaissements de créances rattachés → Entrées et sorties motivées → Comptage → Écart → Validation de l'écart au-delà d'un seuil par un responsable → Clôture</div>
+
+<div class="pb"></div>
+
+<h2>19. Matrice Existant / Cible</h2>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Existant</th>
+<th>Problème</th>
+<th>Cible</th>
+<th>Priorité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend &amp; données</td>
+<td>Mock en mémoire dans le navigateur</td>
+<td>Rien n'est persistant ni partagé</td>
+<td>API NestJS + PostgreSQL</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Authentification</td>
+<td>JWT simulé, mot de passe <code>admin</code>, routes non protégées</td>
+<td>Accès libre</td>
+<td>Auth réelle + guards</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Permissions</td>
+<td>3 rôles codés en dur, inopérants en mock</td>
+<td>Tout le monde est admin</td>
+<td>RBAC permissions + portée dépôt</td>
+<td>P0/P1</td>
+</tr>
+<tr>
+<td>Stock</td>
+<td>Map par dépôt + champ produit + mouvements non réconciliés</td>
+<td>Réception sans effet, incohérences</td>
+<td>Stock unique, mouvements transactionnels</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Traçabilité</td>
+<td>2 actions auditées, logs de démo</td>
+<td>Pas de preuve</td>
+<td>Audit systématique immuable</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>Ventes</td>
+<td>POS détail/gros, crédit</td>
+<td>Prix client, ni annulation ni retour, ni TVA ni remise</td>
+<td>Pièces à états, prix serveur, TVA, remises, avoirs</td>
+<td>P0/P1</td>
+</tr>
+<tr>
+<td>Achats</td>
+<td>Commande → réception totale → facture → paiement</td>
+<td>Réception KO, pas de partiel ni d'annulation</td>
+<td>Réceptions partielles, CUMP, rapprochement</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Inventaire</td>
+<td>Saisie globale appliquée immédiatement</td>
+<td>Pertes masquées, pas de validation</td>
+<td>Workflow ouverture/comptage/validation</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Caisse</td>
+<td>Session unique globale</td>
+<td>Pas de responsabilité par poste</td>
+<td>Session par poste, opérateur et dépôt</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Catalogue</td>
+<td>Produit simple, catégories figées</td>
+<td>Ni marque, ni variantes, ni code-barres</td>
+<td>Catalogue optique complet</td>
+<td>P1/P2</td>
+</tr>
+<tr>
+<td>Reporting</td>
+<td>KPI du jour, rapports côté client, courbe fictive</td>
+<td>Indicateurs partiels ou trompeurs</td>
+<td>Rapports serveur fiables, valorisation</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>Alertes</td>
+<td>Libellé stock faible</td>
+<td>Aucune anticipation</td>
+<td>Alertes planifiées et notifications</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>Lots / péremption</td>
+<td>Absent</td>
+<td>Rappels et périmés non gérés</td>
+<td>Lots + FEFO (lentilles, solutions)</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>UX</td>
+<td>Material cohérent, desktop</td>
+<td>Pas de mobile, pas de scan, listes non paginées</td>
+<td>Responsive, scan, pagination serveur</td>
+<td>P1/P2</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>2 tests (1 KO)</td>
+<td>Aucune protection contre les régressions</td>
+<td>Pyramide de tests + CI</td>
+<td>P0/P1</td>
+</tr>
+<tr>
+<td>Multi-société</td>
+<td>Absent</td>
+<td>—</td>
+<td><code>companyId</code> prévu dès le schéma</td>
+<td>P3</td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>20. Score de maturité</h2>
+<p><strong>Méthode.</strong> Chaque domaine est noté de 0 à 100 selon une grille simple : 0–20 absent ou non fonctionnel ; 21–40 ébauche avec défauts bloquants ; 41–60 fonctionnel partiel ; 61–80 solide avec manques ; 81–100 niveau production. La note globale est la <strong>moyenne pondérée</strong> ci-dessous. Les pondérations reflètent l'importance pour un outil de gestion manipulant stock et argent : la sécurité et le fonctionnel pèsent plus lourd. Le score mesure la <strong>maturité pour un usage en production</strong>, pas la qualité de la maquette.</p>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th style="text-align: right;">Poids</th>
+<th style="text-align: right;">Score /100</th>
+<th style="text-align: right;">Pondéré</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fonctionnel</td>
+<td style="text-align: right;">20 %</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">9,0</td>
+<td>Large couverture d'écrans ; bug de réception, ni retours ni annulations, inventaire fragile</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td style="text-align: right;">10 %</td>
+<td style="text-align: right;">40</td>
+<td style="text-align: right;">4,0</td>
+<td>Front bien structuré ; backend absent, logique dans le navigateur</td>
+</tr>
+<tr>
+<td>Base de données</td>
+<td style="text-align: right;">10 %</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">1,5</td>
+<td>Aucune base ; modèles incomplets (dépôt manquant) ; schémas non branchés</td>
+</tr>
+<tr>
+<td>API</td>
+<td style="text-align: right;">10 %</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">3,0</td>
+<td>Contrat cohérent ; pas de pagination, prix client, endpoints manquants ou erronés</td>
+</tr>
+<tr>
+<td>UX/UI</td>
+<td style="text-align: right;">10 %</td>
+<td style="text-align: right;">55</td>
+<td style="text-align: right;">5,5</td>
+<td>Interface soignée desktop ; pas de mobile, de scan ni de menu par rôle</td>
+</tr>
+<tr>
+<td>Sécurité</td>
+<td style="text-align: right;">15 %</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1,5</td>
+<td>Aucune route protégée, tout le monde admin, mot de passe unique</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td style="text-align: right;">5 %</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">1,75</td>
+<td>Lazy loading OK ; tout chargé et agrégé côté client</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td style="text-align: right;">5 %</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0,15</td>
+<td>1 test utile, 1 en échec</td>
+</tr>
+<tr>
+<td>Maintenabilité</td>
+<td style="text-align: right;">5 %</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">2,25</td>
+<td>Conventions et structure saines ; doublons, <code>unknown/any</code>, code mort</td>
+</tr>
+<tr>
+<td>Traçabilité</td>
+<td style="text-align: right;">10 %</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">2,5</td>
+<td>Modèle d'audit bon, alimentation quasi nulle</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td style="text-align: right;"><strong>100 %</strong></td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;"><strong>31,15</strong></td>
+<td><strong>Maturité actuelle : 31 / 100</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>En tant que <strong>prototype fonctionnel front-end</strong>, l'application se situerait autour de 65/100 : le travail d'interface et de modélisation est réel et réutilisable.</p>
+</blockquote>
+<div class="pb"></div>
+
+<h2>21. Registre des risques</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Risque</th>
+<th>Gravité</th>
+<th>Probabilité</th>
+<th>Impact</th>
+<th>Recommandation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Mise en service en l'état (données perdues au rechargement)</td>
+<td>Critique</td>
+<td>Élevée si déployé</td>
+<td>Perte totale de ventes et de stock</td>
+<td>Ne pas déployer avant le backend (phase 1)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Accès non authentifié à toutes les fonctions</td>
+<td>Critique</td>
+<td>Certaine</td>
+<td>Fraude, fuite de données</td>
+<td>Guards + auth serveur (phase 0/1)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Stock faux après réceptions</td>
+<td>Critique</td>
+<td>Certaine</td>
+<td>Ventes refusées à tort, ruptures non vues, achats inutiles</td>
+<td>Modèle de stock unique (phase 1)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Falsification des prix et marges</td>
+<td>Élevée</td>
+<td>Moyenne</td>
+<td>Pertes financières non détectées</td>
+<td>Prix serveur (phase 1)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Ajustements de stock non tracés (fiche produit)</td>
+<td>Élevée</td>
+<td>Élevée</td>
+<td>Démarque inconnue, vols masqués</td>
+<td>Ajustement motivé et audité</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Inventaire pré-rempli masquant les écarts</td>
+<td>Élevée</td>
+<td>Élevée</td>
+<td>Pertes invisibles</td>
+<td>Workflow d'inventaire</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Vulnérabilités de dépendances (Angular, xlsx)</td>
+<td>Élevée</td>
+<td>Moyenne</td>
+<td>XSS, déni de service</td>
+<td>Mises à jour (phase 0)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Caisse globale sans responsabilité individuelle</td>
+<td>Élevée</td>
+<td>Élevée (multi-postes)</td>
+<td>Écarts non attribuables</td>
+<td>Session par poste et opérateur</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Absence de tests lors de la construction du backend</td>
+<td>Élevée</td>
+<td>Élevée</td>
+<td>Régressions sur stock et argent</td>
+<td>Tests dès la phase 1</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Dérive de périmètre vers la comptabilité complète</td>
+<td>Moyenne</td>
+<td>Moyenne</td>
+<td>Retard, complexité</td>
+<td>S'en tenir à la gestion commerciale + export</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Choix de SGBD non tranché (Mongo vs SQL dans la doc)</td>
+<td>Moyenne</td>
+<td>Moyenne</td>
+<td>Perte de temps</td>
+<td>Décider PostgreSQL en phase 0</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Perte de connaissance (mono-développeur, doc générique)</td>
+<td>Moyenne</td>
+<td>Moyenne</td>
+<td>Maintenance difficile</td>
+<td>README réel, ADR, OpenAPI</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Produits périmés vendus (lentilles, solutions)</td>
+<td>Moyenne</td>
+<td>Moyenne</td>
+<td>Santé du client, image</td>
+<td>Lots + FEFO (phase 3)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Dates en UTC dans les rapports</td>
+<td>Faible (GMT)</td>
+<td>Faible</td>
+<td>Ventes de minuit mal datées</td>
+<td>Fuseau configuré côté serveur</td>
+</tr>
+</tbody>
+</table>
+<div class="pb"></div>
+
+<h2>22. Roadmap</h2>
+<p>Estimations en semaines-développeur (1 développeur full-stack confirmé), indicatives.</p>
+<h3>Phase 0 — Stabilisation (1 à 2 semaines)</h3>
+<ul>
+<li><strong>Objectifs</strong> : sécuriser la base front et préparer le backend.</li>
+<li><strong>Fonctionnalités</strong> :<ul>
+<li>corriger l'ordre des intercepteurs et supprimer le fallback admin ;</li>
+<li>brancher les guards ;</li>
+<li>unifier <code>AuthService</code> et <code>User</code> ;</li>
+<li>mettre à jour Angular et remplacer <code>xlsx</code> ;</li>
+<li>retirer la courbe de stock fictive ;</li>
+<li>rendre le stock non éditable dans la fiche produit ;</li>
+<li>corriger le test cassé, mettre en place la CI (lint, build, test) ;</li>
+<li>acter les choix (NestJS, PostgreSQL) en ADR.</li>
+</ul>
+</li>
+<li><strong>Dépendances</strong> : aucune. <strong>Complexité</strong> : faible.</li>
+<li><strong>Risques</strong> : faibles.</li>
+<li><strong>Résultat attendu</strong> : un prototype honnête et sécurisable, une base saine.</li>
+</ul>
+<h3>Phase 1 — Fondations (6 à 8 semaines)</h3>
+<ul>
+<li><strong>Objectifs</strong> : backend, persistance, stock fiable, utilisateurs.</li>
+<li><strong>Fonctionnalités</strong> :<ul>
+<li>API NestJS + PostgreSQL + migrations ;</li>
+<li>auth réelle et RBAC ;</li>
+<li>catalogue (produits, catégories, marques, dépôts) ;</li>
+<li>modèle de stock unique avec mouvements transactionnels et <code>warehouseId</code> partout ;</li>
+<li>audit systématique ;</li>
+<li>pagination serveur ;</li>
+<li>branchement des facades existantes sur l'API réelle ;</li>
+<li>tests unitaires et d'intégration du domaine stock.</li>
+</ul>
+</li>
+<li><strong>Dépendances</strong> : phase 0. <strong>Complexité</strong> : élevée.</li>
+<li><strong>Risques</strong> : sous-estimation de la migration des règles de <code>MBI</code>.</li>
+<li><strong>Résultat attendu</strong> : <strong>V1 interne utilisable</strong> pour le catalogue et le stock.</li>
+</ul>
+<h3>Phase 2 — Gestion commerciale (5 à 7 semaines)</h3>
+<ul>
+<li><strong>Objectifs</strong> : ventes, achats, clients, fournisseurs, caisse en conditions réelles.</li>
+<li><strong>Fonctionnalités</strong> :<ul>
+<li>ventes avec prix serveur, TVA, remises, numérotation, annulation, retours et avoirs ;</li>
+<li>achats avec réceptions partielles, annulation et CUMP ;</li>
+<li>créances et dettes ;</li>
+<li>caisse par poste et opérateur ;</li>
+<li>factures PDF côté serveur.</li>
+</ul>
+</li>
+<li><strong>Dépendances</strong> : phase 1. <strong>Complexité</strong> : élevée.</li>
+<li><strong>Risques</strong> : règles fiscales locales à valider avec le comptable.</li>
+<li><strong>Résultat attendu</strong> : <strong>V1 exploitable en boutique</strong>.</li>
+</ul>
+<h3>Phase 3 — Stock avancé (4 à 6 semaines)</h3>
+<ul>
+<li><strong>Objectifs</strong> : fiabilité physique du stock.</li>
+<li><strong>Fonctionnalités</strong> :<ul>
+<li>inventaire en workflow ;</li>
+<li>transferts en workflow ;</li>
+<li>code-barres (scan POS et inventaire, étiquettes) ;</li>
+<li>lots et péremption sur les catégories concernées, FEFO.</li>
+</ul>
+</li>
+<li><strong>Dépendances</strong> : phases 1 et 2. <strong>Complexité</strong> : moyenne à élevée.</li>
+<li><strong>Résultat attendu</strong> : écarts d'inventaire mesurés et justifiés.</li>
+</ul>
+<h3>Phase 4 — Reporting (3 à 4 semaines)</h3>
+<ul>
+<li><strong>Objectifs</strong> : pilotage fiable.</li>
+<li><strong>Fonctionnalités</strong> :<ul>
+<li>dashboard serveur (valeur du stock, ruptures, sous seuil, CA, marge, créances, dettes) ;</li>
+<li>rapports : valorisation, rotation, dormants, top ventes, achats, inventaires, performance par dépôt et par vendeur ;</li>
+<li>exports ;</li>
+<li>export comptable.</li>
+</ul>
+</li>
+<li><strong>Dépendances</strong> : phases 1 à 3. <strong>Complexité</strong> : moyenne.</li>
+<li><strong>Résultat attendu</strong> : décisions basées sur des chiffres exacts.</li>
+</ul>
+<h3>Phase 5 — Optimisation (3 à 4 semaines)</h3>
+<ul>
+<li><strong>Objectifs</strong> : performance, UX et mobilité.</li>
+<li><strong>Fonctionnalités</strong> :<ul>
+<li>responsive et tablette ;</li>
+<li>raccourcis clavier au POS ;</li>
+<li>vues matérialisées ;</li>
+<li>alertes planifiées ;</li>
+<li>PWA (lecture hors-ligne) ;</li>
+<li>scan caméra ;</li>
+<li>E2E Playwright complets.</li>
+</ul>
+</li>
+<li><strong>Dépendances</strong> : phases 1 à 4. <strong>Complexité</strong> : moyenne.</li>
+</ul>
+<h3>Phase 6 — Fonctionnalités avancées (selon pertinence)</h3>
+<ul>
+<li>Dossier patient et ordonnances (optique) — <strong>recommandé en priorité dans cette phase</strong>.</li>
+<li>Notifications SMS/WhatsApp, réapprovisionnement automatique, Mobile Money, API externe, multi-entreprise (si projet SaaS).</li>
+</ul>
+<div class="diagram">
+<pre>
+Semaines  0 2       10     17    23  27  31
+Phase 0   ██
+Phase 1     ████████
+Phase 2             ███████
+Phase 3                    ██████
+Phase 4                          ████
+Phase 5                              ████
+Phase 6                                  ░░░░░ (à la demande)
+          Jalons : S2 V0 sécurisée · S10 V1 stock · S17 V1 boutique · S27 pilotage
+</pre>
+</div>
+
+<div class="pb"></div>
+
+<h2>23. Priorisation Impact × Effort</h2>
+<div class="matrix">
+<div class="q q1"><h4>Quick wins — fort impact, faible effort</h4><ul>
+<li>Ordre des intercepteurs + suppression du fallback admin</li>
+<li>Brancher les guards existants</li>
+<li>Stock non éditable dans la fiche produit</li>
+<li>Retirer la courbe de stock fictive ; libellé « marge brute »</li>
+<li>Contrôle <code>isActive</code> au login</li>
+<li>Mise à jour Angular, remplacement de <code>xlsx</code></li>
+<li>Bloquer le crédit sans client côté API, le surpaiement client</li>
+<li>Menu filtré par rôle</li>
+<li>Corriger le test cassé + CI</li>
+</ul></div>
+<div class="q q2"><h4>Projets prioritaires — fort impact, effort moyen à élevé</h4><ul>
+<li>Backend + PostgreSQL + auth réelle</li>
+<li>Modèle de stock unique et transactionnel</li>
+<li>Prix et coûts serveur, CUMP</li>
+<li>Audit systématique</li>
+<li>Annulation, retours, avoirs</li>
+<li>Réceptions partielles</li>
+<li>Workflow d'inventaire</li>
+<li>Caisse par poste</li>
+<li>Pagination serveur</li>
+</ul></div>
+<div class="q q3"><h4>Améliorations secondaires — impact moyen</h4><ul>
+<li>Code-barres et étiquettes</li>
+<li>Alertes planifiées</li>
+<li>Rapports avancés, export comptable</li>
+<li>Transferts en workflow</li>
+<li>Variantes produit, marques</li>
+<li>Responsive tablette</li>
+<li>Lots et péremption (lentilles, solutions)</li>
+</ul></div>
+<div class="q q4"><h4>À reporter — faible impact ou effort élevé</h4><ul>
+<li>Multi-entreprise (prévoir seulement la colonne)</li>
+<li>Emplacements fins (zones, rayons)</li>
+<li>Mode hors-ligne complet</li>
+<li>Réapprovisionnement automatique</li>
+<li>API publique externe</li>
+</ul></div>
+</div>
+
+<div class="pb"></div>
+
+<h2>24. Conclusion</h2>
+<ol>
+<li><strong>Niveau réel de maturité</strong> : <strong>31/100</strong>. C'est un prototype fonctionnel front-end avancé (environ 65/100 dans cette catégorie), sans backend ni persistance. Il n'est pas utilisable en production.</li>
+<li><strong>Points forts</strong> :<ul>
+<li>périmètre fonctionnel large et pertinent pour un opticien ;</li>
+<li>front Angular moderne, bien structuré et homogène ;</li>
+<li>règles métier déjà formalisées dans le mock (crédit, caisse, paiements partiels) ;</li>
+<li>contrat d'API esquissé ;</li>
+<li>modèle d'audit bien pensé.</li>
+</ul>
+</li>
+<li><strong>Principaux problèmes</strong> :<ul>
+<li>absence de backend et de base de données ;</li>
+<li>sécurité inopérante (routes ouvertes, tout le monde admin) ;</li>
+<li>stock incohérent (réception sans effet, double source, mouvements sans dépôt) ;</li>
+<li>prix falsifiables ;</li>
+<li>traçabilité de façade ;</li>
+<li>ni annulation ni retours ;</li>
+<li>tests inexistants.</li>
+</ul>
+</li>
+<li><strong>Fonctionnalités indispensables</strong> : backend persistant, authentification et RBAC, stock unique transactionnel par dépôt, prix serveur, audit, annulation et retours, réceptions partielles, inventaire validé, caisse par poste.</li>
+<li><strong>Risques à corriger immédiatement</strong> : routes non protégées, fallback admin et ordre des intercepteurs, édition directe du stock, dépendances vulnérables, indicateur fictif. Et surtout : <strong>ne pas mettre l'application en service</strong> dans son état actuel.</li>
+<li><strong>Architecture cible</strong> : front Angular conservé, API NestJS modulaire, PostgreSQL, JWT et refresh HttpOnly, RBAC à permissions, audit transactionnel, jobs planifiés, stockage objet.</li>
+<li><strong>Roadmap</strong> : phase 0 (stabilisation, 1–2 sem.) → phase 1 (fondations, 6–8 sem.) → phase 2 (gestion commerciale, 5–7 sem.) = <strong>V1 boutique en ~12–17 semaines</strong> ; puis stock avancé, reporting, optimisation, fonctions avancées.</li>
+<li><strong>Évolution ou refonte ?</strong> <strong>Évolution</strong> pour le front. Pour le backend, il s'agit d'une <strong>création</strong>, pas d'une refonte : <code>MBI</code> sert de spécification et sera conservé comme mode démo. Seule une <strong>refonte partielle du modèle de données</strong> (stock, rattachement au dépôt, états des pièces) est nécessaire.</li>
+<li><strong>Prochaine étape concrète</strong> : valider cette feuille de route et la stack, puis lancer la phase 0. Premier lot de 2 semaines : corrections de sécurité front + squelette NestJS/PostgreSQL avec le module <code>auth</code> et le module <code>inventory</code> (stock par dépôt, <code>applyMovement</code> transactionnel, tests), branché sur l'écran Produits/Stock existant.</li>
+</ol>
+<div class="pb"></div>
+
+<h2>25. Annexes</h2>
+<h3>25.1 Méthode et vérifications effectuées</h3>
+<ul>
+<li>Lecture de l'intégralité des modèles, services, intercepteurs, guards, routes, du backend simulé et des facades et pages principales.</li>
+<li><code>ng build</code> (production, sortie hors projet) : <strong>succès</strong>, avertissements CommonJS (jspdf/canvg/html2canvas).</li>
+<li><code>ng test --watch=false</code> : <strong>2 tests, 1 échec</strong> (<code>app.spec.ts:21</code>).</li>
+<li><code>npm audit --omit=dev</code> : <strong>10 vulnérabilités</strong> (5 high, 5 moderate).</li>
+<li>Inspection du bundle de production : présence des données mock.</li>
+<li><code>git status</code> en fin d'audit : <strong>arbre de travail propre</strong>, aucun fichier du projet modifié.</li>
+</ul>
+<h3>25.2 Points À CONFIRMER</h3>
+<table>
+<thead>
+<tr>
+<th>Point</th>
+<th>Raison</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Comportement d'une future API réelle</td>
+<td>Inexistante ; seul le contrat simulé est vérifiable</td>
+</tr>
+<tr>
+<td>Exigences fiscales locales (TVA, mentions de facture, numérotation)</td>
+<td>Hors code ; à valider avec un expert-comptable (Côte d'Ivoire, d'après les données)</td>
+</tr>
+<tr>
+<td>Volumétrie réelle attendue (références, ventes/jour, postes)</td>
+<td>Non documentée ; les recommandations de performance supposent 1 000 à 10 000 références</td>
+</tr>
+<tr>
+<td>Besoin réel du module Rendez-vous et d'un dossier patient</td>
+<td>Domaine optique déduit des données de démonstration</td>
+</tr>
+<tr>
+<td>Usage visé des fichiers <code>seeds/*.sql|js</code></td>
+<td>Présents dans <code>src/</code> mais non exécutés par l'application</td>
+</tr>
+</tbody>
+</table>
+<h3>25.3 Index des preuves principales</h3>
+<table>
+<thead>
+<tr>
+<th>Constat</th>
+<th>Fichier : ligne</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Réception sans mise à jour du stock dépôt</td>
+<td>MBI:1219-1229</td>
+</tr>
+<tr>
+<td>Produits renvoyés avec le stock du dépôt</td>
+<td>MBI:530</td>
+</tr>
+<tr>
+<td>Fallback admin sans token</td>
+<td>MBI:377-382</td>
+</tr>
+<tr>
+<td>Ordre des intercepteurs</td>
+<td><code>src/app/app.config.ts:21</code></td>
+</tr>
+<tr>
+<td>Routes sans guard</td>
+<td><code>src/app/routing.ts</code>, <code>src/app/layout/layout.routes.ts</code></td>
+</tr>
+<tr>
+<td>Mot de passe universel</td>
+<td>MBI:485 ; <code>login.component.html:129</code></td>
+</tr>
+<tr>
+<td>Prix de vente fournis par le client</td>
+<td>MBI:1663-1676</td>
+</tr>
+<tr>
+<td>Stock modifiable via PUT produit</td>
+<td>MBI:692-695 ; <code>product-drawer.component.ts</code> (champ <code>stockQuantity</code>)</td>
+</tr>
+<tr>
+<td>Mouvement manuel sans contrôle de rôle</td>
+<td>MBI:1610-1648</td>
+</tr>
+<tr>
+<td>Audit : 2 appels réels</td>
+<td>MBI:701, 1741</td>
+</tr>
+<tr>
+<td>Rapports API non filtrés</td>
+<td>MBI:1862-1970</td>
+</tr>
+<tr>
+<td>Évolution du stock fictive</td>
+<td><code>features/dashboard/data/dashboard.facade.ts:152-165</code></td>
+</tr>
+<tr>
+<td>Inventaire pré-rempli</td>
+<td><code>features/inventory/pages/inventory-count-page.component.ts:58-63</code></td>
+</tr>
+<tr>
+<td>Inventaire appliqué immédiatement</td>
+<td>MBI:789-805</td>
+</tr>
+<tr>
+<td>Login sans contrôle <code>isActive</code></td>
+<td>MBI:482-489</td>
+</tr>
+<tr>
+<td>Deux modèles de rôles</td>
+<td><code>core/models/role.model.ts</code>, <code>auth/models/user.model.ts</code></td>
+</tr>
+<tr>
+<td>PATCH statut RDV : mauvais index</td>
+<td>MBI:1768</td>
+</tr>
+</tbody>
+</table></body></html>
