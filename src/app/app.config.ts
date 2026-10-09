@@ -15,7 +15,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideAnimations(),
     importProvidersFrom(MatSnackBarModule),
-    provideHttpClient(withInterceptors([apiErrorInterceptor, warehouseInterceptor, mockBackendInterceptor, jwtInterceptor])),
+    // Le jeton doit être ajouté AVANT le backend simulé : sinon le mock ne reçoit jamais
+    // l'identité de l'utilisateur.
+    provideHttpClient(withInterceptors([apiErrorInterceptor, warehouseInterceptor, jwtInterceptor, mockBackendInterceptor])),
     provideRouter(routes)
   ]
 };

@@ -4,7 +4,8 @@ import { catchError, switchMap, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
-const PUBLIC_URLS = ['/auth/login', '/auth/forgot-password'];
+// Pas de jeton sur ces appels ; /auth/refresh évite aussi une boucle de renouvellement sur 401.
+const PUBLIC_URLS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/forgot-password'];
 
 function addBearer(req: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
   return req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });

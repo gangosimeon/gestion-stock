@@ -376,8 +376,8 @@ function userFromToken(token: string): User | null {
 
 function requireAuth(req: HttpRequest<unknown>): User | null {
   const token = extractBearer(req);
-  // Pendant le dev UI (guards désactivés), on autorise un fallback.
-  if (!token) return mockUsers[0] ?? null;
+  // Aucun repli : sans jeton, la requête n'est pas authentifiée (401), comme sur le vrai backend.
+  if (!token) return null;
   return userFromToken(token);
 }
 
