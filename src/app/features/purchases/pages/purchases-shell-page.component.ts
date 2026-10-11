@@ -60,8 +60,14 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
+  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
+  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
   readonly search = new FormControl<string>('', { nonNullable: true });
@@ -112,8 +118,6 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
 
     this.dataSource.filterPredicate = (o: PurchaseOrder, filter: string) => {
       const v = `${o.number ?? ''} ${o.supplierName} ${this.statusLabelOf(o)} ${o.totalAmount}`.toLowerCase();

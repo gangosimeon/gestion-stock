@@ -25,9 +25,13 @@
 
           <div class="kpi-card">
             <div class="kpi-card__icon kpi-card__icon--green"><mat-icon>payments</mat-icon></div>
-            <div class="kpi-card__label">Encaissé · à crédit</div>
-            <div class="kpi-card__value">{{ (seller.myDay?.paidAmount ?? 0) | number: '1.0-0' }}</div>
-            <div class="kpi-card__hint">À crédit : {{ (seller.myDay?.creditAmount ?? 0) | number: '1.0-0' }}</div>
+            <div class="kpi-card__label">Encaissé aujourd'hui</div>
+            <div class="kpi-card__value">{{ (seller.myDay?.collectedAmount ?? seller.myDay?.paidAmount ?? 0) | number: '1.0-0' }}</div>
+            <div class="kpi-card__hint">
+              Ventes : {{ (seller.myDay?.paidAmount ?? 0) | number: '1.0-0' }}
+              · Règlements de dettes : {{ (seller.myDay?.customerPaymentsAmount ?? 0) | number: '1.0-0' }}
+            </div>
+            <div class="kpi-card__hint">Crédit accordé sur mes ventes : {{ (seller.myDay?.creditAmount ?? 0) | number: '1.0-0' }}</div>
           </div>
 
           <div class="kpi-card">

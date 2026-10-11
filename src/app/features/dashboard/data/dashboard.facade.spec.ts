@@ -49,6 +49,9 @@ describe('DashboardFacade', () => {
       salesTotal: 90000,
       paidAmount: 70000,
       creditAmount: 20000,
+      customerPaymentsAmount: 11000,
+      customerPaymentsCount: 1,
+      collectedAmount: 81000,
       cancelledCount: 1,
       lastSaleAt: '2026-10-11T14:00:00Z',
       last7Days: [
@@ -62,6 +65,7 @@ describe('DashboardFacade', () => {
     const loaded = await vm;
     expect(loaded.canRead).toBe(false);
     expect(loaded.seller?.myDay?.salesTotal).toBe(90000);
+    expect(loaded.seller?.myDay?.collectedAmount).toBe(81000);
     expect(loaded.seller?.cash?.expectedCash).toBe(120000);
     expect(loaded.seller?.stockAlerts).toBe(5);
     expect(loaded.seller?.myDay?.last7Days.map((p) => p.total)).toEqual([0, 90000]);

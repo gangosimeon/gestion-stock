@@ -53,7 +53,13 @@ export interface MyDay {
   salesCount: number;
   salesTotal: number;
   paidAmount: number;
+  /** Crédit accordé sur les ventes du jour, figé à la vente (un règlement ultérieur ne le change pas). */
   creditAmount: number;
+  /** Règlements de dettes clients encaissés aujourd'hui par le vendeur. */
+  customerPaymentsAmount: number;
+  customerPaymentsCount: number;
+  /** Encaissé aujourd'hui : paidAmount + customerPaymentsAmount (calculé par le backend). */
+  collectedAmount: number;
   cancelledCount: number;
   lastSaleAt: string | null;
   /** Ses ventes validées des 7 derniers jours (aujourd'hui en dernier), jours sans vente à 0. */
