@@ -159,7 +159,7 @@ app-layout-shell .mat-drawer {
 
 // ─── HEADER ───────────────────────────────────────────────────────
 
-.header {
+.shell-header {
   height: 56px;
   min-height: 56px;
   background: #fff;
@@ -173,16 +173,18 @@ app-layout-shell .mat-drawer {
   z-index: 10;
 }
 
-.header__toggle {
-  display: none;
+// Toujours visible : replie / déplie la barre latérale quelle que soit la largeur de la fenêtre
+// (auparavant masqué au-delà de 960 px, d'où sa « disparition » au redimensionnement ou au zoom).
+.shell-header__toggle {
+  display: inline-flex;
   color: #64748B;
 }
 
-.header__spacer {
+.shell-header__spacer {
   flex: 1;
 }
 
-.header__warehouse {
+.shell-header__warehouse {
   width: 200px;
 
   .mat-mdc-form-field-subscript-wrapper {
@@ -395,8 +397,4 @@ app-layout-shell .mat-drawer {
 }
 // ─── RESPONSIVE ───────────────────────────────────────────────────
 
-@media (max-width: 960px) {
-  .header__toggle {
-    display: inline-flex;
-  }
-}
+
