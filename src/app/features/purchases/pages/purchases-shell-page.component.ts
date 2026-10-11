@@ -25,11 +25,13 @@ import {
   PaySupplierDialogComponent,
   PaySupplierDialogResult
 } from '../../suppliers/ui/pay-supplier-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-purchases-shell-page',
   standalone: true,
   imports: [
+    MatTooltipModule,
     CommonModule,
     AsyncPipe,
     DecimalPipe,

@@ -31,7 +31,7 @@
           }
         </div>
 
-        <div class="table">
+        <div class="data-table">
           <table mat-table [dataSource]="dataSource" matSort>
             <ng-container matColumnDef="sku">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>SKU</th>
@@ -100,6 +100,10 @@
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
+
+          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+            <div class="data-table-empty">Aucun résultat.</div>
+          }
 
           <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
         </div>

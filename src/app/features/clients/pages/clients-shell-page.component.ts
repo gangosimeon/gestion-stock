@@ -20,11 +20,13 @@ import { Customer } from '../../../core/models/customer.model';
 import { ClientsFacade } from '../data/clients.facade';
 import { ConfirmDeleteClientDialogComponent } from '../ui/confirm-delete-client-dialog.component';
 import { ClientDrawerComponent, ClientDrawerContext } from '../ui/client-drawer.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-clients-shell-page',
   standalone: true,
   imports: [
+    MatTooltipModule,
     CommonModule,
     AsyncPipe,
     DecimalPipe,

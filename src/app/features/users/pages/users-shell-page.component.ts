@@ -11,17 +11,20 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Subject, finalize, take, takeUntil } from 'rxjs';
+import { Subject, finalize, take, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { User } from '../../../core/models/user.model';
 import { UsersFacade } from '../data/users.facade';
 import { ConfirmDeleteUserDialogComponent } from '../ui/confirm-delete-user-dialog.component';
 import { UserDrawerComponent } from '../ui/user-drawer.component';
+import { FormControl } from '@angular/forms';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
 
 @Component({
   selector: 'app-users-shell-page',
   standalone: true,
   imports: [
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     MatToolbarModule,
@@ -58,6 +61,7 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
 
   readonly displayedColumns = ['username', 'fullName', 'roles', 'active', 'actions'] as const;
   readonly dataSource = new MatTableDataSource<User>([]);
+  readonly search = new FormControl<string>('', { nonNullable: true });
 
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
@@ -65,6 +69,11 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
   vmSnapshot: any = null;
 
   constructor() {
+    this.dataSource.filterPredicate = (row: User, filter: string) => (`${row.username} ${row.fullName ?? ''} ${(row.roles ?? []).join(' ')}`).toLowerCase().includes(filter);
+    this.search.valueChanges.pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe((v) => {
+      this.dataSource.filter = v.trim().toLowerCase();
+      this.dataSource.paginator?.firstPage();
+    });
     this.facade.refresh();
   }
 

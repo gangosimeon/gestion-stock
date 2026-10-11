@@ -40,7 +40,7 @@ export class ExpensesFacade {
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
   private readonly filterSubject = new BehaviorSubject<ExpenseFilter>(currentMonthFilter());
-  private readonly pageSubject = new BehaviorSubject<{ index: number; size: number }>({ index: 0, size: 25 });
+  private readonly pageSubject = new BehaviorSubject<{ index: number; size: number }>({ index: 0, size: 10 });
   private readonly resultSubject = new BehaviorSubject<{ expenses: Expense[]; total: number; summary: ExpenseSummary | null }>({
     expenses: [],
     total: 0,

@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +16,10 @@ import { PaymentMethod, Sale } from '../../../core/models/sale.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { CreateCustomerPaymentRequest, CustomersApiService } from '../../../core/services/customers-api.service';
 import { PayCustomerDialogComponent, PayCustomerDialogResult } from '../ui/pay-customer-dialog.component';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { ListTable } from '../../../shared/table/list-table';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
 
 type DetailVm = {
   isLoading: boolean;
@@ -48,6 +52,9 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   selector: 'app-client-detail-page',
   standalone: true,
   imports: [
+    MatPaginatorModule,
+    MatSortModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -65,6 +72,28 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientDetailPageComponent {
+  readonly salesTable = new ListTable<Sale>(
+    (s) => `${s.number ?? ''} ${s.status === 'CANCELLED' ? 'annulée' : ''}`,
+    (s, col) => (col === 'date' ? s.createdAt : col === 'paid' ? s.paidAmount : col === 'due' ? (this.dueAmount(s) ?? 0) : undefined)
+  );
+
+  readonly paymentsTable = new ListTable<CustomerPayment>(
+    (p) => `${p.reference ?? ''} ${p.note ?? ''} ${this.methodLabel(p.paymentMethod)}`,
+    (p, col) => (col === 'date' ? (p.createdAt ?? p.paymentDateIso) : col === 'method' ? this.methodLabel(p.paymentMethod) : undefined)
+  );
+  @ViewChild('salesTablePaginator') set salesTablePaginator(p: MatPaginator | undefined) {
+    this.salesTable.attachPaginator(p);
+  }
+  @ViewChild('salesTableSort') set salesTableSort(s: MatSort | undefined) {
+    this.salesTable.attachSort(s);
+  }
+  @ViewChild('paymentsTablePaginator') set paymentsTablePaginator(p: MatPaginator | undefined) {
+    this.paymentsTable.attachPaginator(p);
+  }
+  @ViewChild('paymentsTableSort') set paymentsTableSort(s: MatSort | undefined) {
+    this.paymentsTable.attachSort(s);
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(CustomersApiService);
   private readonly auth = inject(AuthService);

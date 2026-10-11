@@ -11,7 +11,7 @@
     <div><strong>Différence:</strong> {{ data.session.difference | number: '1.0-0' }}</div>
   </div>
 
-  <div class="table">
+  <div class="data-table">
     <table mat-table [dataSource]="data.operations">
       <ng-container matColumnDef="date">
         <th mat-header-cell *matHeaderCellDef>Date</th>

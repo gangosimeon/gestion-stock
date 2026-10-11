@@ -110,7 +110,7 @@
   }
 
   <!-- TABLEAU -->
-  <div class="table-container">
+  <div class="data-table">
     <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSort($event)">
       <!-- Date -->
       <ng-container matColumnDef="date">
@@ -172,12 +172,19 @@
           (click)="openDetails(row)"></tr>
     </table>
 
+    @if (!isLoading && dataSource.data.length === 0) {
+
+      <div class="data-table-empty">Aucune entrée dans le journal.</div>
+
+    }
+
+
     <!-- PAGINATION -->
     <mat-paginator
       [length]="total"
       [pageSize]="pageSize"
       [pageIndex]="pageIndex"
-      [pageSizeOptions]="[10, 25, 50]"
+      [pageSizeOptions]="[5, 10, 25]"
       (page)="onPage($event)"
       showFirstLastButtons>
     </mat-paginator>

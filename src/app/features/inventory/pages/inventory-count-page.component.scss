@@ -27,13 +27,6 @@
   width: min(720px, 100%);
 }
 
-.table {
-  margin-top: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
-  overflow: auto;
-}
-
 .productCell {
   display: grid;
 }
@@ -68,4 +61,8 @@
 .pos {
   color: #1b5e20;
   font-weight: 900;
+}
+
+.data-table {
+  margin-top: 12px;
 }

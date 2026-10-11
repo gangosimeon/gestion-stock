@@ -14,16 +14,18 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { StockMovementRow, stockReasonLabels, stockTypeLabels } from '../data/stock-vm.model';
 import { StockFacade } from '../data/stock.facade';
 import { StockMovementDrawerComponent } from '../ui/stock-movement-drawer.component';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
 
 @Component({
   selector: 'app-stock-shell-page',
   standalone: true,
   imports: [
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
@@ -61,6 +63,7 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
 
   readonly displayedColumns = ['date', 'product', 'type', 'qty', 'balance', 'user', 'reason'] as const;
   readonly dataSource = new MatTableDataSource<StockMovementRow>([]);
+  readonly search = new FormControl<string>('', { nonNullable: true });
 
   readonly from = new FormControl<Date | null>(null);
   readonly to = new FormControl<Date | null>(null);
@@ -72,6 +75,11 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   vmSnapshot: { products: any[] } = { products: [] };
 
   constructor() {
+    this.dataSource.filterPredicate = (row: StockMovementRow, filter: string) => (`${row.sku ?? ''} ${row.productName ?? ''} ${row.uiType ?? ''} ${row.createdByUsername ?? ''} ${this.reasonLabel(row)} ${row.sourceReference ?? ''}`).toLowerCase().includes(filter);
+    this.search.valueChanges.pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe((v) => {
+      this.dataSource.filter = v.trim().toLowerCase();
+      this.dataSource.paginator?.firstPage();
+    });
     this.facade.refresh();
 
     this.from.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setFilters({ from: v }));

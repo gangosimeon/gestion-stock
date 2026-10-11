@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -14,6 +14,10 @@ import { Warehouse } from '../../../core/models/warehouse.model';
 import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
 import { PaginatedResult } from '../../../core/services/products-api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { ListTable } from '../../../shared/table/list-table';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
 
 type Vm = {
   isLoading: boolean;
@@ -25,6 +29,9 @@ type Vm = {
   selector: 'app-warehouses-list-page',
   standalone: true,
   imports: [
+    MatPaginatorModule,
+    MatSortModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
@@ -41,6 +48,17 @@ type Vm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WarehousesListPageComponent {
+  readonly table = new ListTable<Warehouse>(
+    (w) => `${w.code ?? ''} ${w.name}`,
+    (w, col) => (col === 'main' ? (w.main ? 1 : 0) : undefined)
+  );
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    this.table.attachPaginator(p);
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    this.table.attachSort(s);
+  }
+
   private readonly api = inject(WarehousesApiService);
   private readonly fb = inject(FormBuilder);
   private readonly snackbar = inject(MatSnackBar);

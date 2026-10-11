@@ -70,7 +70,7 @@ export class AuditLogsPageComponent implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage: string | null = null;
   total = 0;
-  pageSize = 25;
+  pageSize = 10;
   pageIndex = 0;
   stats: AuditLogStats | null = null;
   /** Tri demandé au backend (aucun : plus récent d'abord). */

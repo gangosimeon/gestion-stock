@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +16,10 @@ import { SupplierPayment, SupplierPaymentMethod } from '../../../core/models/sup
 import { AuthService } from '../../../core/services/auth.service';
 import { CreateSupplierPaymentRequest, SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { PaySupplierDialogComponent, PaySupplierDialogResult } from '../ui/pay-supplier-dialog.component';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { ListTable } from '../../../shared/table/list-table';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
 
 type DetailVm = {
   isLoading: boolean;
@@ -50,6 +54,9 @@ const METHOD_LABELS: Record<SupplierPaymentMethod, string> = {
   selector: 'app-supplier-detail-page',
   standalone: true,
   imports: [
+    MatPaginatorModule,
+    MatSortModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -66,6 +73,28 @@ const METHOD_LABELS: Record<SupplierPaymentMethod, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SupplierDetailPageComponent {
+  readonly historyTable = new ListTable<SupplierPurchaseHistory>(
+    (h) => `${h.reference ?? ''} ${h.purchaseOrderNumber ?? ''}`,
+    (h, col) => (col === 'date' ? h.purchaseDateIso : col === 'order' ? h.purchaseOrderNumber : col === 'items' ? h.itemsCount : col === 'total' ? h.totalAmount : undefined)
+  );
+
+  readonly paymentsTable = new ListTable<SupplierPayment>(
+    (p) => `${p.number ?? ''} ${p.externalReference ?? ''} ${this.methodLabel(p.paymentMethod)} ${this.ordersOf(p)} ${p.note ?? ''}`,
+    (p, col) => (col === 'date' ? p.paymentDateIso : col === 'method' ? this.methodLabel(p.paymentMethod) : col === 'order' ? this.ordersOf(p) : undefined)
+  );
+  @ViewChild('historyTablePaginator') set historyTablePaginator(p: MatPaginator | undefined) {
+    this.historyTable.attachPaginator(p);
+  }
+  @ViewChild('historyTableSort') set historyTableSort(s: MatSort | undefined) {
+    this.historyTable.attachSort(s);
+  }
+  @ViewChild('paymentsTablePaginator') set paymentsTablePaginator(p: MatPaginator | undefined) {
+    this.paymentsTable.attachPaginator(p);
+  }
+  @ViewChild('paymentsTableSort') set paymentsTableSort(s: MatSort | undefined) {
+    this.paymentsTable.attachSort(s);
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(SuppliersApiService);
   private readonly auth = inject(AuthService);

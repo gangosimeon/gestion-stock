@@ -362,13 +362,36 @@ a {
   &__spacer { flex: 1; }
 }
 
+// ─── Modèle de tableau (référence : liste des produits) ─────────────────────────
+// Barre de recherche au-dessus, cadre arrondi, tableau triable, paginateur dans le cadre
+// ([5, 10, 25], 10 par défaut, boutons premier/dernier), message quand la liste est vide.
+.data-table,
 .table-container {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  // Défilement horizontal seulement : le paginateur suit le tableau et défile avec la page.
   overflow-x: auto;
-  overflow-y: hidden;
   background: var(--color-surface);
   animation: fadeIn var(--duration-slow) var(--ease-out) both;
+}
+
+.data-table-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.data-table-search {
+  width: min(520px, 100%);
+}
+
+.data-table-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .kpi-grid {

@@ -79,7 +79,7 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage: string | null = null;
   total = 0;
-  pageSize = 25;
+  pageSize = 10;
   pageIndex = 0;
 
   dataSource = new MatTableDataSource<Appointment>([]);

@@ -26,7 +26,11 @@
           <div class="error">{{ vm.errorMessage }}</div>
         }
 
-        <div class="table">
+        <div class="data-table-toolbar">
+          <app-table-search [control]="search" placeholder="Utilisateur, nom, rôle" />
+        </div>
+
+        <div class="data-table">
           <table mat-table [dataSource]="dataSource" matSort>
             <ng-container matColumnDef="username">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Username</th>
@@ -70,7 +74,11 @@
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
 
-          <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons />
+          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+            <div class="data-table-empty">Aucun résultat.</div>
+          }
+
+          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
         </div>
       </div>
     }

@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -14,6 +14,12 @@ import { PaginatedResult } from '../../../core/services/products-api.service';
 import { CashRegisterFacade } from '../data/cash-register.facade';
 import { CashSessionDetailsDialogComponent } from '../ui/cash-session-details-dialog.component';
 
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { ListTable } from '../../../shared/table/list-table';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
 type HistoryVm = {
   isLoading: boolean;
   errorMessage: string | null;
@@ -24,6 +30,10 @@ type HistoryVm = {
   selector: 'app-cash-history-page',
   standalone: true,
   imports: [
+    MatTooltipModule,
+    MatPaginatorModule,
+    MatSortModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -40,6 +50,17 @@ type HistoryVm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CashHistoryPageComponent {
+  readonly table = new ListTable<CashRegisterSession>(
+    (s) => `${s.number ?? ''} ${s.status === 'OPEN' ? 'ouverte' : 'fermée'}`,
+    (s, col) => (col === 'expected' ? s.expectedCash : col === 'counted' ? s.countedCash : col === 'diff' ? s.difference : undefined)
+  );
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    this.table.attachPaginator(p);
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    this.table.attachSort(s);
+  }
+
   private readonly facade = inject(CashRegisterFacade);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);

@@ -66,7 +66,7 @@
       </div>
 
       <!-- TABLEAU -->
-      <div class="table-container">
+      <div class="data-table">
         <table mat-table [dataSource]="dataSource">
           <ng-container matColumnDef="dateTime">
             <th mat-header-cell *matHeaderCellDef>Date & Heure</th>
@@ -133,17 +133,14 @@
         </table>
 
         @if (dataSource.data.length === 0 && !isLoading) {
-          <div class="empty-state">
-            <mat-icon>event_busy</mat-icon>
-            <p>Aucun rendez-vous trouvé</p>
-          </div>
+          <div class="data-table-empty">Aucun rendez-vous.</div>
         }
 
         <mat-paginator
           [length]="total"
           [pageSize]="pageSize"
           [pageIndex]="pageIndex"
-          [pageSizeOptions]="[10, 25, 50]"
+          [pageSizeOptions]="[5, 10, 25]"
           (page)="onPage($event)"
           showFirstLastButtons>
         </mat-paginator>

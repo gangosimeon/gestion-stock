@@ -31,7 +31,7 @@
           }
         </div>
 
-        <div class="table">
+        <div class="data-table">
           <table mat-table [dataSource]="dataSource" matSort>
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom</th>
@@ -76,7 +76,11 @@
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
 
-          <mat-paginator [pageSize]="10" [pageSizeOptions]="[5,10,20]" showFirstLastButtons />
+          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+            <div class="data-table-empty">Aucun résultat.</div>
+          }
+
+          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
         </div>
       </div>
     }
