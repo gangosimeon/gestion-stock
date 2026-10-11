@@ -25,6 +25,12 @@ export const LAYOUT_ROUTES: Routes = [
         loadChildren: () => import('../features/stock/stock.routes').then((m) => m.STOCK_ROUTES)
       },
       {
+        path: 'categories',
+        canMatch: [permissionGuard],
+        data: { permissions: ['category:read'] },
+        loadChildren: () => import('../features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES)
+      },
+      {
         path: 'sales',
         loadChildren: () => import('../features/sales/sales.routes').then((m) => m.SALES_ROUTES)
       },

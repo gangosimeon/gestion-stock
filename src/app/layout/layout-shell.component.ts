@@ -82,6 +82,7 @@ export class LayoutShellComponent {
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
     { label: 'Produits', icon: 'inventory_2', route: '/products' },
+    { label: 'Catégories', icon: 'category', route: '/categories', permission: 'category:read' },
     { label: 'Stock', icon: 'warehouse', route: '/stock' },
     { label: 'Ventes', icon: 'point_of_sale', route: '/sales' },
     { label: 'Clients', icon: 'people', route: '/clients' },

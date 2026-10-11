@@ -3,6 +3,10 @@
     <mat-toolbar color="primary">
       <span>Produits</span>
       <span class="spacer"></span>
+      <a mat-button routerLink="/categories">
+        <mat-icon>category</mat-icon>
+        Catégories
+      </a>
       @if ((vm$ | async)?.canCreate) {
         <button mat-flat-button type="button" (click)="openCreate()">
           <mat-icon>add</mat-icon>

@@ -22,11 +22,13 @@ import { Supplier } from '../../../core/models/supplier.model';
 import { ProductsFacade } from '../data/products.facade';
 import { ConfirmDeleteDialogComponent } from '../ui/confirm-delete-dialog.component';
 import { ProductDrawerComponent } from '../ui/product-drawer.component';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-products-shell-page',
   standalone: true,
   imports: [
+    RouterLink,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
