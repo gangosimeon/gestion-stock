@@ -31,11 +31,13 @@ import {
 } from '../../../core/models/audit-log.model';
 import { AuditLogsApiService } from '../../../core/services/audit-logs-api.service';
 import { AuditLogDetailsDialogComponent } from '../ui/audit-log-details-dialog.component';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-audit-logs-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     DatePipe,
     ReactiveFormsModule,

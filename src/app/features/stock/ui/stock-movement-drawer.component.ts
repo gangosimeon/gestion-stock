@@ -16,6 +16,7 @@ import { StockMovementReason } from '../../../core/models/stock-movement.model';
 import { CreateStockMovementRequest } from '../../../core/services/stock-api.service';
 import { StockFacade } from '../data/stock.facade';
 import { stockReasonLabels } from '../data/stock-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface StockMovementDrawerContext {
   products: Product[];
@@ -25,6 +26,7 @@ export interface StockMovementDrawerContext {
   selector: 'app-stock-movement-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,

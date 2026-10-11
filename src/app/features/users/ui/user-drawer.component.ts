@@ -17,6 +17,7 @@ import { User } from '../../../core/models/user.model';
 import { CreateUserRequest, UpdateUserRequest } from '../../../core/services/users-api.service';
 import { UsersFacade } from '../data/users.facade';
 import { roleLabels, UserDrawerMode } from '../data/users-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface UserDrawerContext {
   mode: UserDrawerMode;
@@ -27,6 +28,7 @@ export interface UserDrawerContext {
   selector: 'app-user-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,

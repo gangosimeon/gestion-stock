@@ -23,11 +23,13 @@ import { PaymentMethod } from '../../../core/models/sale.model';
 import { SalesFacade } from '../data/sales.facade';
 import { CartRow, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-sales-shell-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,

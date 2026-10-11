@@ -34,12 +34,13 @@
 
           <mat-form-field appearance="outline" class="product">
             <mat-label>Produit</mat-label>
-            <select matNativeControl [formControl]="productId">
-              <option [ngValue]="null">Tous</option>
+            <mat-select [formControl]="productId">
+              <app-select-search />
+              <mat-option [value]="null">Tous</mat-option>
               @for (p of vm.products; track p.id) {
-                <option [value]="p.id">{{ p.sku }} — {{ p.name }}</option>
+                <mat-option [value]="p.id">{{ p.sku }} — {{ p.name }}</mat-option>
               }
-            </select>
+            </mat-select>
           </mat-form-field>
 
           <app-table-search [control]="search" placeholder="Produit, type, utilisateur, motif" />

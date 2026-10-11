@@ -16,11 +16,13 @@ import { ProductsApiService } from '../../../core/services/products-api.service'
 import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-warehouse-transfer-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,

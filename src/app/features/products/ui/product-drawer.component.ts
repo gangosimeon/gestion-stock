@@ -17,6 +17,7 @@ import { ProductRequest, toProductRequest } from '../../../core/services/product
 import { Supplier } from '../../../core/models/supplier.model';
 import { ProductsFacade } from '../data/products.facade';
 import { ProductDrawerMode } from '../data/product-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface ProductDrawerContext {
   mode: ProductDrawerMode;
@@ -31,6 +32,7 @@ export interface ProductDrawerContext {
   selector: 'app-product-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,

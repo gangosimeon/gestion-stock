@@ -21,6 +21,7 @@
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Catégorie</mat-label>
             <mat-select formControlName="category">
+              <app-select-search />
               <mat-option value="">Toutes</mat-option>
               @for (c of categories; track c) {
                 <mat-option [value]="c">{{ categoryLabels[c] }}</mat-option>
@@ -30,6 +31,7 @@
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Statut</mat-label>
             <mat-select formControlName="status">
+              <app-select-search />
               <mat-option value="">Tous</mat-option>
               @for (s of statuses; track s) {
                 <mat-option [value]="s">{{ statusLabels[s] }}</mat-option>
@@ -93,6 +95,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Catégorie</mat-label>
               <mat-select formControlName="category">
+                <app-select-search />
                 @for (c of categories; track c) {
                   <mat-option [value]="c">{{ categoryLabels[c] }}</mat-option>
                 }
@@ -118,6 +121,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Mode de paiement</mat-label>
               <mat-select formControlName="paymentMethod">
+                <app-select-search />
                 @for (m of paymentMethods; track m) {
                   <mat-option [value]="m">{{ paymentMethodLabels[m] }}</mat-option>
                 }

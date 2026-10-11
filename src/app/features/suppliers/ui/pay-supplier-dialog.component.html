@@ -30,6 +30,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Mode de paiement</mat-label>
       <mat-select formControlName="paymentMethod">
+        <app-select-search />
         @for (m of methods; track m.value) {
           <mat-option [value]="m.value">{{ m.label }}</mat-option>
         }

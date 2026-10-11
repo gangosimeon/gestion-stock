@@ -16,6 +16,7 @@ import { AuthService } from '../auth/services/auth.service';
 import { WarehouseContextService } from '../core/services/warehouse-context.service';
 import { WarehousesApiService } from '../core/services/warehouses-api.service';
 import { Warehouse } from '../core/models/warehouse.model';
+import { SelectSearchComponent } from '../shared/select/select-search.component';
 
 export interface NavItem {
   label: string;
@@ -29,6 +30,7 @@ export interface NavItem {
   selector: 'app-layout-shell',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     AsyncPipe,
     RouterOutlet,

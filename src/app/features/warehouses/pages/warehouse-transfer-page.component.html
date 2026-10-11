@@ -19,6 +19,7 @@
           <mat-form-field appearance="outline">
             <mat-label>De</mat-label>
             <mat-select formControlName="fromWarehouseId">
+              <app-select-search />
               @for (w of vm.warehouses; track w.id) {
                 <mat-option [value]="w.id">{{ w.name }}</mat-option>
               }
@@ -28,6 +29,7 @@
           <mat-form-field appearance="outline">
             <mat-label>Vers</mat-label>
             <mat-select formControlName="toWarehouseId">
+              <app-select-search />
               @for (w of vm.warehouses; track w.id) {
                 <mat-option [value]="w.id">{{ w.name }}</mat-option>
               }
@@ -37,6 +39,7 @@
           <mat-form-field appearance="outline" class="span2">
             <mat-label>Produit</mat-label>
             <mat-select formControlName="productId">
+              <app-select-search />
               @for (p of vm.products; track p.id) {
                 <mat-option [value]="p.id">{{ p.sku }} — {{ p.name }}</mat-option>
               }

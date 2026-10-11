@@ -47,6 +47,7 @@
           <mat-form-field appearance="outline" class="header__warehouse" subscriptSizing="dynamic">
             <mat-label>Magasin</mat-label>
             <mat-select [value]="wid" (valueChange)="setWarehouse($event, w)">
+              <app-select-search />
               @for (it of w; track it.id) {
                 <mat-option [value]="it.id">{{ it.name }}</mat-option>
               }

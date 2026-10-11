@@ -20,11 +20,15 @@ import { StockMovementRow, stockReasonLabels, stockTypeLabels } from '../data/st
 import { StockFacade } from '../data/stock.facade';
 import { StockMovementDrawerComponent } from '../ui/stock-movement-drawer.component';
 import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatSelectModule } from '@angular/material/select';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-stock-shell-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
+    MatSelectModule,
     TableSearchComponent,
     CommonModule,
     AsyncPipe,

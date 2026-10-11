@@ -35,6 +35,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Catégorie</mat-label>
         <mat-select formControlName="categoryId">
+          <app-select-search />
           @for (c of ctx.categories; track c.id) {
             <mat-option [value]="c.id">{{ c.name }}</mat-option>
           }
@@ -45,6 +46,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Fournisseur principal</mat-label>
         <mat-select formControlName="supplierId">
+          <app-select-search />
           <mat-option value="">—</mat-option>
           @for (s of ctx.suppliers; track s.id) {
             <mat-option [value]="s.id">{{ s.name }}</mat-option>

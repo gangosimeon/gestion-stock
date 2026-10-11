@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
 import { PaymentMethod } from '../../../core/models/sale.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export type PayCustomerDialogData = {
   title: string;
@@ -23,7 +24,8 @@ export type PayCustomerDialogResult = {
 @Component({
   selector: 'app-pay-customer-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [
+    SelectSearchComponent,MatDialogModule, MatButtonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   templateUrl: './pay-customer-dialog.component.html'
 })
 export class PayCustomerDialogComponent {

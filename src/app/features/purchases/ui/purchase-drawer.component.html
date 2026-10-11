@@ -13,6 +13,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Fournisseur</mat-label>
       <mat-select formControlName="supplierId" [disabled]="ctx.mode !== 'CREATE'">
+        <app-select-search />
         @for (s of ctx.suppliers; track s.id) {
           <mat-option [value]="s.id">{{ s.name }}</mat-option>
         }
@@ -27,6 +28,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Produit</mat-label>
           <mat-select formControlName="lineProductId" (selectionChange)="onProductChange()">
+            <app-select-search />
             @for (p of ctx.products; track p.id) {
               <mat-option [value]="p.id">{{ p.sku }} - {{ p.name }}</mat-option>
             }

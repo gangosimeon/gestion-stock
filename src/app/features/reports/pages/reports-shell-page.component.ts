@@ -22,11 +22,13 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { TopProductRow } from '../data/reports-vm.model';
 import { ListTable } from '../../../shared/table/list-table';
 import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-reports-shell-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     MatPaginatorModule,
     MatSortModule,
     TableSearchComponent,

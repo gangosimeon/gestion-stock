@@ -18,6 +18,7 @@ import { Supplier } from '../../../core/models/supplier.model';
 import { CreatePurchaseOrderRequest } from '../../../core/services/purchases-api.service';
 import { PurchasesFacade } from '../data/purchases.facade';
 import { PurchaseDrawerMode } from '../data/purchases-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface PurchaseDrawerContext {
   mode: PurchaseDrawerMode;
@@ -46,6 +47,7 @@ type LineForm = {
   selector: 'app-purchase-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,

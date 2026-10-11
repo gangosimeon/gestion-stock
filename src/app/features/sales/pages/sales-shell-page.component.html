@@ -46,6 +46,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Client</mat-label>
               <mat-select [formControl]="customerId">
+                <app-select-search />
                 <mat-option [value]="null">Comptoir</mat-option>
                 @for (c of vm.customers; track c.id) {
                   <mat-option [value]="c.id">{{ c.name }}</mat-option>
@@ -64,6 +65,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Paiement</mat-label>
               <mat-select [value]="vm.form.paymentMethod" (valueChange)="onPaymentChange($event)">
+                <app-select-search />
                 <mat-option value="CASH">Cash</mat-option>
                 <mat-option value="MOBILE_MONEY">Mobile Money</mat-option>
                 <mat-option value="BANK_TRANSFER">Virement</mat-option>

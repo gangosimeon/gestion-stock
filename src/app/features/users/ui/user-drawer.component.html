@@ -30,6 +30,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Rôles</mat-label>
       <mat-select formControlName="roles" multiple>
+        <app-select-search />
         @for (r of roleOptions; track r) {
           <mat-option [value]="r">{{ roleLabel(r) }}</mat-option>
         }
