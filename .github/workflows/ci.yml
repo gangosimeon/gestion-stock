@@ -1,0 +1,53 @@
+# Intégration continue du front : tests puis build de production (mock exclu, API relative /api).
+# Sur un tag v*, publication de l'image Docker (Nginx).
+name: frontend-ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Tests
+        run: npx ng test --watch=false
+      - name: Build de production
+        run: npx ng build --configuration production
+      - name: Aucun mock ni adresse locale dans le bundle
+        run: |
+          ! grep -rlE 'localhost:8080|MOCK_WAREHOUSES|mockBackend' dist/gestion-stock/browser
+
+  image:
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/geststock-frontend:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/geststock-frontend:latest
