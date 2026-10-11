@@ -37,7 +37,21 @@
       @if (fieldError('roles'); as e) { <mat-error>{{ e }}</mat-error> }
     </mat-form-field>
 
-    <mat-slide-toggle formControlName="isActive">Actif</mat-slide-toggle>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ ctx.mode === 'CREATE' ? 'Mot de passe provisoire' : 'Nouveau mot de passe (optionnel)' }}</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="new-password" />
+      <mat-hint>
+        {{ ctx.mode === 'CREATE'
+          ? 'Sans mot de passe, le compte ne pourra pas se connecter.'
+          : 'Remplace le mot de passe et ferme les sessions de l’utilisateur.' }}
+      </mat-hint>
+      @if (fieldError('password'); as e) { <mat-error>{{ e }}</mat-error> }
+    </mat-form-field>
+
+    <!-- En modification, le statut se change depuis la liste (route dédiée du backend). -->
+    @if (ctx.mode === 'CREATE') {
+      <mat-slide-toggle formControlName="isActive">Actif</mat-slide-toggle>
+    }
 
     <div class="drawer__actions">
       <button mat-button type="button" (click)="requestClose()">Annuler</button>

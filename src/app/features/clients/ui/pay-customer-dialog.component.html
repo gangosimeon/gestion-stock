@@ -17,8 +17,13 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Date paiement</mat-label>
-      <input matInput type="date" formControlName="paymentDateIso" />
+      <mat-label>Mode de paiement</mat-label>
+      <mat-select formControlName="paymentMethod">
+        @for (m of methods; track m.value) {
+          <mat-option [value]="m.value">{{ m.label }}</mat-option>
+        }
+      </mat-select>
+      <mat-hint>Encaissé maintenant dans votre caisse ouverte.</mat-hint>
     </mat-form-field>
 
     <mat-form-field appearance="outline">

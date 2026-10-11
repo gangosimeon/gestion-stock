@@ -9,13 +9,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Subject, finalize, map, startWith, switchMap, take, takeUntil } from 'rxjs';
+import { Subject, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod } from '../../../core/models/sale.model';
@@ -40,6 +41,7 @@ import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
     MatCardModule,
     MatSelectModule,
     MatRadioModule,
+    MatCheckboxModule,
     MatDividerModule,
     MatProgressBarModule,
     MatSidenavModule,
@@ -56,7 +58,7 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('invoiceDrawer') invoiceDrawer!: MatSidenav;
 
-  readonly displayedColumns = ['product', 'qty', 'unit', 'total', 'profit', 'actions'] as const;
+  readonly displayedColumns = ['product', 'qty', 'unit', 'total', 'actions'] as const;
   readonly dataSource = new MatTableDataSource<CartRow>([]);
 
   readonly productSearch = new FormControl<string>('', { nonNullable: true });
@@ -152,6 +154,7 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     this.facade.clearCart();
   }
 
+  /** Aperçu du reste dû en paiement partiel (le backend calcule la part à crédit). */
   dueAmount(): number {
     if (!this.vmSnapshot) return 0;
     const total = Number(this.vmSnapshot.totals?.total ?? 0);
@@ -159,11 +162,8 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     return Math.max(0, total - paid);
   }
 
-  changeAmount(): number {
-    if (!this.vmSnapshot) return 0;
-    const total = Number(this.vmSnapshot.totals?.total ?? 0);
-    const paid = Number(this.vmSnapshot.form?.paidAmount ?? 0);
-    return Math.max(0, paid - total);
+  onPartialChange(partial: boolean): void {
+    this.facade.setPartialPayment(partial);
   }
 
   checkout(): void {
@@ -173,23 +173,19 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const total = Number(this.vmSnapshot.totals.total ?? 0);
-    const paid = Number(this.vmSnapshot.form.paidAmount ?? 0);
-    const due = Math.max(0, total - paid);
+    // Aide à la saisie : le backend refuse aussi un reste dû sans client.
     const customerId = this.vmSnapshot.form.customerId as string | null;
 
-    if (due > 0 && !customerId) {
+    if (this.vmSnapshot.form.partialPayment && !customerId) {
       this.snackbar.open('Sélectionne un client pour enregistrer une vente à crédit.', 'OK', { duration: 3500 });
       return;
     }
 
-    (this.facade.createSale() as any)
-      .pipe(
-        take(1),
-        finalize(() => {})
-      )
+    this.facade
+      .createSale()
+      .pipe(take(1))
       .subscribe({
-        next: () => this.snackbar.open('Vente enregistrée', 'OK', { duration: 2500 }),
+        next: (sale) => this.snackbar.open(`Vente ${sale.number ?? ''} enregistrée`, 'OK', { duration: 2500 }),
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
       });
   }

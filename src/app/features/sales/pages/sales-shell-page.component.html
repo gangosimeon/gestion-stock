@@ -7,10 +7,12 @@
         <mat-icon>delete</mat-icon>
         Vider
       </button>
-      <button mat-flat-button type="button" (click)="checkout()">
-        <mat-icon>shopping_cart_checkout</mat-icon>
-        Encaisser
-      </button>
+      @if ((vm$ | async)?.canSell) {
+        <button mat-flat-button type="button" (click)="checkout()">
+          <mat-icon>shopping_cart_checkout</mat-icon>
+          Encaisser
+        </button>
+      }
     </mat-toolbar>
 
     @if (vm$ | async; as vm) {
@@ -68,10 +70,17 @@
               </mat-select>
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Montant payé</mat-label>
-              <input matInput type="number" [formControl]="paidAmount" />
-            </mat-form-field>
+            <mat-checkbox [checked]="vm.form.partialPayment" (change)="onPartialChange($event.checked)">
+              Paiement partiel / à crédit (client obligatoire)
+            </mat-checkbox>
+
+            @if (vm.form.partialPayment) {
+              <mat-form-field appearance="outline">
+                <mat-label>Montant payé maintenant</mat-label>
+                <input matInput type="number" [formControl]="paidAmount" />
+                <mat-hint>Le reste est porté au compte du client (plafond contrôlé par le serveur).</mat-hint>
+              </mat-form-field>
+            }
           </div>
 
           @if (vm.errorMessage) {
@@ -113,11 +122,6 @@
                 <td mat-cell *matCellDef="let r" class="right">{{ r.lineTotal | number: '1.0-0' }}</td>
               </ng-container>
 
-              <ng-container matColumnDef="profit">
-                <th mat-header-cell *matHeaderCellDef>Bénéfice</th>
-                <td mat-cell *matCellDef="let r" class="right profit">{{ r.lineProfit | number: '1.0-0' }}</td>
-              </ng-container>
-
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let r" class="right">
@@ -140,25 +144,17 @@
               <div class="value">{{ vm.totals.itemsCount }}</div>
             </div>
             <div class="kpi">
-              <div class="label">Total</div>
+              <div class="label">Total estimé</div>
               <div class="value">{{ vm.totals.total | number: '1.0-0' }}</div>
             </div>
-            <div class="kpi">
-              <div class="label">Bénéfice</div>
-              <div class="value">{{ vm.totals.profit | number: '1.0-0' }}</div>
-            </div>
 
-            @if (vm.form.paidAmount < vm.totals.total) {
+            @if (vm.form.partialPayment) {
               <div class="kpi">
-                <div class="label">Reste à payer</div>
+                <div class="label">Reste dû estimé</div>
                 <div class="value due">{{ dueAmount() | number: '1.0-0' }}</div>
               </div>
-            } @else {
-              <div class="kpi">
-                <div class="label">Rendu</div>
-                <div class="value">{{ changeAmount() | number: '1.0-0' }}</div>
-              </div>
             }
+            <div class="hint">Prix, remises et total définitifs calculés par le serveur à l'enregistrement.</div>
           </div>
         </mat-card>
       </div>

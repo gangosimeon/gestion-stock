@@ -23,8 +23,8 @@
     <mat-form-field appearance="outline">
       <mat-label>Type / motif</mat-label>
       <mat-select formControlName="reason">
-        @for (r of reasons; track r.value) {
-          <mat-option [value]="r.value">{{ r.label }}</mat-option>
+        @for (r of reasons; track r.key) {
+          <mat-option [value]="r.key">{{ r.label }}</mat-option>
         }
       </mat-select>
       @if (fieldError('reason'); as e) { <mat-error>{{ e }}</mat-error> }

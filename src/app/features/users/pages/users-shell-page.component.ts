@@ -110,7 +110,11 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
       )
       .subscribe({
         next: () => this.snackbar.open('Statut mis à jour', 'OK', { duration: 2000 }),
-        error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
+        error: (e: unknown) => {
+          // Refus du backend (ex. dernier administrateur actif) : l'interrupteur revient en place.
+          ev.source.checked = !ev.checked;
+          this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 });
+        }
       });
   }
 
@@ -121,7 +125,7 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
       .open(ConfirmDeleteUserDialogComponent, {
         data: {
           title: 'Supprimer utilisateur',
-          message: `Supprimer ${u.fullName} (${u.username}) ?`
+          message: `Supprimer ${u.fullName} (${u.username}) ? Le compte sera désactivé ; son historique est conservé.`
         }
       })
       .afterClosed()
@@ -132,7 +136,7 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
         (this.facade.delete(u.id) as any)
           .pipe(take(1))
           .subscribe({
-            next: () => this.snackbar.open('Utilisateur supprimé', 'OK', { duration: 2500 }),
+            next: () => this.snackbar.open('Utilisateur désactivé', 'OK', { duration: 2500 }),
             error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
           });
       });

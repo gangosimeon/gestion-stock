@@ -13,6 +13,7 @@ import { Observable, finalize, of, switchMap, take } from 'rxjs';
 
 import { Category } from '../../../core/models/category.model';
 import { Product } from '../../../core/models/product.model';
+import { ProductRequest, toProductRequest } from '../../../core/services/products-api.service';
 import { Supplier } from '../../../core/models/supplier.model';
 import { ProductsFacade } from '../data/products.facade';
 import { ProductDrawerMode } from '../data/product-vm.model';
@@ -22,6 +23,8 @@ export interface ProductDrawerContext {
   productId: string | null;
   categories: Category[];
   suppliers: Supplier[];
+  /** Permission product:update (interface seulement). */
+  canUpdate?: boolean;
 }
 
 @Component({
@@ -70,7 +73,6 @@ export class ProductDrawerComponent {
     purchasePrice: [0, [Validators.required, Validators.min(0)]],
     retailPrice: [0, [Validators.required, Validators.min(0)]],
     wholesalePrice: [0, [Validators.required, Validators.min(0)]],
-    stockQuantity: [0, [Validators.required, Validators.min(0)]],
     alertThreshold: [0, [Validators.required, Validators.min(0)]]
   });
 
@@ -83,11 +85,10 @@ export class ProductDrawerComponent {
         sku: '',
         name: '',
         categoryId: this.ctx.categories[0]?.id ?? '',
-        supplierId: this.ctx.suppliers[0]?.id ?? '',
+        supplierId: '',
         purchasePrice: 0,
         retailPrice: 0,
         wholesalePrice: 0,
-        stockQuantity: 0,
         alertThreshold: 0
       });
       return;
@@ -98,7 +99,8 @@ export class ProductDrawerComponent {
     this.isLoading = true;
     this.form.disable();
 
-    (this.facade.getProductById(this.ctx.productId) as Observable<Product>)
+    this.facade
+      .getProductById(this.ctx.productId)
       .pipe(
         take(1),
         finalize(() => {
@@ -117,7 +119,6 @@ export class ProductDrawerComponent {
             purchasePrice: p.purchasePrice,
             retailPrice: p.retailPrice,
             wholesalePrice: p.wholesalePrice,
-            stockQuantity: p.stockQuantity,
             alertThreshold: p.alertThreshold
           });
 
@@ -141,6 +142,8 @@ export class ProductDrawerComponent {
     return this.ctx.mode !== 'detail';
   }
 
+
+
   submit(): void {
     if (!this.canSubmit) return;
     if (this.form.invalid) {
@@ -153,20 +156,23 @@ export class ProductDrawerComponent {
 
     const raw = this.form.getRawValue();
 
-    const payload: Omit<Product, 'id'> = {
-      sku: raw.sku,
-      name: raw.name,
+    // PUT = remplacement complet : on repart des valeurs actuelles (code-barres, marque,
+    // fournisseur… absents du formulaire), puis on applique la saisie. Aucun stock envoyé.
+    const current = this.ctx.mode === 'edit' && this.loadedProduct ? toProductRequest(this.loadedProduct) : null;
+    const payload: ProductRequest = {
+      ...current,
+      sku: raw.sku.trim(),
+      name: raw.name.trim(),
       categoryId: raw.categoryId,
-      categoryName: this.ctx.categories.find((c) => c.id === raw.categoryId)?.name,
-      supplierId: raw.supplierId ? raw.supplierId : undefined,
+      supplierId: raw.supplierId || null,
       purchasePrice: raw.purchasePrice,
       retailPrice: raw.retailPrice,
       wholesalePrice: raw.wholesalePrice,
-      stockQuantity: raw.stockQuantity,
       alertThreshold: raw.alertThreshold
     };
 
-    (this.facade.save(payload, this.ctx.mode === 'edit' ? this.ctx.productId : null) as Observable<unknown>)
+    this.facade
+      .save(payload, this.ctx.mode === 'edit' ? this.ctx.productId : null)
       .pipe(
         take(1),
         finalize(() => {

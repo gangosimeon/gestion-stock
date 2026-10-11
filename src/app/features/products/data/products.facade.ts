@@ -1,19 +1,27 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
+import { StockAlertType } from '../../../core/models/alert.model';
 import { Category } from '../../../core/models/category.model';
 import { Product } from '../../../core/models/product.model';
 import { Supplier } from '../../../core/models/supplier.model';
-import { ProductsApiService } from '../../../core/services/products-api.service';
+import { AlertsApiService } from '../../../core/services/alerts-api.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ProductRequest, ProductsApiService } from '../../../core/services/products-api.service';
 import { SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { ProductDrawerMode, ProductDrawerState, ProductListVm } from './product-vm.model';
+
+/** Tous les abonnés de l'écran (pipes async, table) partagent un seul appel. */
+const SHARED = { bufferSize: 1, refCount: true } as const;
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductsFacade {
   private readonly api = inject(ProductsApiService);
+  private readonly alertsApi = inject(AlertsApiService);
   private readonly suppliersApi = inject(SuppliersApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -37,34 +45,64 @@ export class ProductsFacade {
     switchMap(() =>
       this.api.list().pipe(
         map((r) => r.items),
-        tap({
-          error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement')
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement');
+          return of([] as Product[]);
         }),
         finalize(() => this.isLoadingSubject.next(false))
       )
-    )
+    ),
+    shareReplay(SHARED)
   );
 
-  private readonly categories$ = this.api.listCategories().pipe(map((r) => r.items));
+  /** Niveaux de stock calculés par le backend (alertes), rechargés avec la liste. */
+  private readonly stockLevels$ = this.refreshSubject.pipe(
+    switchMap(() => this.alertsApi.stockLevels().pipe(catchError(() => of(new Map<string, StockAlertType>())))),
+    shareReplay(SHARED)
+  );
 
-  private readonly suppliers$ = this.suppliersApi.list().pipe(map((r) => r.items));
+  private readonly categories$ = this.api.listCategories().pipe(
+    map((r) => r.items),
+    catchError(() => of([] as Category[])),
+    shareReplay(SHARED)
+  );
 
-  readonly vm$ = combineLatest([
+  // Fournisseurs du backend (identifiants réels, assignables au produit).
+  private readonly suppliers$ = this.suppliersApi.list().pipe(
+    map((r) => r.items),
+    catchError(() => of([] as Supplier[])),
+    shareReplay(SHARED)
+  );
+
+  private readonly rights$ = combineLatest([
+    this.auth.hasPermission$('product:create'),
+    this.auth.hasPermission$('product:update'),
+    this.auth.hasPermission$('product:delete')
+  ]);
+
+  readonly vm$: Observable<ProductListVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
     this.products$,
+    this.stockLevels$,
     this.categories$,
     this.suppliers$,
-    this.filterSubject
+    this.filterSubject,
+    this.rights$
   ]).pipe(
-    map(([isLoading, errorMessage, products, categories, suppliers, filter]): ProductListVm => ({
+    map(([isLoading, errorMessage, products, stockLevels, categories, suppliers, filter, [canCreate, canUpdate, canDelete]]): ProductListVm => ({
       isLoading,
       errorMessage,
       products,
+      stockLevels,
       categories,
       suppliers,
-      filter
-    }))
+      filter,
+      canCreate,
+      canUpdate,
+      canDelete
+    })),
+    shareReplay(SHARED)
   );
 
   refresh(): void {
@@ -84,16 +122,18 @@ export class ProductsFacade {
     this.drawerSubject.next({ ...current, opened: false });
   }
 
-  getProductById(productId: string): unknown {
+  getProductById(productId: string): Observable<Product> {
     // exposé pour le composant drawer, évite de dupliquer la logique.
     return this.api.getById(productId);
   }
 
-  save(payload: Omit<Product, 'id'>, productId: string | null): unknown {
+  save(payload: ProductRequest, productId: string | null): Observable<Product> {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
-    const op$ = productId ? this.api.update(productId, payload) : this.api.create(payload);
+    const op$ = productId
+      ? this.api.update(productId, payload)
+      : this.api.create(payload);
 
     return op$.pipe(
       finalize(() => this.isLoadingSubject.next(false)),
@@ -104,7 +144,7 @@ export class ProductsFacade {
     );
   }
 
-  delete(productId: string): unknown {
+  delete(productId: string): Observable<unknown> {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
@@ -126,13 +166,16 @@ export class ProductsFacade {
     return suppliers.find((s) => s.id === product.supplierId)?.name ?? '—';
   }
 
-  isLowStock(product: Product): boolean {
-    return product.stockQuantity <= product.alertThreshold;
+  /** Statut fourni par le backend (seuil du produit ou seuil par défaut, marge configurable). */
+  isLowStock(product: Product, levels: ReadonlyMap<string, StockAlertType>): boolean {
+    const level = levels.get(product.id);
+    return level === 'BELOW_MINIMUM' || level === 'LOW_STOCK';
   }
 
-  availabilityLabel(product: Product): string {
-    if (product.stockQuantity <= 0) return 'Rupture';
-    if (this.isLowStock(product)) return 'Stock faible';
+  availabilityLabel(product: Product, levels: ReadonlyMap<string, StockAlertType>): string {
+    const level = levels.get(product.id);
+    if (level === 'OUT_OF_STOCK') return 'Rupture';
+    if (level === 'BELOW_MINIMUM' || level === 'LOW_STOCK') return 'Stock faible';
     return 'Disponible';
   }
 }

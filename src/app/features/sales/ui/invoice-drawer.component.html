@@ -3,7 +3,7 @@
     <div>
       <div class="invoice__title">Facture</div>
       <div class="invoice__meta">
-        <div><strong>Réf:</strong> {{ sale.id }}</div>
+        <div><strong>N°:</strong> {{ sale.number ?? sale.id }}</div>
         <div><strong>Date:</strong> {{ sale.createdAt | date: 'short' }}</div>
       </div>
     </div>
@@ -28,7 +28,7 @@
   <div class="invoice__body">
     <div class="block">
       <div class="label">Client</div>
-      <div class="value">{{ customer?.name ?? 'Comptoir' }}</div>
+      <div class="value">{{ sale.customerName ?? customer?.name ?? 'Comptoir' }}</div>
       @if (customer?.phone) { <div class="hint">{{ customer?.phone }}</div> }
     </div>
 
@@ -47,10 +47,11 @@
 
       @for (it of sale.items; track trackByIndex($index)) {
         <div class="items__row">
-          <div>{{ it.productId }}</div>
+          <!-- Libellés et montants de la vente enregistrée (backend). -->
+          <div>{{ it.productName ?? it.productId }}</div>
           <div class="right">{{ it.quantity }}</div>
           <div class="right">{{ it.unitPrice | number: '1.0-0' }}</div>
-          <div class="right">{{ (it.unitPrice * it.quantity) | number: '1.0-0' }}</div>
+          <div class="right">{{ (it.lineTotal ?? it.unitPrice * it.quantity) | number: '1.0-0' }}</div>
         </div>
       }
     </div>
@@ -60,10 +61,22 @@
         <div>Total</div>
         <div class="right"><strong>{{ sale.total | number: '1.0-0' }}</strong></div>
       </div>
+      @if (sale.discountTotal) {
+        <div class="totals__row">
+          <div>Remises</div>
+          <div class="right">{{ sale.discountTotal | number: '1.0-0' }}</div>
+        </div>
+      }
       <div class="totals__row">
-        <div>Paiement</div>
-        <div class="right">{{ sale.paymentMethod }}</div>
+        <div>Payé ({{ methodLabel(sale.paymentMethod) }})</div>
+        <div class="right">{{ sale.paidAmount | number: '1.0-0' }}</div>
       </div>
+      @if (sale.creditAmount) {
+        <div class="totals__row">
+          <div>À crédit (compte client)</div>
+          <div class="right">{{ sale.creditAmount | number: '1.0-0' }}</div>
+        </div>
+      }
     </div>
   </div>
 </div>

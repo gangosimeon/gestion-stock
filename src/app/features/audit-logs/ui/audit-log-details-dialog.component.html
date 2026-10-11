@@ -13,23 +13,45 @@
     <span class="detail-value">{{ data.log.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</span>
 
     <span class="detail-label">Utilisateur</span>
-    <span class="detail-value">{{ data.log.username }} ({{ data.log.userRole }})</span>
+    <span class="detail-value">
+      {{ data.log.username || '—' }}@if (data.log.userRole) { ({{ data.log.userRole }}) }
+    </span>
 
     <span class="detail-label">IP</span>
-    <span class="detail-value">{{ data.log.ipAddress }}</span>
+    <span class="detail-value">{{ data.log.ipAddress || '—' }}</span>
+
+    @if (data.log.userAgent) {
+      <span class="detail-label">Navigateur</span>
+      <span class="detail-value">{{ data.log.userAgent }}</span>
+    }
 
     <span class="detail-label">Action</span>
-    <span class="detail-value">{{ data.log.action }}</span>
+    <span class="detail-value">{{ label(actionLabels, data.log.action) }}</span>
 
-    <span class="detail-label">Entité</span>
-    <span class="detail-value">{{ data.log.entityLabel }} ({{ data.log.entityType }} · {{ data.log.entityId }})</span>
+    <span class="detail-label">Domaine</span>
+    <span class="detail-value">{{ label(moduleLabels, data.log.module) }}</span>
+
+    <span class="detail-label">Objet</span>
+    <span class="detail-value">
+      {{ data.log.entityLabel || '—' }} ({{ label(entityTypeLabels, data.log.entityType) }}@if (data.log.entityId) { · {{ data.log.entityId }} })
+    </span>
 
     <span class="detail-label">Statut</span>
     <span class="detail-value">
       <span [class]="'status-badge status-badge--' + data.log.status.toLowerCase()">
-        {{ data.log.status }}
+        {{ label(statusLabels, data.log.status) }}
       </span>
     </span>
+
+    @if (data.log.meta?.['errorCode']) {
+      <span class="detail-label">Erreur</span>
+      <span class="detail-value">{{ data.log.meta?.['errorCode'] }} (HTTP {{ data.log.meta?.['httpStatus'] ?? '—' }})</span>
+    }
+
+    @if (data.log.traceId) {
+      <span class="detail-label">Trace</span>
+      <span class="detail-value">{{ data.log.traceId }}</span>
+    }
 
     @if (data.log.details) {
       <span class="detail-label">Détails</span>
@@ -52,8 +74,8 @@
         @for (change of data.log.changes; track change.field) {
           <tr>
             <td><strong>{{ change.field }}</strong></td>
-            <td><span class="old-value">{{ change.oldValue }}</span></td>
-            <td><span class="new-value">{{ change.newValue }}</span></td>
+            <td><span class="old-value">{{ format(change.oldValue) }}</span></td>
+            <td><span class="new-value">{{ format(change.newValue) }}</span></td>
           </tr>
         }
       </tbody>

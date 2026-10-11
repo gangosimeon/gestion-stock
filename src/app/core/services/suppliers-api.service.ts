@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { Supplier } from '../models/supplier.model';
+import { Supplier, SupplierAccount } from '../models/supplier.model';
 import { SupplierPurchaseHistory } from '../models/supplier-purchase-history.model';
-import { SupplierPayment } from '../models/supplier-payment.model';
+import { SupplierPayment, SupplierPaymentMethod } from '../models/supplier-payment.model';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -34,10 +34,17 @@ export interface UpdateSupplierRequest {
   deliveryLeadTimeDays: number;
 }
 
+/**
+ * POST /api/suppliers/{id}/payments. Sans `orderId`, le backend solde les commandes les plus
+ * anciennes ; il refuse tout montant supérieur au reste dû. En espèces, le paiement sort de la
+ * caisse ouverte de l'utilisateur.
+ */
 export interface CreateSupplierPaymentRequest {
   amount: number;
   paymentDateIso: string;
+  paymentMethod?: SupplierPaymentMethod;
   orderId?: string;
+  externalReference?: string;
   note?: string;
 }
 
@@ -65,21 +72,31 @@ export class SuppliersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /** PUT : les champs inconnus du formulaire (code, contact, NCC…) sont conservés par le backend. */
   update(id: string, payload: UpdateSupplierRequest): Observable<Supplier> {
     return this.http
       .put<Supplier>(`${environment.apiUrl}/suppliers/${id}`, payload)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /** Côté backend, « supprimer » désactive le fournisseur : commandes et produits le référencent. */
   delete(id: string): Observable<{ ok: true } | { ok: boolean }> {
     return this.http
       .delete<{ ok: true } | { ok: boolean }>(`${environment.apiUrl}/suppliers/${id}`)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
-  purchaseHistory(supplierId: string): Observable<PaginatedResult<SupplierPurchaseHistory>> {
+  /**
+   * Réceptions du fournisseur. Sans `allWarehouses`, le backend se limite au dépôt courant ;
+   * `allWarehouses` exige la permission warehouse:all.
+   */
+  purchaseHistory(
+    supplierId: string,
+    allWarehouses = false
+  ): Observable<PaginatedResult<SupplierPurchaseHistory>> {
+    const params = allWarehouses ? new HttpParams().set('allWarehouses', 'true') : undefined;
     return this.http
-      .get<PaginatedResult<SupplierPurchaseHistory>>(`${environment.apiUrl}/suppliers/${supplierId}/purchases`)
+      .get<PaginatedResult<SupplierPurchaseHistory>>(`${environment.apiUrl}/suppliers/${supplierId}/purchases`, { params })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
@@ -89,7 +106,17 @@ export class SuppliersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
-  createPayment(supplierId: string, payload: CreateSupplierPaymentRequest): Observable<SupplierPayment> {
+  /** Commandé, reçu, dû, payé et reste à payer, calculés par le backend. */
+  account(supplierId: string): Observable<SupplierAccount> {
+    return this.http
+      .get<SupplierAccount>(`${environment.apiUrl}/suppliers/${supplierId}/account`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  createPayment(
+    supplierId: string,
+    payload: CreateSupplierPaymentRequest
+  ): Observable<SupplierPayment> {
     return this.http
       .post<SupplierPayment>(`${environment.apiUrl}/suppliers/${supplierId}/payments`, payload)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));

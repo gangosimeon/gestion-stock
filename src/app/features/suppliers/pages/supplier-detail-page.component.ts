@@ -8,11 +8,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { BehaviorSubject, catchError, finalize, forkJoin, map, of, startWith, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, forkJoin, map, of, shareReplay, startWith, switchMap, take } from 'rxjs';
 
-import { Supplier } from '../../../core/models/supplier.model';
+import { Supplier, SupplierAccount } from '../../../core/models/supplier.model';
 import { SupplierPurchaseHistory } from '../../../core/models/supplier-purchase-history.model';
-import { SupplierPayment } from '../../../core/models/supplier-payment.model';
+import { SupplierPayment, SupplierPaymentMethod } from '../../../core/models/supplier-payment.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { CreateSupplierPaymentRequest, SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { PaySupplierDialogComponent, PaySupplierDialogResult } from '../ui/pay-supplier-dialog.component';
 
@@ -22,9 +23,27 @@ type DetailVm = {
   supplier: Supplier | null;
   history: SupplierPurchaseHistory[];
   payments: SupplierPayment[];
-  totalPurchases: number;
-  totalPaid: number;
-  balance: number;
+  /** Totaux calculés par le backend ; `null` sans la permission purchase:read. */
+  account: SupplierAccount | null;
+  /** Permission purchase:read : achats, paiements et dette visibles. */
+  canReadPurchases: boolean;
+  /** Permission purchase:pay (interface seulement ; le backend la revérifie). */
+  canPay: boolean;
+};
+
+const EMPTY: Omit<DetailVm, 'isLoading' | 'errorMessage'> = {
+  supplier: null,
+  history: [],
+  payments: [],
+  account: null,
+  canReadPurchases: false,
+  canPay: false
+};
+
+const METHOD_LABELS: Record<SupplierPaymentMethod, string> = {
+  CASH: 'Espèces',
+  MOBILE_MONEY: 'Mobile money',
+  BANK_TRANSFER: 'Virement'
 };
 
 @Component({
@@ -38,10 +57,9 @@ type DetailVm = {
     MatButtonModule,
     MatIconModule,
     MatCardModule,
-    MatTableModule,
-    MatProgressBarModule,
     MatDialogModule,
-    // PaySupplierDialogComponent
+    MatProgressBarModule,
+    MatTableModule
   ],
   templateUrl: './supplier-detail-page.component.html',
   styleUrl: './supplier-detail-page.component.scss',
@@ -50,89 +68,76 @@ type DetailVm = {
 export class SupplierDetailPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(SuppliersApiService);
+  private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  readonly displayedColumns = ['date', 'reference', 'items', 'total'] as const;
-  readonly paymentColumns = ['date', 'amount', 'order', 'note'] as const;
+  readonly displayedColumns = ['date', 'reference', 'order', 'items', 'total'] as const;
+  readonly paymentColumns = ['date', 'number', 'amount', 'method', 'order', 'note'] as const;
 
-  readonly vm$ = this.refresh$.pipe(
-    switchMap(() => this.route.paramMap.pipe(map((p) => p.get('id')))),
-    switchMap((id) => {
+  readonly vm$: Observable<DetailVm> = combineLatest([
+    this.refresh$,
+    this.route.paramMap.pipe(map((p) => p.get('id'))),
+    this.auth.hasPermission$('purchase:read'),
+    this.auth.hasPermission$('purchase:pay'),
+    this.auth.hasPermission$('warehouse:all')
+  ]).pipe(
+    switchMap(([, id, canReadPurchases, canPay, allWarehouses]) => {
       if (!id) {
-        return of({
-          isLoading: false,
-          errorMessage: 'ID fournisseur manquant',
-          supplier: null,
-          history: [],
-          payments: [],
-          totalPurchases: 0,
-          totalPaid: 0,
-          balance: 0
-        } satisfies DetailVm);
+        return of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: 'ID fournisseur manquant' });
       }
-
-      return forkJoin({
-        supplier: this.api.getById(id),
-        history: this.api.purchaseHistory(id).pipe(map((r) => r.items)),
-        payments: this.api.payments(id).pipe(map((r) => r.items))
-      }).pipe(
-        map((r): DetailVm => {
-          const totalPurchases = r.history.reduce((acc, h) => acc + (Number(h.totalAmount) || 0), 0);
-          const totalPaid = r.payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
-          const balance = totalPurchases - totalPaid;
-
-          return {
+      const supplier$ = this.api.getById(id);
+      // Sans purchase:read, le backend refuse achats, paiements et compte : on ne les demande pas.
+      const purchases$ = canReadPurchases
+        ? forkJoin({
+            history: this.api.purchaseHistory(id, allWarehouses).pipe(map((r) => r.items)),
+            payments: this.api.payments(id).pipe(map((r) => r.items)),
+            account: this.api.account(id)
+          })
+        : of({ history: [], payments: [], account: null });
+      return forkJoin({ supplier: supplier$, purchases: purchases$ }).pipe(
+        map(
+          (r): DetailVm => ({
             isLoading: false,
             errorMessage: null,
             supplier: r.supplier,
-            history: r.history,
-            payments: r.payments,
-            totalPurchases,
-            totalPaid,
-            balance
-          };
-        }),
-        startWith({
-          isLoading: true,
-          errorMessage: null,
-          supplier: null,
-          history: [],
-          payments: [],
-          totalPurchases: 0,
-          totalPaid: 0,
-          balance: 0
-        } satisfies DetailVm),
-        catchError((e: unknown) =>
-          of({
-            isLoading: false,
-            errorMessage: e instanceof Error ? e.message : 'Erreur',
-            supplier: null,
-            history: [],
-            payments: [],
-            totalPurchases: 0,
-            totalPaid: 0,
-            balance: 0
-          } satisfies DetailVm)
+            history: r.purchases.history,
+            payments: r.purchases.payments,
+            account: r.purchases.account,
+            canReadPurchases,
+            canPay: canPay && canReadPurchases
+          })
         ),
-        finalize(() => {})
+        startWith<DetailVm>({ ...EMPTY, isLoading: true, errorMessage: null }),
+        catchError((e: unknown) =>
+          of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: e instanceof Error ? e.message : 'Erreur' })
+        )
       );
-    })
+    }),
+    // Une seule série d'appels pour tous les abonnés de l'écran.
+    shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  methodLabel(method: SupplierPaymentMethod | undefined): string {
+    return method ? METHOD_LABELS[method] : '—';
+  }
+
+  /** Commandes réglées par un paiement (réparti par le backend). */
+  ordersOf(payment: SupplierPayment): string {
+    return payment.allocations?.length ? payment.allocations.map((a) => a.orderNumber).join(', ') : '—';
+  }
 
   paySupplier(vm: DetailVm): void {
     const supplierId = vm.supplier?.id;
-    if (!supplierId) return;
-
-    const remaining = Math.max(0, vm.balance);
+    if (!supplierId || !vm.canPay) return;
 
     this.dialog
       .open(PaySupplierDialogComponent, {
         data: {
           title: `Payer ${vm.supplier?.name ?? ''}`,
-          maxAmount: remaining > 0 ? remaining : undefined
+          maxAmount: vm.account?.remainingToPay
         }
       })
       .afterClosed()
@@ -143,6 +148,8 @@ export class SupplierDetailPageComponent {
         const payload: CreateSupplierPaymentRequest = {
           amount: res.amount,
           paymentDateIso: res.paymentDateIso,
+          paymentMethod: res.paymentMethod,
+          externalReference: res.externalReference,
           note: res.note
         };
 
@@ -150,8 +157,8 @@ export class SupplierDetailPageComponent {
           .createPayment(supplierId, payload)
           .pipe(take(1))
           .subscribe({
-            next: () => {
-              this.snackbar.open('Paiement enregistré', 'OK', { duration: 2500 });
+            next: (payment) => {
+              this.snackbar.open(`Paiement ${payment.number ?? ''} enregistré`, 'OK', { duration: 2500 });
               this.refresh$.next(undefined);
             },
             error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })

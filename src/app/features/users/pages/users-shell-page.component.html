@@ -19,7 +19,7 @@
 
       <div class="content">
         @if (!vm.canManage) {
-          <div class="hint">Accès lecture seule (réservé ADMIN pour gérer).</div>
+          <div class="hint">Accès lecture seule (permission user:manage requise pour gérer).</div>
         }
 
         @if (vm.errorMessage) {

@@ -5,6 +5,9 @@ export interface SuppliersVm {
   errorMessage: string | null;
   suppliers: Supplier[];
   filter: string;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
 }
 
 export type SupplierDrawerMode = 'CREATE' | 'EDIT';

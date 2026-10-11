@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, tap } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, finalize, map, shareReplay, tap } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   CreateCustomerRequest,
   CustomersApiService,
@@ -14,6 +15,7 @@ import { ClientDrawerState, ClientsVm } from './clients-vm.model';
 })
 export class ClientsFacade {
   private readonly api = inject(CustomersApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -21,20 +23,34 @@ export class ClientsFacade {
   private readonly filterSubject = new BehaviorSubject<string>('');
   private readonly drawerSubject = new BehaviorSubject<ClientDrawerState>({ opened: false });
 
-  readonly vm$ = combineLatest([
+  // Interface seulement : le backend contrôle chaque permission à chaque appel.
+  private readonly rights$ = combineLatest([
+    this.auth.hasPermission$('customer:create'),
+    this.auth.hasPermission$('customer:update'),
+    this.auth.hasPermission$('customer:delete'),
+    this.auth.hasPermission$('customer:credit')
+  ]);
+
+  readonly vm$: Observable<ClientsVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
     this.customersSubject,
     this.filterSubject,
-    this.drawerSubject
+    this.drawerSubject,
+    this.rights$
   ]).pipe(
-    map(([isLoading, errorMessage, customers, filter, drawer]): ClientsVm => ({
+    map(([isLoading, errorMessage, customers, filter, drawer, [canCreate, canUpdate, canDelete, canCredit]]): ClientsVm => ({
       isLoading,
       errorMessage,
       customers,
       filter,
-      drawer
-    }))
+      drawer,
+      canCreate,
+      canUpdate,
+      canDelete,
+      canCredit
+    })),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   refresh(): void {
@@ -66,7 +82,7 @@ export class ClientsFacade {
     this.drawerSubject.next({ opened: false });
   }
 
-  create(payload: CreateCustomerRequest): unknown {
+  create(payload: CreateCustomerRequest): Observable<Customer> {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
@@ -79,7 +95,7 @@ export class ClientsFacade {
     );
   }
 
-  update(id: string, payload: UpdateCustomerRequest): unknown {
+  update(id: string, payload: UpdateCustomerRequest): Observable<Customer> {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
@@ -92,7 +108,7 @@ export class ClientsFacade {
     );
   }
 
-  delete(id: string): unknown {
+  delete(id: string): Observable<unknown> {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 

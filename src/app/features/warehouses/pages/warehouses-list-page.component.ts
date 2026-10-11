@@ -13,6 +13,7 @@ import { catchError, finalize, map, of, startWith, take } from 'rxjs';
 import { Warehouse } from '../../../core/models/warehouse.model';
 import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
 import { PaginatedResult } from '../../../core/services/products-api.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 type Vm = {
   isLoading: boolean;
@@ -43,10 +44,14 @@ export class WarehousesListPageComponent {
   private readonly api = inject(WarehousesApiService);
   private readonly fb = inject(FormBuilder);
   private readonly snackbar = inject(MatSnackBar);
+  private readonly auth = inject(AuthService);
+
+  /** Interface seulement : le backend exige warehouse:manage pour créer un dépôt. */
+  readonly canManage$ = this.auth.hasPermission$('warehouse:manage');
 
   isSubmitting = false;
 
-  readonly displayedColumns = ['id', 'name'] as const;
+  readonly displayedColumns = ['code', 'name', 'main'] as const;
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]]
@@ -83,6 +88,7 @@ export class WarehousesListPageComponent {
       .subscribe({
         next: () => {
           this.snackbar.open('Dépôt ajouté', 'OK', { duration: 2500 });
+          // Recharge aussi le sélecteur de magasin de l'en-tête.
           window.location.reload();
         },
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })

@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, map, of } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
+import { Role } from '../models/role.model';
 import { User } from '../models/user.model';
-import { TokenStorageService } from './token-storage.service';
 import { AuthService as NewAuthService } from '../../auth/services/auth.service';
+import { User as SessionUser } from '../../auth/models/user.model';
 
 export interface LoginRequest {
   username: string;
@@ -17,51 +17,54 @@ export interface LoginResponse {
   user: User;
 }
 
+const ROLES: readonly Role[] = ['ADMIN', 'GESTIONNAIRE', 'CAISSIER'];
+
+function toCoreUser(u: SessionUser): User {
+  return {
+    id: u.id,
+    username: u.username,
+    fullName: u.fullName ?? u.username,
+    email: u.email ?? undefined,
+    roles: (u.roles ?? []).filter((r): r is Role => ROLES.includes(r as Role)),
+    role: u.role,
+    isActive: true
+  };
+}
+
+/**
+ * Façade historique utilisée par les features. Toute la session (jetons, utilisateur,
+ * permissions) vit dans `auth/services/auth.service.ts` ; ce service la relaie.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly tokenStorage = inject(TokenStorageService);
-  private readonly router = inject(Router);
-
   private readonly newAuth = inject(NewAuthService);
 
-  private readonly userSubject = new BehaviorSubject<User | null>(null);
-  readonly user$ = this.userSubject.asObservable();
-
-  constructor() {
-    this.newAuth.currentUser$.subscribe((u) => {
-      if (u) {
-        this.userSubject.next({
-          id: u.id,
-          username: u.username,
-          fullName: u.username,
-          email: u.email,
-          roles: u.role ? [u.role as unknown as any] : [],
-          isActive: true
-        } as User);
-      } else {
-        this.userSubject.next(null);
-      }
-    });
-  }
+  readonly user$: Observable<User | null> = this.newAuth.currentUser$.pipe(
+    map((u) => (u ? toCoreUser(u) : null))
+  );
 
   get accessToken(): string | null {
-    return this.tokenStorage.getAccessToken();
+    return this.newAuth.accessToken;
   }
 
   get isAuthenticated(): boolean {
-    return !!this.accessToken;
+    return this.newAuth.isAuthenticated();
   }
 
   logout(): void {
-    this.tokenStorage.clear();
-    this.userSubject.next(null);
-    void this.router.navigateByUrl('/login');
+    this.newAuth.logout();
   }
 
+  /** @deprecated Préférer `hasPermission$` : les droits viennent des permissions du backend. */
   hasAnyRole(required: readonly string[]): Observable<boolean> {
     return this.user$.pipe(map((u) => !!u && u.roles.some((r) => required.includes(r))));
+  }
+
+  /** Permission backend (`domaine:action`) détenue par l'utilisateur courant. Interface seulement. */
+  hasPermission$(permission: string): Observable<boolean> {
+    return this.newAuth.currentUser$.pipe(map((u) => u?.permissions?.includes(permission) ?? false));
   }
 
   toHumanError(err: unknown): string {
@@ -77,6 +80,6 @@ export class AuthService {
   }
 
   hydrateUserFromApi(): Observable<User | null> {
-    return of(null);
+    return this.newAuth.ensureCurrentUser().pipe(map((u) => (u ? toCoreUser(u) : null)));
   }
 }

@@ -135,7 +135,7 @@ export class SuppliersShellPageComponent implements AfterViewInit, OnDestroy {
       .open(ConfirmDeleteSupplierDialogComponent, {
         data: {
           title: 'Supprimer fournisseur',
-          message: `Supprimer "${s.name}" ?`
+          message: `Supprimer "${s.name}" ? Le fournisseur sera désactivé ; ses commandes et produits sont conservés.`
         }
       })
       .afterClosed()
@@ -146,7 +146,7 @@ export class SuppliersShellPageComponent implements AfterViewInit, OnDestroy {
         (this.facade.delete(s.id) as any)
           .pipe(take(1))
           .subscribe({
-            next: () => this.snackbar.open('Fournisseur supprimé', 'OK', { duration: 2500 }),
+            next: () => this.snackbar.open('Fournisseur désactivé', 'OK', { duration: 2500 }),
             error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
           });
       });

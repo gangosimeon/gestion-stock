@@ -38,7 +38,7 @@
       <div class="kpi-card">
         <div class="kpi-card__icon kpi-card__icon--purple"><mat-icon>bolt</mat-icon></div>
         <span class="kpi-card__label">Action la plus fréquente</span>
-        <span class="kpi-card__value">{{ stats.mostFrequentAction }}</span>
+        <span class="kpi-card__value">{{ actionLabel(stats.mostFrequentAction) }}</span>
       </div>
     </div>
   }
@@ -60,16 +60,16 @@
         <mat-label>Actions</mat-label>
         <mat-select formControlName="actions" multiple>
           @for (a of actionOptions; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
+            <mat-option [value]="a">{{ actionLabel(a) }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Type d'entité</mat-label>
-        <mat-select formControlName="entityTypes" multiple>
-          @for (et of entityTypeOptions; track et) {
-            <mat-option [value]="et">{{ et }}</mat-option>
+        <mat-label>Domaine</mat-label>
+        <mat-select formControlName="modules" multiple>
+          @for (m of moduleOptions; track m) {
+            <mat-option [value]="m">{{ moduleLabel(m) }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
@@ -79,14 +79,14 @@
         <mat-select formControlName="status">
           <mat-option value="">Tous</mat-option>
           @for (s of statusOptions; track s) {
-            <mat-option [value]="s">{{ s }}</mat-option>
+            <mat-option [value]="s">{{ statusLabel(s) }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Recherche</mat-label>
-        <input matInput formControlName="search" placeholder="Utilisateur, entité...">
+        <input matInput formControlName="search" placeholder="Utilisateur, objet, détails...">
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
 
@@ -111,7 +111,7 @@
 
   <!-- TABLEAU -->
   <div class="table-container">
-    <table mat-table [dataSource]="dataSource" matSort>
+    <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSort($event)">
       <!-- Date -->
       <ng-container matColumnDef="date">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Date / Heure</th>
@@ -123,7 +123,7 @@
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Utilisateur</th>
         <td mat-cell *matCellDef="let l">
           <div class="cell-user">
-            <span class="cell-user__name">{{ l.username }}</span>
+            <span class="cell-user__name">{{ l.username || '—' }}</span>
             <span class="cell-user__role">{{ l.userRole }}</span>
           </div>
         </td>
@@ -133,17 +133,17 @@
       <ng-container matColumnDef="action">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Action</th>
         <td mat-cell *matCellDef="let l">
-          <span [class]="actionBadgeClass(l.action)">{{ l.action }}</span>
+          <span [class]="actionBadgeClass(l.action)">{{ actionLabel(l.action) }}</span>
         </td>
       </ng-container>
 
       <!-- Entité -->
       <ng-container matColumnDef="entity">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Entité</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Objet</th>
         <td mat-cell *matCellDef="let l">
           <div class="cell-entity">
-            <span class="cell-entity__label">{{ l.entityLabel }}</span>
-            <span class="cell-entity__type">{{ l.entityType }}</span>
+            <span class="cell-entity__label">{{ l.entityLabel || l.entityId || '—' }}</span>
+            <span class="cell-entity__type">{{ moduleLabel(l.module) }} · {{ entityTypeLabel(l.entityType) }}</span>
           </div>
         </td>
       </ng-container>
@@ -152,7 +152,7 @@
       <ng-container matColumnDef="status">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
         <td mat-cell *matCellDef="let l">
-          <span [class]="statusBadgeClass(l.status)">{{ l.status }}</span>
+          <span [class]="statusBadgeClass(l.status)">{{ statusLabel(l.status) }}</span>
         </td>
       </ng-container>
 

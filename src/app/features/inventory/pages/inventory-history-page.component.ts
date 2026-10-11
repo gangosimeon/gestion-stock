@@ -8,7 +8,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { catchError, map, of, startWith, take } from 'rxjs';
 
-import { InventorySession } from '../../../core/models/inventory.model';
+import { InventorySession, inventoryStatusLabels } from '../../../core/models/inventory.model';
 import { PaginatedResult } from '../../../core/services/products-api.service';
 import { InventoryApiService } from '../../../core/services/inventory-api.service';
 import { InventorySessionDetailsDialogComponent } from '../ui/inventory-session-details-dialog.component';
@@ -42,7 +42,10 @@ export class InventoryHistoryPageComponent {
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
 
-  readonly displayedColumns = ['date', 'items', 'diff', 'actions'] as const;
+  readonly displayedColumns = ['date', 'number', 'status', 'items', 'diff', 'actions'] as const;
+  statusLabel(s: InventorySession): string {
+    return s.status ? inventoryStatusLabels[s.status] : '—';
+  }
 
   readonly vm$ = this.api.listSessions().pipe(
     map((r: PaginatedResult<InventorySession>) => ({ isLoading: false, errorMessage: null, sessions: r.items } satisfies HistoryVm)),

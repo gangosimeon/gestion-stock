@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/role.model';
@@ -26,7 +26,8 @@ export class UsersFacade {
 
   readonly drawer$ = this.drawerSubject.asObservable();
 
-  private readonly canManage$ = this.auth.hasAnyRole(['ADMIN']);
+  // Interface seulement : le backend exige user:manage sur chaque appel /api/users.
+  private readonly canManage$ = this.auth.hasPermission$('user:manage');
 
   private readonly items$ = this.refreshSubject.pipe(
     tap(() => {
@@ -37,11 +38,15 @@ export class UsersFacade {
       this.api.list().pipe(
         map((r) => r.items),
         finalize(() => this.isLoadingSubject.next(false)),
-        tap({
-          error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
+        // Une erreur (403, réseau…) ne doit pas couper le flux : l'écran reste utilisable.
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
+          return of([] as User[]);
         })
       )
-    )
+    ),
+    // Un seul GET /users pour tous les abonnés de l'écran (pipes async, table).
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   readonly vm$ = combineLatest([this.isLoadingSubject, this.errorSubject, this.canManage$, this.items$]).pipe(
@@ -82,11 +87,17 @@ export class UsersFacade {
     );
   }
 
-  update(id: string, payload: UpdateUserRequest): unknown {
+  /** Modification ; `newPassword` (facultatif) passe ensuite par la route dédiée du backend. */
+  update(id: string, payload: UpdateUserRequest, newPassword?: string): unknown {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
-    return this.api.update(id, payload).pipe(
+    const update$ = this.api.update(id, payload);
+    const request$ = newPassword
+      ? update$.pipe(switchMap((user) => this.api.resetPassword(id, newPassword).pipe(map(() => user))))
+      : update$;
+
+    return request$.pipe(
       finalize(() => this.isLoadingSubject.next(false)),
       tap({
         next: () => this.refresh(),

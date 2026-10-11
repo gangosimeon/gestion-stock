@@ -6,7 +6,7 @@ import { catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { Customer } from '../models/customer.model';
-import { Sale } from '../models/sale.model';
+import { PaymentMethod, Sale, SaleType } from '../models/sale.model';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -19,7 +19,25 @@ function toApiError(err: unknown): Error {
   return new Error('Une erreur est survenue.');
 }
 
-export type CreateSaleRequest = Omit<Sale, 'id' | 'createdAt' | 'createdByUserId' | 'total' | 'profit'>;
+/** Article vendu : produit, quantité, remise éventuelle. Le backend fixe le prix. */
+export interface CreateSaleItem {
+  productId: string;
+  quantity: number;
+  discountPercent?: number;
+}
+
+/**
+ * POST /api/sales. Aucun prix ni coût : le backend applique le tarif (`type`), vérifie le
+ * stock et le crédit, encaisse dans la caisse ouverte. `paidAmount` absent : totalité payée.
+ */
+export interface CreateSaleRequest {
+  type: SaleType;
+  customerId?: string;
+  paymentMethod: PaymentMethod;
+  paidAmount?: number;
+  note?: string;
+  items: CreateSaleItem[];
+}
 
 @Injectable({
   providedIn: 'root'

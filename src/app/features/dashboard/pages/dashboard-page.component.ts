@@ -1,16 +1,18 @@
-import { AsyncPipe, DecimalPipe } from '@angular/common';
+import { AsyncPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject, takeUntil } from 'rxjs';
 
-import { DashboardFacade } from '../data/dashboard.facade';
+import { DashboardFacade, DashboardVm } from '../data/dashboard.facade';
+
+type ChartName = 'salesByDay' | 'topProducts' | 'stockEvolution' | 'mySales';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [AsyncPipe, DecimalPipe, MatCardModule, MatIconModule],
+  imports: [AsyncPipe, DatePipe, DecimalPipe, MatCardModule, MatIconModule],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss'
 })
@@ -18,13 +20,13 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(DashboardFacade);
   private readonly destroy$ = new Subject<void>();
 
-  @ViewChild('salesByDayCanvas') salesByDayCanvas!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('topProductsCanvas') topProductsCanvas!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('stockEvolutionCanvas') stockEvolutionCanvas!: ElementRef<HTMLCanvasElement>;
+  // Canevas présents selon la vue (magasin ou vendeur) : chacun peut être absent.
+  @ViewChild('salesByDayCanvas') salesByDayCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('topProductsCanvas') topProductsCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('stockEvolutionCanvas') stockEvolutionCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('mySalesCanvas') mySalesCanvas?: ElementRef<HTMLCanvasElement>;
 
-  private salesByDayChart: Chart | null = null;
-  private topProductsChart: Chart | null = null;
-  private stockEvolutionChart: Chart | null = null;
+  private readonly charts = new Map<ChartName, Chart>();
 
   readonly vm$ = this.facade.vm$;
 
@@ -34,158 +36,113 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
-      this.renderSalesByDay(vm.salesByDay);
-      this.renderTopProducts(vm.topProducts);
-      this.renderStockEvolution(vm.stockEvolution);
-    });
+    // Après le rendu du template : les canevas des blocs @if viennent d'apparaître.
+    this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => setTimeout(() => this.render(vm)));
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-
-    this.salesByDayChart?.destroy();
-    this.topProductsChart?.destroy();
-    this.stockEvolutionChart?.destroy();
+    this.charts.forEach((chart) => chart.destroy());
+    this.charts.clear();
   }
 
-  private renderSalesByDay(points: { date: string; total: number; profit: number }[]): void {
-    const labels = points.map((p) => p.date);
-    const data = points.map((p) => p.total);
+  private render(vm: DashboardVm): void {
+    const days = vm.salesByDay;
+    this.draw('salesByDay', this.salesByDayCanvas, 'line', 'Ventes', days.map((p) => p.date), days.map((p) => p.total), '#2563EB');
+    this.draw('topProducts', this.topProductsCanvas, 'bar', 'CA', vm.topProducts.map((p) => p.name), vm.topProducts.map((p) => p.total), '#10B981');
+    this.draw(
+      'stockEvolution',
+      this.stockEvolutionCanvas,
+      'line',
+      'Stock total',
+      vm.stockEvolution.map((p) => p.label),
+      vm.stockEvolution.map((p) => p.stockTotal),
+      '#F59E0B'
+    );
+    const mine = vm.seller?.myDay?.last7Days ?? [];
+    this.draw('mySales', this.mySalesCanvas, 'line', 'Mes ventes', mine.map((p) => p.label), mine.map((p) => p.total), '#2563EB');
+  }
 
-    const config: ChartConfiguration<'line'> = {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Ventes',
-            data,
-            borderColor: '#2563EB',
-            backgroundColor: 'rgba(37, 99, 235, 0.06)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#2563EB'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' },
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10, titleFont: { size: 12 }, bodyFont: { size: 12 } }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
-          y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
-        }
-      }
-    };
-
-    if (!this.salesByDayChart) {
-      this.salesByDayChart = new Chart(this.salesByDayCanvas.nativeElement, config);
+  /** Crée le graphique, le met à jour, ou le recrée si Angular a remplacé son canevas. */
+  private draw(
+    name: ChartName,
+    canvas: ElementRef<HTMLCanvasElement> | undefined,
+    type: 'line' | 'bar',
+    label: string,
+    labels: string[],
+    data: number[],
+    color: string
+  ): void {
+    const existing = this.charts.get(name);
+    if (!canvas) {
+      existing?.destroy();
+      this.charts.delete(name);
       return;
     }
-
-    this.salesByDayChart.data.labels = labels;
-    this.salesByDayChart.data.datasets[0].data = data;
-    this.salesByDayChart.update();
-  }
-
-  private renderTopProducts(points: { name: string; total: number }[]): void {
-    const labels = points.map((p) => p.name);
-    const data = points.map((p) => p.total);
-
-    const config: ChartConfiguration<'bar'> = {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'CA',
-            data,
-            backgroundColor: '#10B981',
-            borderRadius: 4,
-            borderSkipped: false,
-            maxBarThickness: 32
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10 }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
-          y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
-        }
-      }
-    };
-
-    if (!this.topProductsChart) {
-      this.topProductsChart = new Chart(this.topProductsCanvas.nativeElement, config);
+    if (existing && existing.canvas === canvas.nativeElement) {
+      existing.data.labels = labels;
+      existing.data.datasets[0].data = data;
+      existing.update();
       return;
     }
-
-    this.topProductsChart.data.labels = labels;
-    this.topProductsChart.data.datasets[0].data = data;
-    this.topProductsChart.update();
+    existing?.destroy();
+    const chart =
+      type === 'line'
+        ? new Chart(canvas.nativeElement, lineConfig(label, labels, data, color))
+        : new Chart(canvas.nativeElement, barConfig(label, labels, data, color));
+    this.charts.set(name, chart as Chart);
   }
+}
 
-  private renderStockEvolution(points: { label: string; stockTotal: number }[]): void {
-    const labels = points.map((p) => p.label);
-    const data = points.map((p) => p.stockTotal);
+const tooltip = { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10, titleFont: { size: 12 }, bodyFont: { size: 12 } };
+const scales = {
+  x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
+  y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
+};
 
-    const config: ChartConfiguration<'line'> = {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Stock total',
-            data,
-            borderColor: '#F59E0B',
-            backgroundColor: 'rgba(245, 158, 11, 0.06)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#F59E0B'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' },
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10 }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
-          y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
+function lineConfig(label: string, labels: string[], data: number[], color: string): ChartConfiguration<'line'> {
+  return {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label,
+          data,
+          borderColor: color,
+          backgroundColor: `${color}10`,
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: color
         }
-      }
-    };
-
-    if (!this.stockEvolutionChart) {
-      this.stockEvolutionChart = new Chart(this.stockEvolutionCanvas.nativeElement, config);
-      return;
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: { legend: { display: false }, tooltip },
+      scales
     }
+  };
+}
 
-    this.stockEvolutionChart.data.labels = labels;
-    this.stockEvolutionChart.data.datasets[0].data = data;
-    this.stockEvolutionChart.update();
-  }
+function barConfig(label: string, labels: string[], data: number[], color: string): ChartConfiguration<'bar'> {
+  return {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label, data, backgroundColor: color, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip },
+      scales
+    }
+  };
 }

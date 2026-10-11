@@ -8,12 +8,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { combineLatest, finalize, map, startWith, take } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, startWith, take } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { Warehouse } from '../../../core/models/warehouse.model';
 import { ProductsApiService } from '../../../core/services/products-api.service';
 import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 @Component({
   selector: 'app-warehouse-transfer-page',
@@ -39,16 +41,36 @@ export class WarehouseTransferPageComponent {
   private readonly productsApi = inject(ProductsApiService);
   private readonly warehousesApi = inject(WarehousesApiService);
   private readonly snackbar = inject(MatSnackBar);
+  private readonly auth = inject(AuthService);
+  private readonly warehouseCtx = inject(WarehouseContextService);
+
+  /** Interface seulement : le backend exige stock:transfer et l'accès au dépôt source. */
+  readonly canTransfer$ = this.auth.hasPermission$('stock:transfer');
 
   isSubmitting = false;
 
+  // Dépôts et catalogue du backend : identifiants réels, comme le transfert.
   readonly vm$ = combineLatest([this.warehousesApi.list(), this.productsApi.list()]).pipe(
-    map(([w, p]) => ({ warehouses: w.items, products: p.items, isLoading: false, errorMessage: null })),
-    startWith({ warehouses: [] as Warehouse[], products: [] as Product[], isLoading: true, errorMessage: null })
+    map(([w, p]) => ({
+      warehouses: w.items,
+      products: p.items,
+      isLoading: false,
+      errorMessage: null as string | null
+    })),
+    catchError((e: unknown) =>
+      of({
+        warehouses: [] as Warehouse[],
+        products: [] as Product[],
+        isLoading: false,
+        errorMessage: e instanceof Error ? e.message : 'Erreur de chargement'
+      })
+    ),
+    startWith({ warehouses: [] as Warehouse[], products: [] as Product[], isLoading: true, errorMessage: null as string | null })
   );
 
   readonly form = this.fb.nonNullable.group({
-    fromWarehouseId: ['', [Validators.required]],
+    // Par défaut : le magasin choisi dans l'en-tête.
+    fromWarehouseId: [this.warehouseCtx.warehouseId ?? '', [Validators.required]],
     toWarehouseId: ['', [Validators.required]],
     productId: ['', [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1)]]
@@ -85,7 +107,12 @@ export class WarehouseTransferPageComponent {
         })
       )
       .subscribe({
-        next: () => this.snackbar.open('Transfert effectué', 'OK', { duration: 2500 }),
+        next: (res) =>
+          this.snackbar.open(
+            `Transfert effectué. Stock restant au dépôt source : ${res.out.balanceAfter ?? '—'}`,
+            'OK',
+            { duration: 3500 }
+          ),
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
       });
   }

@@ -16,7 +16,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { Subject, takeUntil } from 'rxjs';
 
-import { StockMovementRow, stockReasonLabels } from '../data/stock-vm.model';
+import { StockMovementRow, stockReasonLabels, stockTypeLabels } from '../data/stock-vm.model';
 import { StockFacade } from '../data/stock.facade';
 import { StockMovementDrawerComponent } from '../ui/stock-movement-drawer.component';
 
@@ -53,7 +53,7 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('drawer') drawer!: MatSidenav;
 
-  readonly displayedColumns = ['date', 'product', 'type', 'qty', 'user', 'reason'] as const;
+  readonly displayedColumns = ['date', 'product', 'type', 'qty', 'balance', 'user', 'reason'] as const;
   readonly dataSource = new MatTableDataSource<StockMovementRow>([]);
 
   readonly from = new FormControl<Date | null>(null);
@@ -111,8 +111,9 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
     this.facade.closeDrawer();
   }
 
-  reasonLabel(reason: StockMovementRow['reason']): string {
-    return stockReasonLabels[reason];
+  /** Origine du mouvement (type détaillé du backend), sinon motif historique. */
+  reasonLabel(m: StockMovementRow): string {
+    return (m.type && stockTypeLabels[m.type]) || stockReasonLabels[m.reason];
   }
 
   chipColor(m: StockMovementRow): 'primary' | 'warn' {

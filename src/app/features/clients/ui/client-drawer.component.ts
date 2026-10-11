@@ -18,6 +18,8 @@ export interface ClientDrawerContext {
   mode: ClientDrawerMode;
   customerId: string | null;
   customers: Customer[];
+  /** customer:credit : sans elle, le plafond n'est ni saisi ni envoyé (le backend refuserait). */
+  canCredit: boolean;
 }
 
 @Component({
@@ -62,6 +64,7 @@ export class ClientDrawerComponent {
     if (this.ctx.mode === 'CREATE') {
       this.form.reset({ name: '', phone: '', email: '', creditLimit: 0 }, { emitEvent: false });
       this.form.enable({ emitEvent: false });
+      this.lockCreditIfNotAllowed();
       return;
     }
 
@@ -80,6 +83,11 @@ export class ClientDrawerComponent {
     );
 
     this.form.enable({ emitEvent: false });
+    this.lockCreditIfNotAllowed();
+  }
+
+  private lockCreditIfNotAllowed(): void {
+    if (!this.ctx.canCredit) this.form.controls.creditLimit.disable({ emitEvent: false });
   }
 
   get title(): string {
@@ -94,11 +102,12 @@ export class ClientDrawerComponent {
 
     const raw = this.form.getRawValue();
 
-    const payloadBase = {
+    const payloadBase: CreateCustomerRequest = {
       name: raw.name.trim(),
       phone: raw.phone.trim() ? raw.phone.trim() : undefined,
       email: raw.email.trim() ? raw.email.trim() : undefined,
-      creditLimit: Number(raw.creditLimit)
+      // Sans customer:credit : plafond absent, donc conservé par le backend.
+      ...(this.ctx.canCredit ? { creditLimit: Number(raw.creditLimit) } : {})
     };
 
     if (!payloadBase.name) {
@@ -111,8 +120,8 @@ export class ClientDrawerComponent {
 
     const req$ =
       this.ctx.mode === 'CREATE'
-        ? (this.facade.create(payloadBase satisfies CreateCustomerRequest) as any)
-        : (this.facade.update(this.ctx.customerId as string, payloadBase satisfies UpdateCustomerRequest) as any);
+        ? this.facade.create(payloadBase)
+        : this.facade.update(this.ctx.customerId as string, payloadBase satisfies UpdateCustomerRequest);
 
     req$
       .pipe(
@@ -120,6 +129,7 @@ export class ClientDrawerComponent {
         finalize(() => {
           this.isSubmitting = false;
           this.form.enable();
+          this.lockCreditIfNotAllowed();
         })
       )
       .subscribe({

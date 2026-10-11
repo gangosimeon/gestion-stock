@@ -61,13 +61,13 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
 
   readonly search = new FormControl<string>('', { nonNullable: true });
 
-  readonly displayedColumns = ['name', 'phone', 'email', 'creditLimit', 'actions'] as const;
+  readonly displayedColumns = ['name', 'phone', 'email', 'creditLimit', 'balance', 'actions'] as const;
   readonly dataSource = new MatTableDataSource<Customer>([]);
 
   readonly vm$ = this.facade.vm$;
 
   vmSnapshot = { customers: [] as Customer[] };
-  drawerCtx: ClientDrawerContext = { mode: 'CREATE', customerId: null, customers: [] };
+  drawerCtx: ClientDrawerContext = { mode: 'CREATE', customerId: null, customers: [], canCredit: false };
 
   constructor() {
     this.facade.refresh();
@@ -98,7 +98,8 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
         this.drawerCtx = {
           mode: vm.drawer.mode,
           customerId: vm.drawer.customerId,
-          customers: vm.customers
+          customers: vm.customers,
+          canCredit: vm.canCredit
         };
         void this.drawer.open();
       } else {
@@ -137,10 +138,11 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
       .subscribe((ok: boolean | undefined) => {
         if (!ok) return;
 
-        (this.facade.delete(c.id) as any)
+        this.facade
+          .delete(c.id)
           .pipe(take(1))
           .subscribe({
-            next: () => this.snackbar.open('Client supprimé', 'OK', { duration: 2500 }),
+            next: () => this.snackbar.open('Client désactivé (ventes et dette conservées)', 'OK', { duration: 2500 }),
             error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
           });
       });

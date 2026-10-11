@@ -10,7 +10,7 @@
       </div>
 
       <nav class="sidebar__nav">
-        @for (item of navItems; track item.route) {
+        @for (item of visibleNavItems$ | async; track item.route) {
           <a class="nav-item"
              [routerLink]="item.route"
              routerLinkActive="nav-item--active"
@@ -46,8 +46,8 @@
         @if (warehouseId$ | async; as wid) {
           <mat-form-field appearance="outline" class="header__warehouse" subscriptSizing="dynamic">
             <mat-label>Magasin</mat-label>
-            <mat-select [value]="wid" (valueChange)="setWarehouse($event)">
-              @for (it of w.items; track it.id) {
+            <mat-select [value]="wid" (valueChange)="setWarehouse($event, w)">
+              @for (it of w; track it.id) {
                 <mat-option [value]="it.id">{{ it.name }}</mat-option>
               }
             </mat-select>

@@ -1,13 +1,5 @@
-import { CanActivateFn, Router } from '@angular/router';
-import { inject } from '@angular/core';
-
-import { AuthService } from '../services/auth.service';
-
-export const authGuard: CanActivateFn = () => {
-  const auth = inject(AuthService);
-  const router = inject(Router);
-
-  if (auth.isAuthenticated) return true;
-
-  return router.parseUrl('/auth/login');
-};
+/**
+ * @deprecated Doublon historique : le garde d'authentification est `auth/guards/auth.guard.ts`.
+ * Ré-exporté ici pour que les anciens imports restent valides.
+ */
+export { authGuard } from '../../auth/guards/auth.guard';

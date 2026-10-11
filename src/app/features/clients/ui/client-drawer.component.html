@@ -28,6 +28,9 @@
     <mat-form-field appearance="outline">
       <mat-label>Limite crédit</mat-label>
       <input matInput type="number" formControlName="creditLimit" />
+      @if (!ctx.canCredit) {
+        <mat-hint>Permission customer:credit requise pour modifier le plafond.</mat-hint>
+      }
       @if (form.controls.creditLimit.touched && (form.controls.creditLimit.errors?.['required'] || form.controls.creditLimit.errors?.['min'])) {
         <mat-error>Valeur invalide</mat-error>
       }

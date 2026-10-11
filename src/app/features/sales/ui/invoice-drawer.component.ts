@@ -5,7 +5,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 
 import { Customer } from '../../../core/models/customer.model';
-import { Sale } from '../../../core/models/sale.model';
+import { PaymentMethod, Sale } from '../../../core/models/sale.model';
+import { paymentMethodLabels } from '../data/sales-vm.model';
 
 @Component({
   selector: 'app-invoice-drawer',
@@ -40,11 +41,11 @@ export class InvoiceDrawerComponent {
     y += 18;
 
     doc.setFontSize(10);
-    doc.text(`Réf: ${this.sale.id}`, marginX, y);
+    doc.text(`N°: ${this.sale.number ?? this.sale.id}`, marginX, y);
     y += 14;
     doc.text(`Date: ${new Date(this.sale.createdAt).toLocaleString()}`, marginX, y);
     y += 14;
-    doc.text(`Client: ${this.customer?.name ?? 'Comptoir'}`, marginX, y);
+    doc.text(`Client: ${this.sale.customerName ?? this.customer?.name ?? 'Comptoir'}`, marginX, y);
     y += 18;
 
     doc.setFontSize(11);
@@ -53,7 +54,8 @@ export class InvoiceDrawerComponent {
 
     doc.setFontSize(10);
     for (const it of this.sale.items) {
-      const line = `${it.productId}  |  Qté: ${it.quantity}  |  PU: ${it.unitPrice}  |  Total: ${it.unitPrice * it.quantity}`;
+      // Montants de la vente enregistrée (backend).
+      const line = `${it.productName ?? it.productId}  |  Qté: ${it.quantity}  |  PU: ${it.unitPrice}  |  Total: ${it.lineTotal ?? it.unitPrice * it.quantity}`;
       doc.text(line, marginX, y);
       y += 12;
 
@@ -68,9 +70,17 @@ export class InvoiceDrawerComponent {
     doc.text(`Total: ${this.sale.total}`, marginX, y);
     y += 14;
     doc.setFontSize(10);
-    doc.text(`Paiement: ${this.sale.paymentMethod}`, marginX, y);
+    doc.text(`Payé (${this.methodLabel(this.sale.paymentMethod)}): ${this.sale.paidAmount}`, marginX, y);
+    if (this.sale.creditAmount) {
+      y += 14;
+      doc.text(`À crédit (compte client): ${this.sale.creditAmount}`, marginX, y);
+    }
 
-    doc.save(`facture_${this.sale.id}.pdf`);
+    doc.save(`facture_${this.sale.number ?? this.sale.id}.pdf`);
+  }
+
+  methodLabel(method: PaymentMethod): string {
+    return paymentMethodLabels[method] ?? method;
   }
 
   trackByIndex(i: number): number {

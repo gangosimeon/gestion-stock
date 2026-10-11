@@ -1,10 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, forkJoin, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, forkJoin, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { PurchaseOrder } from '../../../core/models/purchase-order.model';
 import { Supplier } from '../../../core/models/supplier.model';
 import { ProductsApiService } from '../../../core/services/products-api.service';
+import { AuthService } from '../../../core/services/auth.service';
 import {
   PurchasesApiService,
   CreatePurchaseOrderRequest,
@@ -21,6 +22,7 @@ export class PurchasesFacade {
   private readonly purchasesApi = inject(PurchasesApiService);
   private readonly suppliersApi = inject(SuppliersApiService);
   private readonly productsApi = inject(ProductsApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -41,33 +43,53 @@ export class PurchasesFacade {
       this.errorSubject.next(null);
     }),
     switchMap(() =>
+      // Commandes, fournisseurs et catalogue du backend : identifiants réels de bout en bout.
       forkJoin({
         orders: this.purchasesApi.listOrders().pipe(map((r) => r.items)),
         suppliers: this.suppliersApi.list().pipe(map((r) => r.items)),
         products: this.productsApi.list().pipe(map((r) => r.items))
       }).pipe(
-        tap({
-          error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
+        // Une erreur ne coupe pas le flux : message affiché, nouvelle tentative possible.
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
+          return of({ orders: [] as PurchaseOrder[], suppliers: [] as Supplier[], products: [] as Product[] });
         }),
         finalize(() => this.isLoadingSubject.next(false))
       )
     ),
-    switchMap((v) => (this.errorSubject.value ? of({ orders: [] as PurchaseOrder[], suppliers: [] as Supplier[], products: [] as Product[] }) : of(v))),
     shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  // Interface seulement : le backend contrôle chaque permission à chaque appel.
+  private readonly rights$ = combineLatest([
+    this.auth.hasPermission$('purchase:create'),
+    this.auth.hasPermission$('purchase:receive'),
+    this.auth.hasPermission$('purchase:pay')
+  ]);
 
   private readonly orders$ = this.data$.pipe(map((d) => d.orders));
   private readonly suppliers$ = this.data$.pipe(map((d) => d.suppliers));
   private readonly products$ = this.data$.pipe(map((d) => d.products));
 
-  readonly vm$ = combineLatest([this.isLoadingSubject, this.errorSubject, this.orders$, this.suppliers$, this.products$, this.filterSubject]).pipe(
-    map(([isLoading, errorMessage, orders, suppliers, products, filter]): PurchasesVm => ({
+  readonly vm$: Observable<PurchasesVm> = combineLatest([
+    this.isLoadingSubject,
+    this.errorSubject,
+    this.orders$,
+    this.suppliers$,
+    this.products$,
+    this.filterSubject,
+    this.rights$
+  ]).pipe(
+    map(([isLoading, errorMessage, orders, suppliers, products, filter, [canCreate, canReceive, canPay]]): PurchasesVm => ({
       isLoading,
       errorMessage,
       orders,
       suppliers,
       products,
-      filter
+      filter,
+      canCreate,
+      canReceive,
+      canPay
     })),
     shareReplay({ bufferSize: 1, refCount: true })
   );

@@ -22,16 +22,14 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(outgoing).pipe(
     catchError((err) => {
-      if (err instanceof HttpErrorResponse && err.status === 401) {
-        return auth.refreshToken().pipe(
-          switchMap((res) => next(addBearer(req, res.accessToken))),
-          catchError((refreshErr) => {
-            auth.logout();
-            return throwError(() => refreshErr);
-          })
-        );
+      if (!(err instanceof HttpErrorResponse) || err.status !== 401 || !token) {
+        return throwError(() => err);
       }
-      return throwError(() => err);
+      // Jeton déjà renouvelé par une requête concurrente : on rejoue sans nouveau refresh.
+      const current = auth.accessToken;
+      if (current && current !== token) return next(addBearer(req, current));
+      // Un refresh refusé ferme lui-même la session (AuthService.refreshToken).
+      return auth.refreshToken().pipe(switchMap((res) => next(addBearer(req, res.accessToken))));
     })
   );
 };

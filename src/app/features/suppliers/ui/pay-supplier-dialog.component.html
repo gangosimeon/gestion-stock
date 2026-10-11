@@ -2,6 +2,12 @@
 
 <form [formGroup]="form" (ngSubmit)="submit()">
   <div mat-dialog-content class="content">
+    @if (data.maxAmount !== undefined) {
+      <p class="hint">
+        Reste à payer : {{ data.maxAmount }}. Le paiement solde les commandes les plus anciennes.
+      </p>
+    }
+
     <mat-form-field appearance="outline">
       <mat-label>Montant</mat-label>
       <input matInput type="number" formControlName="amount" />
@@ -18,7 +24,21 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Date paiement</mat-label>
-      <input matInput type="date" formControlName="paymentDateIso" />
+      <input matInput type="date" formControlName="paymentDateIso" [max]="today" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Mode de paiement</mat-label>
+      <mat-select formControlName="paymentMethod">
+        @for (m of methods; track m.value) {
+          <mat-option [value]="m.value">{{ m.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Référence (virement, chèque, transaction)</mat-label>
+      <input matInput formControlName="externalReference" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">

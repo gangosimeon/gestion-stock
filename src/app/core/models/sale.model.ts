@@ -4,8 +4,14 @@ export type SaleType = 'RETAIL' | 'WHOLESALE';
 export interface SaleItem {
   productId: string;
   quantity: number;
+  /** Prix unitaire appliqué par le backend. */
   unitPrice: number;
-  purchasePrice: number;
+  purchasePrice?: number;
+  // Champs du backend.
+  productSku?: string;
+  productName?: string;
+  discountPercent?: number;
+  lineTotal?: number;
 }
 
 export interface Sale {
@@ -19,4 +25,12 @@ export interface Sale {
   profit: number;
   createdAt: string;
   createdByUserId: string;
+  // Champs du backend.
+  number?: string;
+  status?: 'CONFIRMED' | 'CANCELLED';
+  customerName?: string | null;
+  subtotal?: number;
+  discountTotal?: number;
+  /** Part vendue à crédit (dette du client), calculée par le backend. */
+  creditAmount?: number;
 }

@@ -10,8 +10,8 @@ import { CustomerPayment } from '../models/customer-payment.model';
 import { Sale } from '../models/sale.model';
 import { PurchaseOrder } from '../models/purchase-order.model';
 import { StockMovement } from '../models/stock-movement.model';
-import { Expense } from '../models/expense.model';
-import { Appointment } from '../models/appointment.model';
+import { Expense } from './legacy-mock-models';
+import { Appointment } from './legacy-mock-models';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const d = (daysAgo: number, h = 9): string =>
