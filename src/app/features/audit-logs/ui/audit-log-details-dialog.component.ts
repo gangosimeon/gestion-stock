@@ -4,7 +4,15 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
-import { AuditLogEntry } from '../../../core/models/audit-log.model';
+import {
+  AuditLogEntry,
+  auditActionLabels,
+  auditEntityTypeLabels,
+  auditLabel,
+  auditModuleLabels,
+  auditStatusLabels,
+  formatAuditValue
+} from '../../../core/models/audit-log.model';
 
 export type AuditLogDetailsDialogData = {
   log: AuditLogEntry;
@@ -88,4 +96,11 @@ export type AuditLogDetailsDialogData = {
 })
 export class AuditLogDetailsDialogComponent {
   readonly data = inject<AuditLogDetailsDialogData>(MAT_DIALOG_DATA);
+
+  readonly actionLabels = auditActionLabels;
+  readonly moduleLabels = auditModuleLabels;
+  readonly entityTypeLabels = auditEntityTypeLabels;
+  readonly statusLabels = auditStatusLabels;
+  readonly label = auditLabel;
+  readonly format = formatAuditValue;
 }

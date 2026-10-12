@@ -1,0 +1,43 @@
+<div class="drawer">
+  <div class="drawer__header">
+    <div>
+      <div class="drawer__title">{{ title }}</div>
+      @if (ctx.category) {
+        <div class="drawer__subtitle">{{ ctx.category.active === false ? 'Désactivée' : 'Active' }}</div>
+      }
+    </div>
+
+    <button mat-icon-button type="button" (click)="close.emit()" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider />
+
+  <form class="drawer__content" [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Nom</mat-label>
+      <input matInput formControlName="name" maxlength="100" placeholder="Ex : Montures" />
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <mat-error>Nom obligatoire (100 caractères au plus)</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" rows="4" maxlength="255"></textarea>
+    </mat-form-field>
+
+    @if (errorMessage) {
+      <div class="drawer__error">{{ errorMessage }}</div>
+    }
+
+    <div class="drawer__actions">
+      <span class="spacer"></span>
+      <button mat-stroked-button type="button" (click)="close.emit()">Fermer</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="saving">
+        {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </form>
+</div>

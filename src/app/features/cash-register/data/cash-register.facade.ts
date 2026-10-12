@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, Observable, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, Observable, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import {
   CashRegisterApiService,
@@ -26,8 +26,16 @@ export class CashRegisterFacade {
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
   private readonly refreshSubject = new BehaviorSubject<void>(undefined);
 
+  // Ma caisse ouverte (null : aucune). Une erreur ne coupe pas le flux.
   readonly current$ = this.refreshSubject.pipe(
-    switchMap(() => this.api.current()),
+    switchMap(() =>
+      this.api.current().pipe(
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
+          return of(null);
+        })
+      )
+    ),
     shareReplay({ bufferSize: 1, refCount: true })
   );
 

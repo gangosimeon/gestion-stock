@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -17,19 +17,27 @@ import { Subject, takeUntil } from 'rxjs';
 
 import {
   AuditAction,
-  AuditEntityType,
   AuditLogEntry,
   AuditLogFilter,
+  AuditLogSort,
   AuditLogStats,
-  AuditStatus
+  AuditModule,
+  AuditStatus,
+  auditActionLabels,
+  auditEntityTypeLabels,
+  auditLabel,
+  auditModuleLabels,
+  auditStatusLabels
 } from '../../../core/models/audit-log.model';
 import { AuditLogsApiService } from '../../../core/services/audit-logs-api.service';
 import { AuditLogDetailsDialogComponent } from '../ui/audit-log-details-dialog.component';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-audit-logs-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     DatePipe,
     ReactiveFormsModule,
@@ -50,7 +58,7 @@ import { AuditLogDetailsDialogComponent } from '../ui/audit-log-details-dialog.c
   styleUrl: './audit-logs-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AuditLogsPageComponent implements OnInit {
+export class AuditLogsPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(AuditLogsApiService);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
@@ -64,25 +72,32 @@ export class AuditLogsPageComponent implements OnInit {
   isLoading = false;
   errorMessage: string | null = null;
   total = 0;
-  pageSize = 25;
+  pageSize = 10;
   pageIndex = 0;
   stats: AuditLogStats | null = null;
+  /** Tri demandé au backend (aucun : plus récent d'abord). */
+  sortBy: AuditLogSort | undefined;
 
   // DataSource
   dataSource = new MatTableDataSource<AuditLogEntry>([]);
   readonly displayedColumns = ['date', 'user', 'action', 'entity', 'status', 'details'];
 
-  // Options filtres
-  readonly actionOptions: AuditAction[] = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'EXPORT', 'RECEIVE', 'PAY', 'TRANSFER', 'OPEN', 'CLOSE'];
-  readonly entityTypeOptions: AuditEntityType[] = ['PRODUCT', 'SALE', 'SUPPLIER', 'PURCHASE_ORDER', 'EXPENSE', 'INVENTORY_SESSION', 'CASH_REGISTER_SESSION', 'WAREHOUSE_TRANSFER', 'CUSTOMER', 'USER', 'SYSTEM'];
+  // Options filtres : valeurs tracées par le backend
+  readonly actionOptions = Object.keys(auditActionLabels) as AuditAction[];
+  readonly moduleOptions = Object.keys(auditModuleLabels) as AuditModule[];
   readonly statusOptions: AuditStatus[] = ['SUCCESS', 'FAILURE'];
+
+  readonly actionLabel = (code: string | null | undefined) => auditLabel(auditActionLabels, code);
+  readonly moduleLabel = (code: string | null | undefined) => auditLabel(auditModuleLabels, code);
+  readonly entityTypeLabel = (code: string | null | undefined) => auditLabel(auditEntityTypeLabels, code);
+  readonly statusLabel = (code: string | null | undefined) => auditLabel(auditStatusLabels, code);
 
   // Formulaire de filtres
   filtersForm = new FormGroup({
     dateFrom: new FormControl<string>(''),
     dateTo: new FormControl<string>(''),
     actions: new FormControl<AuditAction[]>([]),
-    entityTypes: new FormControl<AuditEntityType[]>([]),
+    modules: new FormControl<AuditModule[]>([]),
     status: new FormControl<AuditStatus | ''>(''),
     search: new FormControl<string>('')
   });
@@ -106,16 +121,7 @@ export class AuditLogsPageComponent implements OnInit {
     this.errorMessage = null;
     this.cdr.markForCheck();
 
-    const f = this.filtersForm.value;
-    const filters: AuditLogFilter = {};
-    if (f.dateFrom) filters.dateFrom = f.dateFrom;
-    if (f.dateTo) filters.dateTo = f.dateTo;
-    if (f.actions?.length) filters.actions = f.actions;
-    if (f.entityTypes?.length) filters.entityTypes = f.entityTypes;
-    if (f.status) filters.status = f.status;
-    if (f.search) filters.search = f.search;
-
-    this.api.list(filters, this.pageIndex, this.pageSize).pipe(takeUntil(this.destroy$)).subscribe({
+    this.api.list(this.currentFilters(), this.pageIndex, this.pageSize, this.sortBy).pipe(takeUntil(this.destroy$)).subscribe({
       next: (r) => {
         this.dataSource.data = r.items;
         this.total = r.total;
@@ -136,9 +142,37 @@ export class AuditLogsPageComponent implements OnInit {
     this.loadData();
   }
 
+  /** Critères du formulaire, transmis tels quels au backend (recherche comme export). */
+  private currentFilters(): AuditLogFilter {
+    const f = this.filtersForm.value;
+    const filters: AuditLogFilter = {};
+    if (f.dateFrom) filters.dateFrom = f.dateFrom;
+    if (f.dateTo) filters.dateTo = f.dateTo;
+    if (f.actions?.length) filters.actions = f.actions;
+    if (f.modules?.length) filters.modules = f.modules;
+    if (f.status) filters.status = f.status;
+    if (f.search?.trim()) filters.search = f.search.trim();
+    return filters;
+  }
+
+  // Tri : demandé au backend, sur tout le journal (pas seulement la page affichée)
+  onSort(sort: Sort): void {
+    const fields: Record<string, AuditLogSort['field']> = {
+      date: 'createdAt',
+      user: 'username',
+      action: 'action',
+      entity: 'module',
+      status: 'status'
+    };
+    const field = fields[sort.active];
+    this.sortBy = field && sort.direction ? { field, direction: sort.direction } : undefined;
+    this.pageIndex = 0;
+    this.loadData();
+  }
+
   // Réinitialiser les filtres
   resetFilters(): void {
-    this.filtersForm.reset({ actions: [], entityTypes: [], status: '', search: '', dateFrom: '', dateTo: '' });
+    this.filtersForm.reset({ actions: [], modules: [], status: '', search: '', dateFrom: '', dateTo: '' });
     this.pageIndex = 0;
     this.loadData();
   }
@@ -152,15 +186,7 @@ export class AuditLogsPageComponent implements OnInit {
 
   // Export CSV
   exportCsv(): void {
-    const f = this.filtersForm.value;
-    const filters: AuditLogFilter = {};
-    if (f.dateFrom) filters.dateFrom = f.dateFrom;
-    if (f.dateTo) filters.dateTo = f.dateTo;
-    if (f.actions?.length) filters.actions = f.actions;
-    if (f.entityTypes?.length) filters.entityTypes = f.entityTypes;
-    if (f.status) filters.status = f.status;
-
-    this.api.exportCsv(filters).pipe(takeUntil(this.destroy$)).subscribe({
+    this.api.exportCsv(this.currentFilters()).pipe(takeUntil(this.destroy$)).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -170,8 +196,8 @@ export class AuditLogsPageComponent implements OnInit {
         URL.revokeObjectURL(url);
         this.snackbar.open('Export CSV téléchargé', 'OK', { duration: 3000, panelClass: 'snack-success' });
       },
-      error: () => {
-        this.snackbar.open('Erreur lors de l\'export', 'OK', { duration: 3000, panelClass: 'snack-error' });
+      error: (e: Error) => {
+        this.snackbar.open(e.message || 'Erreur lors de l\'export', 'OK', { duration: 3000, panelClass: 'snack-error' });
       }
     });
   }
@@ -190,7 +216,7 @@ export class AuditLogsPageComponent implements OnInit {
     switch (action) {
       case 'CREATE': return 'badge badge--success';
       case 'UPDATE': return 'badge badge--info';
-      case 'DELETE': return 'badge badge--danger';
+      case 'DELETE': case 'CANCEL': case 'DEACTIVATE': return 'badge badge--danger';
       case 'LOGIN': case 'LOGOUT': return 'badge badge--neutral';
       case 'EXPORT': return 'badge badge--warning';
       default: return 'badge badge--neutral';

@@ -1,0 +1,11 @@
+.git
+.github
+.angular
+.vscode
+node_modules
+dist
+coverage
+*.md
+audit-gestion-stock
+.env
+.env.*

@@ -1,26 +1,67 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, forkJoin, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, forkJoin, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
-import { Product } from '../../../core/models/product.model';
-import { Sale } from '../../../core/models/sale.model';
-import { ProductsApiService } from '../../../core/services/products-api.service';
-import { SalesApiService } from '../../../core/services/sales-api.service';
+import { ProductSalesReportRow, SalesGroupBy, SalesPeriodReportRow } from '../../../core/models/report.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { ReportsApiService } from '../../../core/services/reports-api.service';
 import {
   ReportsFilters,
+  ReportsKpis,
   ReportsTab,
   ReportsVm,
-  computeKpis,
-  computeTopProducts,
+  SeriesPoint,
+  TopProductRow,
   isoDay,
   isoMonth
 } from './reports-vm.model';
 
+type ReportData = { totals: SalesPeriodReportRow[]; series: SalesPeriodReportRow[]; top: ProductSalesReportRow[] };
+
+const EMPTY: ReportData = { totals: [], series: [], top: [] };
+
+/** Bornes demandées au backend pour un onglet. */
+interface Period {
+  from: string;
+  to: string;
+  /** Regroupement des totaux : une seule ligne couvrant la période. */
+  totalsGroup: SalesGroupBy;
+  seriesFrom: string;
+  seriesGroup: SalesGroupBy;
+}
+
+function periodOf(f: ReportsFilters): Period {
+  if (f.tab === 'DAILY') {
+    const day = isoDay(f.date);
+    const weekStart = new Date(f.date);
+    weekStart.setDate(weekStart.getDate() - 6);
+    // Série : les 7 derniers jours jusqu'au jour choisi.
+    return { from: day, to: day, totalsGroup: 'DAY', seriesFrom: isoDay(weekStart), seriesGroup: 'DAY' };
+  }
+  if (f.tab === 'MONTHLY') {
+    const [y, m] = f.month.split('-').map(Number);
+    const last = new Date(y, m, 0).getDate();
+    const from = `${f.month}-01`;
+    return { from, to: `${f.month}-${String(last).padStart(2, '0')}`, totalsGroup: 'MONTH', seriesFrom: from, seriesGroup: 'DAY' };
+  }
+  const from = `${f.year}-01-01`;
+  return { from, to: `${f.year}-12-31`, totalsGroup: 'YEAR', seriesFrom: from, seriesGroup: 'MONTH' };
+}
+
+function labelOf(row: SalesPeriodReportRow, group: SalesGroupBy): string {
+  const [y, m, d] = row.period.split('-');
+  return group === 'MONTH' ? `${m}/${y}` : `${d}/${m}`;
+}
+
+/**
+ * Rapports : tous les chiffres viennent du backend (`/api/reports/sales/*`, calculés par
+ * PostgreSQL, ventes annulées exclues, retours déduits). Le front n'additionne plus de ventes.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class ReportsFacade {
-  private readonly salesApi = inject(SalesApiService);
-  private readonly productsApi = inject(ProductsApiService);
+  private readonly api = inject(ReportsApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -33,51 +74,59 @@ export class ReportsFacade {
     year: new Date().getFullYear()
   });
 
-  private readonly data$ = this.refreshSubject.pipe(
-    tap(() => {
+  private readonly data$: Observable<ReportData> = combineLatest([
+    this.refreshSubject,
+    this.filtersSubject,
+    this.auth.hasPermission$('report:read')
+  ]).pipe(
+    switchMap(([, filters, canRead]) => {
+      if (!canRead) {
+        this.errorSubject.next('Permission report:read requise pour consulter les rapports.');
+        return of(EMPTY);
+      }
+      const p = periodOf(filters);
       this.isLoadingSubject.next(true);
       this.errorSubject.next(null);
-    }),
-    switchMap(() =>
-      forkJoin({
-        products: this.productsApi.list().pipe(map((r) => r.items)),
-        sales: this.salesApi.list().pipe(map((r) => r.items))
+      return forkJoin({
+        totals: this.api.salesByPeriod(p.from, p.to, p.totalsGroup),
+        series: this.api.salesByPeriod(p.seriesFrom, p.to, p.seriesGroup),
+        top: this.api.salesByProduct(p.from, p.to).pipe(map((r) => r.items))
       }).pipe(
-        tap({
-          error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
+          return of(EMPTY);
         }),
         finalize(() => this.isLoadingSubject.next(false))
-      )
-    ),
-    switchMap((v) => (this.errorSubject.value ? of({ products: [] as Product[], sales: [] as Sale[] }) : of(v))),
+      );
+    }),
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
-  private readonly products$ = this.data$.pipe(map((d) => d.products));
-  private readonly sales$ = this.data$.pipe(map((d) => d.sales));
-
-  readonly vm$ = combineLatest([
+  readonly vm$: Observable<ReportsVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
     this.filtersSubject,
-    this.products$,
-    this.sales$
+    this.data$
   ]).pipe(
-    map(([isLoading, errorMessage, filters, products, sales]): ReportsVm => {
-      const filteredSales = this.filterSales(filters, sales);
-      const kpis = computeKpis(filteredSales);
-      const topProducts = computeTopProducts(products, filteredSales);
-
-      const { salesSeries, profitSeries } = this.computeSeries(filters, filteredSales);
-
+    map(([isLoading, errorMessage, filters, data]): ReportsVm => {
+      const group = periodOf(filters).seriesGroup;
       return {
         isLoading,
         errorMessage,
         filters,
-        kpis,
-        topProducts,
-        salesSeries,
-        profitSeries
+        kpis: this.kpisOf(data.totals),
+        topProducts: data.top.map(
+          (r): TopProductRow => ({
+            productId: r.productId,
+            sku: r.sku,
+            name: r.name,
+            quantity: r.netQuantity,
+            total: r.netRevenue,
+            profit: r.profit
+          })
+        ),
+        salesSeries: data.series.map((r): SeriesPoint => ({ label: labelOf(r, group), value: r.netSales })),
+        profitSeries: data.series.map((r): SeriesPoint => ({ label: labelOf(r, group), value: r.profit }))
       };
     }),
     shareReplay({ bufferSize: 1, refCount: true })
@@ -107,42 +156,14 @@ export class ReportsFacade {
     this.filtersSubject.next({ ...current, year });
   }
 
-  private filterSales(filters: ReportsFilters, sales: Sale[]): Sale[] {
-    if (filters.tab === 'DAILY') {
-      const day = isoDay(filters.date);
-      return sales.filter((s) => s.createdAt.slice(0, 10) === day);
-    }
-
-    if (filters.tab === 'MONTHLY') {
-      return sales.filter((s) => s.createdAt.slice(0, 7) === filters.month);
-    }
-
-    return sales.filter((s) => Number(s.createdAt.slice(0, 4)) === filters.year);
-  }
-
-  private computeSeries(filters: ReportsFilters, sales: Sale[]): {
-    salesSeries: { label: string; value: number }[];
-    profitSeries: { label: string; value: number }[];
-  } {
-    const byLabel = new Map<string, { total: number; profit: number }>();
-
-    for (const s of sales) {
-      const label =
-        filters.tab === 'YEARLY'
-          ? s.createdAt.slice(0, 7)
-          : filters.tab === 'MONTHLY'
-            ? s.createdAt.slice(8, 10)
-            : s.createdAt.slice(11, 13);
-
-      const prev = byLabel.get(label) ?? { total: 0, profit: 0 };
-      byLabel.set(label, { total: prev.total + s.total, profit: prev.profit + s.profit });
-    }
-
-    const entries = [...byLabel.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-
+  /** Totaux de la période : ligne unique renvoyée par le backend (regroupement = période entière). */
+  private kpisOf(rows: SalesPeriodReportRow[]): ReportsKpis {
+    const row = rows[0];
     return {
-      salesSeries: entries.map(([label, v]) => ({ label, value: v.total })),
-      profitSeries: entries.map(([label, v]) => ({ label, value: v.profit }))
+      totalSales: row?.netSales ?? 0,
+      profit: row?.profit ?? 0,
+      transactionsCount: row?.count ?? 0,
+      returns: row?.returns ?? 0
     };
   }
 }

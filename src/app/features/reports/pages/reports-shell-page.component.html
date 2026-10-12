@@ -44,6 +44,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Année</mat-label>
           <mat-select [formControl]="yearCtrl">
+            <app-select-search />
             @for (y of years; track y) {
               <mat-option [value]="y">{{ y }}</mat-option>
             }
@@ -107,10 +108,13 @@
           <mat-card-title>Produits les plus vendus</mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <div class="table">
-            <table mat-table [dataSource]="vm.topProducts">
+          <div class="data-table-toolbar">
+            <app-table-search [control]="table.search" placeholder="Produit, SKU" />
+          </div>
+          <div class="data-table">
+            <table mat-table [dataSource]="table.bind(vm.topProducts)" matSort>
               <ng-container matColumnDef="product">
-                <th mat-header-cell *matHeaderCellDef>Produit</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Produit</th>
                 <td mat-cell *matCellDef="let r">
                   <div class="productCell">
                     <div class="name">{{ r.name }}</div>
@@ -120,23 +124,27 @@
               </ng-container>
 
               <ng-container matColumnDef="quantity">
-                <th mat-header-cell *matHeaderCellDef class="right">Qté</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Qté</th>
                 <td mat-cell *matCellDef="let r" class="right">{{ r.quantity | number: '1.0-0' }}</td>
               </ng-container>
 
               <ng-container matColumnDef="total">
-                <th mat-header-cell *matHeaderCellDef class="right">CA</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">CA</th>
                 <td mat-cell *matCellDef="let r" class="right">{{ r.total | number: '1.0-0' }}</td>
               </ng-container>
 
               <ng-container matColumnDef="profit">
-                <th mat-header-cell *matHeaderCellDef class="right">Bénéfice</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Bénéfice</th>
                 <td mat-cell *matCellDef="let r" class="right profit">{{ r.profit | number: '1.0-0' }}</td>
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
             </table>
+            @if (table.isEmpty) {
+              <div class="data-table-empty">Aucune vente sur la période.</div>
+            }
+            <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
           </div>
         </mat-card-content>
       </mat-card>

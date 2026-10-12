@@ -20,11 +20,13 @@ import { Customer } from '../../../core/models/customer.model';
 import { ClientsFacade } from '../data/clients.facade';
 import { ConfirmDeleteClientDialogComponent } from '../ui/confirm-delete-client-dialog.component';
 import { ClientDrawerComponent, ClientDrawerContext } from '../ui/client-drawer.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-clients-shell-page',
   standalone: true,
   imports: [
+    MatTooltipModule,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -55,19 +57,25 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
+  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
+  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
   readonly search = new FormControl<string>('', { nonNullable: true });
 
-  readonly displayedColumns = ['name', 'phone', 'email', 'creditLimit', 'actions'] as const;
+  readonly displayedColumns = ['name', 'phone', 'email', 'creditLimit', 'balance', 'actions'] as const;
   readonly dataSource = new MatTableDataSource<Customer>([]);
 
   readonly vm$ = this.facade.vm$;
 
   vmSnapshot = { customers: [] as Customer[] };
-  drawerCtx: ClientDrawerContext = { mode: 'CREATE', customerId: null, customers: [] };
+  drawerCtx: ClientDrawerContext = { mode: 'CREATE', customerId: null, customers: [], canCredit: false };
 
   constructor() {
     this.facade.refresh();
@@ -87,8 +95,6 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
 
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
       this.vmSnapshot = { customers: vm.customers };
@@ -98,7 +104,8 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
         this.drawerCtx = {
           mode: vm.drawer.mode,
           customerId: vm.drawer.customerId,
-          customers: vm.customers
+          customers: vm.customers,
+          canCredit: vm.canCredit
         };
         void this.drawer.open();
       } else {
@@ -137,10 +144,11 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
       .subscribe((ok: boolean | undefined) => {
         if (!ok) return;
 
-        (this.facade.delete(c.id) as any)
+        this.facade
+          .delete(c.id)
           .pipe(take(1))
           .subscribe({
-            next: () => this.snackbar.open('Client supprimé', 'OK', { duration: 2500 }),
+            next: () => this.snackbar.open('Client désactivé (ventes et dette conservées)', 'OK', { duration: 2500 }),
             error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
           });
       });

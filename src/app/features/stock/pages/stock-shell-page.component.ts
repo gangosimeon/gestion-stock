@@ -14,16 +14,22 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import { StockMovementRow, stockReasonLabels } from '../data/stock-vm.model';
+import { StockMovementRow, stockReasonLabels, stockTypeLabels } from '../data/stock-vm.model';
 import { StockFacade } from '../data/stock.facade';
 import { StockMovementDrawerComponent } from '../ui/stock-movement-drawer.component';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatSelectModule } from '@angular/material/select';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-stock-shell-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
+    MatSelectModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
@@ -49,12 +55,19 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(StockFacade);
   private readonly destroy$ = new Subject<void>();
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
+  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
+  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
-  readonly displayedColumns = ['date', 'product', 'type', 'qty', 'user', 'reason'] as const;
+  readonly displayedColumns = ['date', 'product', 'type', 'qty', 'balance', 'user', 'reason'] as const;
   readonly dataSource = new MatTableDataSource<StockMovementRow>([]);
+  readonly search = new FormControl<string>('', { nonNullable: true });
 
   readonly from = new FormControl<Date | null>(null);
   readonly to = new FormControl<Date | null>(null);
@@ -66,6 +79,11 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   vmSnapshot: { products: any[] } = { products: [] };
 
   constructor() {
+    this.dataSource.filterPredicate = (row: StockMovementRow, filter: string) => (`${row.sku ?? ''} ${row.productName ?? ''} ${row.uiType ?? ''} ${row.createdByUsername ?? ''} ${this.reasonLabel(row)} ${row.sourceReference ?? ''}`).toLowerCase().includes(filter);
+    this.search.valueChanges.pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe((v) => {
+      this.dataSource.filter = v.trim().toLowerCase();
+      this.dataSource.paginator?.firstPage();
+    });
     this.facade.refresh();
 
     this.from.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setFilters({ from: v }));
@@ -76,8 +94,6 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
 
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
       this.vmSnapshot.products = vm.products;
@@ -111,8 +127,9 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
     this.facade.closeDrawer();
   }
 
-  reasonLabel(reason: StockMovementRow['reason']): string {
-    return stockReasonLabels[reason];
+  /** Origine du mouvement (type détaillé du backend), sinon motif historique. */
+  reasonLabel(m: StockMovementRow): string {
+    return (m.type && stockTypeLabels[m.type]) || stockReasonLabels[m.reason];
   }
 
   chipColor(m: StockMovementRow): 'primary' | 'warn' {

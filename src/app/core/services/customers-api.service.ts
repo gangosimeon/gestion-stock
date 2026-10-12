@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { Customer } from '../models/customer.model';
 import { CustomerPayment } from '../models/customer-payment.model';
-import { Sale } from '../models/sale.model';
+import { PaymentMethod, Sale } from '../models/sale.model';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -18,12 +18,25 @@ function toApiError(err: unknown): Error {
   return new Error('Une erreur est survenue.');
 }
 
-export type CreateCustomerRequest = Omit<Customer, 'id'>;
-export type UpdateCustomerRequest = Omit<Customer, 'id'>;
+/**
+ * Création et modification (PATCH) d'un client. En modification, `creditLimit` absent est
+ * conservé par le backend ; le changer exige la permission customer:credit.
+ */
+export interface CreateCustomerRequest {
+  name: string;
+  phone?: string;
+  email?: string;
+  creditLimit?: number;
+}
+export type UpdateCustomerRequest = CreateCustomerRequest;
 
+/**
+ * Règlement d'une dette client : encaissé maintenant dans la caisse ouverte de l'utilisateur,
+ * refusé au-delà de la dette (backend).
+ */
 export interface CreateCustomerPaymentRequest {
   amount: number;
-  paymentDateIso: string;
+  paymentMethod?: PaymentMethod;
   note?: string;
 }
 
@@ -36,6 +49,14 @@ export class CustomersApiService {
   list(): Observable<PaginatedResult<Customer>> {
     return this.http
       .get<PaginatedResult<Customer>>(`${environment.apiUrl}/customers`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Clients actifs correspondant au texte (code, nom, email, chiffres du téléphone), pour une sélection. */
+  search(q: string, size = 10): Observable<PaginatedResult<Customer>> {
+    const params = new HttpParams().set('q', q).set('page', 0).set('size', size);
+    return this.http
+      .get<PaginatedResult<Customer>>(`${environment.apiUrl}/customers`, { params })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
@@ -57,6 +78,7 @@ export class CustomersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /** Côté backend, « supprimer » désactive le client : ventes, règlements et dette le référencent. */
   delete(id: string): Observable<{ ok: true } | { ok: boolean }> {
     return this.http
       .delete<{ ok: true } | { ok: boolean }>(`${environment.apiUrl}/customers/${id}`)

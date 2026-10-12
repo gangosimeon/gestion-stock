@@ -87,6 +87,24 @@ export function extractUsernameFromToken(token: string): string | null {
 }
 
 /**
+ * Identité portée par un jeton du backend Spring Boot : {@code sub} est l'UUID de
+ * l'utilisateur, le login est dans le claim {@code username}. Lecture seule, sans vérification
+ * de signature : sert uniquement aux modules encore simulés pendant la migration.
+ */
+export function extractBackendIdentity(token: string): { id: string; username: string; roles: string[] } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const p = JSON.parse(_decodeB64(parts[1])) as { sub?: string; username?: string; roles?: unknown };
+    if (!p.sub || !p.username) return null;
+    const roles = Array.isArray(p.roles) ? p.roles.filter((r): r is string => typeof r === 'string') : [];
+    return { id: p.sub, username: p.username, roles };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Extrait l'uid (user.id) depuis un token.
  */
 export function extractUidFromToken(token: string): string | null {

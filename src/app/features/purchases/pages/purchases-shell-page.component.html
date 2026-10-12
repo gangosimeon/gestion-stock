@@ -3,10 +3,12 @@
     <mat-toolbar color="primary">
       <span>Achats fournisseurs</span>
       <span class="spacer"></span>
-      <button mat-flat-button type="button" (click)="openCreate()">
-        <mat-icon>add</mat-icon>
-        Nouvelle commande
-      </button>
+      @if ((vm$ | async)?.canCreate) {
+        <button mat-flat-button type="button" (click)="openCreate()">
+          <mat-icon>add</mat-icon>
+          Nouvelle commande
+        </button>
+      }
     </mat-toolbar>
 
     @if (vm$ | async; as vm) {
@@ -29,8 +31,13 @@
           }
         </div>
 
-        <div class="table">
+        <div class="data-table">
           <table mat-table [dataSource]="dataSource" matSort>
+            <ng-container matColumnDef="number">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>N°</th>
+              <td mat-cell *matCellDef="let o">{{ o.number ?? '—' }}</td>
+            </ng-container>
+
             <ng-container matColumnDef="supplier">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Fournisseur</th>
               <td mat-cell *matCellDef="let o">
@@ -40,12 +47,20 @@
 
             <ng-container matColumnDef="status">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
-              <td mat-cell *matCellDef="let o">{{ statusLabelOf(o.status) }}</td>
+              <td mat-cell *matCellDef="let o">{{ statusLabelOf(o) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="total">
               <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Montant</th>
               <td mat-cell *matCellDef="let o" class="right total">{{ o.totalAmount | number: '1.0-0' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="remaining">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="remainingToPay" class="right">Reste à payer</th>
+              <!-- Valeur du backend ; absente (backend sans remainingToPay) : « — », jamais un 0 trompeur. -->
+              <td mat-cell *matCellDef="let o" class="right">
+                {{ o.remainingToPay != null ? (o.remainingToPay | number: '1.0-0') : '—' }}
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="createdAt">
@@ -55,19 +70,27 @@
 
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="right">Actions</th>
-              <td mat-cell *matCellDef="let o" class="right">
-                <button mat-stroked-button type="button" (click)="pay(o)">
-                  Payer
-                </button>
-                <button mat-stroked-button type="button" (click)="confirmReceive(o)" [disabled]="o.status !== 'PENDING'">
-                  Réception
-                </button>
+              <td mat-cell *matCellDef="let o" class="right actions">
+                @if (vm.canPay) {
+                  <button mat-icon-button type="button" (click)="pay(o)" [disabled]="!o.remainingToPay" matTooltip="Payer" aria-label="Payer">
+                    <mat-icon>payments</mat-icon>
+                  </button>
+                }
+                @if (vm.canReceive) {
+                  <button mat-icon-button type="button" (click)="confirmReceive(o)" [disabled]="o.status !== 'PENDING'" matTooltip="Réceptionner" aria-label="Réceptionner">
+                    <mat-icon>move_to_inbox</mat-icon>
+                  </button>
+                }
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
+
+          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+            <div class="data-table-empty">Aucun résultat.</div>
+          }
 
           <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
         </div>

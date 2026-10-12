@@ -13,11 +13,13 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize, take } from 'rxjs';
 
 import { CashRegisterFacade } from '../data/cash-register.facade';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-cash-close-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,

@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import { Supplier } from '../../../core/models/supplier.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { CreateSupplierRequest, SuppliersApiService, UpdateSupplierRequest } from '../../../core/services/suppliers-api.service';
 import { SupplierDrawerState, SuppliersVm } from './suppliers-vm.model';
 
@@ -10,6 +11,7 @@ import { SupplierDrawerState, SuppliersVm } from './suppliers-vm.model';
 })
 export class SuppliersFacade {
   private readonly api = inject(SuppliersApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -32,21 +34,40 @@ export class SuppliersFacade {
     switchMap(() =>
       this.api.list().pipe(
         map((r) => r.items),
-        tap({
-          error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement')
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement');
+          return of([] as Supplier[]);
         }),
         finalize(() => this.isLoadingSubject.next(false))
       )
-    )
+    ),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
-  readonly vm$ = combineLatest([this.isLoadingSubject, this.errorSubject, this.suppliers$, this.filterSubject]).pipe(
-    map(([isLoading, errorMessage, suppliers, filter]): SuppliersVm => ({
+  // Interface seulement : le backend contrôle supplier:create / update / delete à chaque appel.
+  private readonly rights$ = combineLatest([
+    this.auth.hasPermission$('supplier:create'),
+    this.auth.hasPermission$('supplier:update'),
+    this.auth.hasPermission$('supplier:delete')
+  ]);
+
+  readonly vm$: Observable<SuppliersVm> = combineLatest([
+    this.isLoadingSubject,
+    this.errorSubject,
+    this.suppliers$,
+    this.filterSubject,
+    this.rights$
+  ]).pipe(
+    map(([isLoading, errorMessage, suppliers, filter, [canCreate, canUpdate, canDelete]]): SuppliersVm => ({
       isLoading,
       errorMessage,
       suppliers,
-      filter
-    }))
+      filter,
+      canCreate,
+      canUpdate,
+      canDelete
+    })),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   refresh(): void {

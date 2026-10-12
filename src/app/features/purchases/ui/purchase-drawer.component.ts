@@ -18,6 +18,7 @@ import { Supplier } from '../../../core/models/supplier.model';
 import { CreatePurchaseOrderRequest } from '../../../core/services/purchases-api.service';
 import { PurchasesFacade } from '../data/purchases.facade';
 import { PurchaseDrawerMode } from '../data/purchases-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface PurchaseDrawerContext {
   mode: PurchaseDrawerMode;
@@ -25,18 +26,28 @@ export interface PurchaseDrawerContext {
   orders: PurchaseOrder[];
   suppliers: Supplier[];
   products: Product[];
+  /** purchase:receive (interface seulement). */
+  canReceive: boolean;
+  /** purchase:pay : facture fournisseur (interface seulement). */
+  canPay: boolean;
 }
 
 type LineForm = {
   productId: string;
   quantity: number;
   unitPurchasePrice: number;
+  // Commande enregistrée : libellés et quantités reçues fournis par le backend.
+  productSku?: string;
+  productName?: string;
+  receivedQuantity?: number;
+  lineTotal?: number;
 };
 
 @Component({
   selector: 'app-purchase-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
@@ -110,7 +121,15 @@ export class PurchaseDrawerComponent {
         lineProductId: this.ctx.products[0]?.id ?? '',
         lineQuantity: 1,
         lineUnitPurchasePrice: this.ctx.products[0]?.purchasePrice ?? 0,
-        lines: o.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPurchasePrice: l.unitPurchasePrice })),
+        lines: o.lines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          unitPurchasePrice: l.unitPurchasePrice,
+          productSku: l.productSku,
+          productName: l.productName,
+          receivedQuantity: l.receivedQuantity,
+          lineTotal: l.lineTotal
+        })),
         invoiceNumber: o.invoice?.invoiceNumber ?? '',
         invoiceDateIso: (o.invoice?.invoiceDateIso ?? new Date().toISOString()).slice(0, 10)
       },
@@ -118,7 +137,26 @@ export class PurchaseDrawerComponent {
     );
 
     this.form.disable({ emitEvent: false });
+    // Seule la facture reste saisissable, et seulement quand le backend l'accepte.
+    if (this.canInvoice) {
+      this.form.controls.invoiceNumber.enable({ emitEvent: false });
+      this.form.controls.invoiceDateIso.enable({ emitEvent: false });
+    }
   }
+
+  /** Facture saisissable : commande reçue ou soldée, sans facture, permission purchase:pay. */
+  get canInvoice(): boolean {
+    const o = this.loadedOrder;
+    return (
+      !!o &&
+      this.ctx.canPay &&
+      !o.invoice &&
+      (o.documentStatus === 'RECEIVED' || o.documentStatus === 'CLOSED')
+    );
+  }
+
+  /** Date maximale de facture (le backend refuse une date future). */
+  readonly today = new Date().toISOString().slice(0, 10);
 
   get title(): string {
     return this.ctx.mode === 'CREATE' ? 'Nouvelle commande fournisseur' : 'Détail commande';
@@ -128,23 +166,29 @@ export class PurchaseDrawerComponent {
     return this.form.controls.lines.value;
   }
 
-  productName(id: string): string {
-    return this.ctx.products.find((p) => p.id === id)?.name ?? '—';
+  productName(l: LineForm): string {
+    return l.productName ?? this.ctx.products.find((p) => p.id === l.productId)?.name ?? '—';
   }
 
-  productSku(id: string): string {
-    return this.ctx.products.find((p) => p.id === id)?.sku ?? '';
+  productSku(l: LineForm): string {
+    return l.productSku ?? this.ctx.products.find((p) => p.id === l.productId)?.sku ?? '';
   }
 
   supplierName(id: string): string {
     return this.ctx.suppliers.find((s) => s.id === id)?.name ?? '—';
   }
 
+  /** Commande enregistrée : total de ligne du backend ; saisie : estimation. */
   lineTotal(l: LineForm): number {
-    return (Number(l.quantity) || 0) * (Number(l.unitPurchasePrice) || 0);
+    return l.lineTotal ?? (Number(l.quantity) || 0) * (Number(l.unitPurchasePrice) || 0);
   }
 
+  /**
+   * Commande enregistrée : total calculé par le backend. Saisie : simple estimation, le backend
+   * recalcule le total à l'enregistrement.
+   */
   totalAmount(): number {
+    if (this.loadedOrder) return this.loadedOrder.totalAmount;
     return this.lines.reduce((acc, l) => acc + this.lineTotal(l), 0);
   }
 
@@ -235,7 +279,7 @@ export class PurchaseDrawerComponent {
   receive(): void {
     if (this.ctx.mode !== 'DETAIL') return;
     if (!this.loadedOrder) return;
-    if (this.loadedOrder.status !== 'PENDING') return;
+    if (this.loadedOrder.status !== 'PENDING' || !this.ctx.canReceive) return;
     if (this.isReceiving) return;
 
     this.isReceiving = true;
@@ -258,7 +302,7 @@ export class PurchaseDrawerComponent {
 
   createInvoice(): void {
     if (this.ctx.mode !== 'DETAIL') return;
-    if (!this.loadedOrder) return;
+    if (!this.loadedOrder || !this.canInvoice) return;
     if (this.isInvoicing) return;
 
     const invoiceNumber = this.form.controls.invoiceNumber.value.trim();

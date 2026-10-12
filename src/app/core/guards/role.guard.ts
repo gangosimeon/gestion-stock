@@ -4,6 +4,10 @@ import { map } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
+/**
+ * @deprecated Les droits viennent des permissions du backend : utiliser `permissionGuard`
+ * (`auth/guards/permission.guard.ts`). Conservé pour compatibilité, aucune route ne l'utilise.
+ */
 export const roleGuard: CanMatchFn = (route: Route, _segments: UrlSegment[]) => {
   const auth = inject(AuthService);
   const router = inject(Router);

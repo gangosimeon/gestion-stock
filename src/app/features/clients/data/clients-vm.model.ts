@@ -16,4 +16,10 @@ export interface ClientsVm {
   customers: Customer[];
   filter: string;
   drawer: ClientDrawerState;
+  // Interface seulement : le backend revérifie chaque permission.
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  /** customer:credit — fixer ou changer le plafond de crédit. */
+  canCredit: boolean;
 }

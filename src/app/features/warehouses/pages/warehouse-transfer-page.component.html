@@ -9,10 +9,17 @@
         <mat-card-title>Transfert stock</mat-card-title>
       </mat-card-header>
       <mat-card-content>
+        @if (vm.errorMessage) {
+          <div class="error">{{ vm.errorMessage }}</div>
+        }
+        @if (!(canTransfer$ | async)) {
+          <div class="hint">Permission stock:transfer requise pour transférer.</div>
+        }
         <form class="form" [formGroup]="form" (ngSubmit)="submit()">
           <mat-form-field appearance="outline">
             <mat-label>De</mat-label>
             <mat-select formControlName="fromWarehouseId">
+              <app-select-search />
               @for (w of vm.warehouses; track w.id) {
                 <mat-option [value]="w.id">{{ w.name }}</mat-option>
               }
@@ -22,6 +29,7 @@
           <mat-form-field appearance="outline">
             <mat-label>Vers</mat-label>
             <mat-select formControlName="toWarehouseId">
+              <app-select-search />
               @for (w of vm.warehouses; track w.id) {
                 <mat-option [value]="w.id">{{ w.name }}</mat-option>
               }
@@ -31,6 +39,7 @@
           <mat-form-field appearance="outline" class="span2">
             <mat-label>Produit</mat-label>
             <mat-select formControlName="productId">
+              <app-select-search />
               @for (p of vm.products; track p.id) {
                 <mat-option [value]="p.id">{{ p.sku }} — {{ p.name }}</mat-option>
               }
@@ -43,7 +52,7 @@
           </mat-form-field>
 
           <div class="actions">
-            <button mat-flat-button color="primary" type="submit" [disabled]="isSubmitting">
+            <button mat-flat-button color="primary" type="submit" [disabled]="isSubmitting || !(canTransfer$ | async)">
               Transférer
             </button>
           </div>

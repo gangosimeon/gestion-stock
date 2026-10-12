@@ -17,6 +17,7 @@ import { User } from '../../../core/models/user.model';
 import { CreateUserRequest, UpdateUserRequest } from '../../../core/services/users-api.service';
 import { UsersFacade } from '../data/users.facade';
 import { roleLabels, UserDrawerMode } from '../data/users-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface UserDrawerContext {
   mode: UserDrawerMode;
@@ -27,6 +28,7 @@ export interface UserDrawerContext {
   selector: 'app-user-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
@@ -60,7 +62,10 @@ export class UserDrawerComponent {
     fullName: ['', [Validators.required, Validators.minLength(3)]],
     phone: [''],
     roles: [[] as Role[], [Validators.required]],
-    isActive: [true]
+    isActive: [true],
+    // Création : mot de passe provisoire ; modification : nouveau mot de passe facultatif.
+    // Politique complète (lettre, chiffre, ≠ identifiant) vérifiée par le backend.
+    password: ['', [Validators.minLength(8)]]
   });
 
   ngOnChanges(): void {
@@ -72,7 +77,8 @@ export class UserDrawerComponent {
           fullName: u.fullName,
           phone: u.phone ?? '',
           roles: u.roles,
-          isActive: u.isActive
+          isActive: u.isActive,
+          password: ''
         },
         { emitEvent: false }
       );
@@ -83,7 +89,8 @@ export class UserDrawerComponent {
           fullName: '',
           phone: '',
           roles: [],
-          isActive: true
+          isActive: true,
+          password: ''
         },
         { emitEvent: false }
       );
@@ -108,14 +115,15 @@ export class UserDrawerComponent {
             fullName: raw.fullName.trim(),
             phone: raw.phone.trim() ? raw.phone.trim() : undefined,
             roles: raw.roles,
-            isActive: raw.isActive
+            isActive: raw.isActive,
+            password: raw.password || undefined
           } satisfies CreateUserRequest) as any)
         : (this.facade.update(this.ctx.user?.id ?? '', {
             username: raw.username.trim(),
             fullName: raw.fullName.trim(),
             phone: raw.phone.trim() ? raw.phone.trim() : undefined,
             roles: raw.roles
-          } satisfies UpdateUserRequest) as any);
+          } satisfies UpdateUserRequest, raw.password || undefined) as any);
 
     req$
       .pipe(
@@ -147,7 +155,7 @@ export class UserDrawerComponent {
     if (!c.touched || !c.errors) return null;
 
     if (c.errors['required']) return 'Champ obligatoire';
-    if (c.errors['minlength']) return 'Trop court';
+    if (c.errors['minlength']) return path === 'password' ? '8 caractères minimum' : 'Trop court';
 
     return 'Invalide';
   }

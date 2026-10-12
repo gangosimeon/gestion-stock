@@ -3,10 +3,12 @@
     <mat-toolbar color="primary">
       <span>Stock</span>
       <span class="spacer"></span>
-      <button mat-flat-button type="button" (click)="openCreate()">
-        <mat-icon>add</mat-icon>
-        Mouvement
-      </button>
+      @if ((vm$ | async)?.canAdjust) {
+        <button mat-flat-button type="button" (click)="openCreate()">
+          <mat-icon>add</mat-icon>
+          Mouvement
+        </button>
+      }
     </mat-toolbar>
 
     @if (vm$ | async; as vm) {
@@ -32,20 +34,23 @@
 
           <mat-form-field appearance="outline" class="product">
             <mat-label>Produit</mat-label>
-            <select matNativeControl [formControl]="productId">
-              <option [ngValue]="null">Tous</option>
+            <mat-select [formControl]="productId">
+              <app-select-search />
+              <mat-option [value]="null">Tous</mat-option>
               @for (p of vm.products; track p.id) {
-                <option [value]="p.id">{{ p.sku }} — {{ p.name }}</option>
+                <mat-option [value]="p.id">{{ p.sku }} — {{ p.name }}</mat-option>
               }
-            </select>
+            </mat-select>
           </mat-form-field>
+
+          <app-table-search [control]="search" placeholder="Produit, type, utilisateur, motif" />
 
           @if (vm.errorMessage) {
             <div class="error">{{ vm.errorMessage }}</div>
           }
         </div>
 
-        <div class="table">
+        <div class="data-table">
           <table mat-table [dataSource]="dataSource" matSort>
             <ng-container matColumnDef="date">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
@@ -74,21 +79,33 @@
               <td mat-cell *matCellDef="let m" class="qty">{{ formatQty(m) }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="balance">
+              <th mat-header-cell *matHeaderCellDef>Stock après</th>
+              <td mat-cell *matCellDef="let m" class="qty">{{ m.balanceAfter ?? '—' }}</td>
+            </ng-container>
+
             <ng-container matColumnDef="user">
               <th mat-header-cell *matHeaderCellDef>Utilisateur</th>
-              <td mat-cell *matCellDef="let m">{{ m.createdByUserId }}</td>
+              <td mat-cell *matCellDef="let m">{{ m.createdByUsername ?? '—' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="reason">
               <th mat-header-cell *matHeaderCellDef>Motif</th>
-              <td mat-cell *matCellDef="let m">{{ reasonLabel(m.reason) }}</td>
+              <td mat-cell *matCellDef="let m">
+                {{ reasonLabel(m) }}
+                @if (m.sourceReference) { <span class="source">· {{ m.sourceReference }}</span> }
+              </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
 
-          <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons />
+          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+            <div class="data-table-empty">Aucun résultat.</div>
+          }
+
+          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
         </div>
       </div>
     }

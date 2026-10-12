@@ -35,15 +35,30 @@
             <mat-card-title>Suivi dette</mat-card-title>
           </mat-card-header>
           <mat-card-content class="info">
-            <div><span class="label">Total achats</span> {{ vm.totalPurchases | number: '1.0-0' }}</div>
-            <div><span class="label">Total payé</span> {{ vm.totalPaid | number: '1.0-0' }}</div>
-            <div><span class="label">Reste à payer</span> <span class="debt">{{ vm.balance | number: '1.0-0' }}</span></div>
+            @if (vm.account; as a) {
+              <!-- Totaux calculés par le backend (commandes des dépôts visibles). -->
+              <div><span class="label">Commandé</span> {{ a.orderedAmount | number: '1.0-0' }}</div>
+              <div><span class="label">Reçu</span> {{ a.receivedAmount | number: '1.0-0' }}</div>
+              <div><span class="label">Payé</span> {{ a.paidAmount | number: '1.0-0' }}</div>
+              @if (a.advanceAmount > 0) {
+                <div><span class="label">Dont acomptes</span> {{ a.advanceAmount | number: '1.0-0' }}</div>
+              }
+              <div>
+                <span class="label">Reste à payer</span>
+                <span class="debt">{{ a.remainingToPay | number: '1.0-0' }}</span>
+                ({{ a.ordersToPay }} commande(s))
+              </div>
 
-            <div>
-              <button mat-stroked-button type="button" (click)="paySupplier(vm)">
-                Payer
-              </button>
-            </div>
+              @if (vm.canPay) {
+                <div>
+                  <button mat-stroked-button type="button" (click)="paySupplier(vm)" [disabled]="a.remainingToPay <= 0">
+                    Payer
+                  </button>
+                </div>
+              }
+            } @else if (!vm.canReadPurchases) {
+              <div class="hint">Permission purchase:read requise pour consulter les achats et paiements.</div>
+            }
           </mat-card-content>
         </mat-card>
 
@@ -52,31 +67,43 @@
             <mat-card-title>Historique d’achats</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <div class="table">
-              <table mat-table [dataSource]="vm.history">
+            <div class="data-table-toolbar">
+              <app-table-search [control]="historyTable.search" placeholder="Réception, commande" />
+            </div>
+            <div class="data-table">
+              <table mat-table [dataSource]="historyTable.bind(vm.history)" matSort #historyTableSort="matSort" matSortActive="date" matSortDirection="desc">
                 <ng-container matColumnDef="date">
-                  <th mat-header-cell *matHeaderCellDef>Date</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
                   <td mat-cell *matCellDef="let h">{{ h.purchaseDateIso | date: 'dd/MM/yyyy' }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="reference">
-                  <th mat-header-cell *matHeaderCellDef>Référence</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Réception</th>
                   <td mat-cell *matCellDef="let h">{{ h.reference }}</td>
                 </ng-container>
 
+                <ng-container matColumnDef="order">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Commande</th>
+                  <td mat-cell *matCellDef="let h">{{ h.purchaseOrderNumber ?? '—' }}</td>
+                </ng-container>
+
                 <ng-container matColumnDef="items">
-                  <th mat-header-cell *matHeaderCellDef class="right">Articles</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Articles</th>
                   <td mat-cell *matCellDef="let h" class="right">{{ h.itemsCount | number: '1.0-0' }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="total">
-                  <th mat-header-cell *matHeaderCellDef class="right">Total</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Total</th>
                   <td mat-cell *matCellDef="let h" class="right total">{{ h.totalAmount | number: '1.0-0' }}</td>
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                 <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
               </table>
+              @if (historyTable.isEmpty) {
+                <div class="data-table-empty">Aucune réception.</div>
+              }
+              <mat-paginator #historyTablePaginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
             </div>
           </mat-card-content>
         </mat-card>
@@ -86,31 +113,51 @@
             <mat-card-title>Historique paiements</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <div class="table">
-              <table mat-table [dataSource]="vm.payments">
+            <div class="data-table-toolbar">
+              <app-table-search [control]="paymentsTable.search" placeholder="Référence, mode, commande, note" />
+            </div>
+            <div class="data-table">
+              <table mat-table [dataSource]="paymentsTable.bind(vm.payments)" matSort #paymentsTableSort="matSort" matSortActive="date" matSortDirection="desc">
                 <ng-container matColumnDef="date">
-                  <th mat-header-cell *matHeaderCellDef>Date</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
                   <td mat-cell *matCellDef="let p">{{ p.paymentDateIso | date: 'dd/MM/yyyy' }}</td>
                 </ng-container>
 
+                <ng-container matColumnDef="number">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Référence</th>
+                  <td mat-cell *matCellDef="let p">
+                    {{ p.number ?? '—' }}
+                    @if (p.externalReference) { <span class="sub">· {{ p.externalReference }}</span> }
+                  </td>
+                </ng-container>
+
                 <ng-container matColumnDef="amount">
-                  <th mat-header-cell *matHeaderCellDef class="right">Montant</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Montant</th>
                   <td mat-cell *matCellDef="let p" class="right total">{{ p.amount | number: '1.0-0' }}</td>
                 </ng-container>
 
+                <ng-container matColumnDef="method">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Mode</th>
+                  <td mat-cell *matCellDef="let p">{{ methodLabel(p.paymentMethod) }}</td>
+                </ng-container>
+
                 <ng-container matColumnDef="order">
-                  <th mat-header-cell *matHeaderCellDef>Commande</th>
-                  <td mat-cell *matCellDef="let p">{{ p.orderId ?? '—' }}</td>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Commande(s)</th>
+                  <td mat-cell *matCellDef="let p">{{ ordersOf(p) }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="note">
-                  <th mat-header-cell *matHeaderCellDef>Note</th>
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Note</th>
                   <td mat-cell *matCellDef="let p">{{ p.note ?? '—' }}</td>
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
                 <tr mat-row *matRowDef="let row; columns: paymentColumns"></tr>
               </table>
+              @if (paymentsTable.isEmpty) {
+                <div class="data-table-empty">Aucun paiement.</div>
+              }
+              <mat-paginator #paymentsTablePaginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
             </div>
           </mat-card-content>
         </mat-card>

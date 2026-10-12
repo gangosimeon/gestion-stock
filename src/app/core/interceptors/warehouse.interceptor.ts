@@ -3,14 +3,13 @@ import { inject } from '@angular/core';
 
 import { WarehouseContextService } from '../services/warehouse-context.service';
 
+/**
+ * En-tête X-Warehouse-Id (dépôt courant) : UUID du dépôt choisi. Aucun choix → pas d'en-tête, le
+ * backend applique le dépôt par défaut de l'utilisateur. Le backend refuse un dépôt non autorisé.
+ */
 export const warehouseInterceptor: HttpInterceptorFn = (req, next) => {
-  const ctx = inject(WarehouseContextService);
+  const warehouseId = inject(WarehouseContextService).warehouseId;
+  if (!warehouseId) return next(req);
 
-  return next(
-    req.clone({
-      setHeaders: {
-        'X-Warehouse-Id': ctx.warehouseId
-      }
-    })
-  );
+  return next(req.clone({ setHeaders: { 'X-Warehouse-Id': warehouseId } }));
 };

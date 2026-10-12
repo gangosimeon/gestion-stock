@@ -8,8 +8,8 @@ import { Product } from '../models/product.model';
 import { Customer } from '../models/customer.model';
 import { Sale } from '../models/sale.model';
 import { StockMovement } from '../models/stock-movement.model';
-import { Expense } from '../models/expense.model';
-import { Appointment } from '../models/appointment.model';
+import { Expense } from './legacy-mock-models';
+import { Appointment } from './legacy-mock-models';
 import { PurchaseOrder } from '../models/purchase-order.model';
 
 // ─── ID generator ────────────────────────────────────────────────────────────

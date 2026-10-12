@@ -1,69 +1,79 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, finalize, forkJoin, map, shareReplay, tap } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod, Sale, SaleType } from '../../../core/models/sale.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateSaleRequest, SalesApiService } from '../../../core/services/sales-api.service';
 import { CartRow, SalesFormState, SalesTotals, SalesVm, toSaleItems } from './sales-vm.model';
 
+/**
+ * Point de vente. Le panier n'est qu'un aperçu : le backend fixe les prix (tarif du produit),
+ * calcule les montants, vérifie le stock, le crédit du client et encaisse dans la caisse ouverte.
+ * La vente renvoyée par le backend fait foi (facture, montants).
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class SalesFacade {
   private readonly productsApi = inject(ProductsApiService);
   private readonly salesApi = inject(SalesApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
 
   private readonly productsSubject = new BehaviorSubject<Product[]>([]);
   private readonly customersSubject = new BehaviorSubject<Customer[]>([]);
-
   private readonly cartSubject = new BehaviorSubject<CartRow[]>([]);
+
   private readonly formSubject = new BehaviorSubject<SalesFormState>({
     type: 'RETAIL',
     customerId: null,
     paymentMethod: 'CASH',
-    paidAmount: 0
+    paidAmount: 0,
+    partialPayment: false
   });
 
   private readonly lastSaleSubject = new BehaviorSubject<Sale | null>(null);
 
-  readonly vm$ = combineLatest([
+  readonly vm$: Observable<SalesVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
     this.productsSubject,
     this.customersSubject,
     this.cartSubject,
     this.formSubject,
-    this.lastSaleSubject
+    this.lastSaleSubject,
+    // Interface seulement : le backend exige sale:create.
+    this.auth.hasPermission$('sale:create')
   ]).pipe(
-    map(([isLoading, errorMessage, products, customers, cart, form, lastSale]): SalesVm => {
-      const totals = this.computeTotals(cart);
-      return {
-        isLoading,
-        errorMessage,
-        products,
-        customers,
-        cart,
-        form,
-        totals,
-        lastSale
-      };
-    })
+    map(([isLoading, errorMessage, products, customers, cart, form, lastSale, canSell]): SalesVm => ({
+      isLoading,
+      errorMessage,
+      products,
+      customers,
+      cart,
+      form,
+      totals: this.computeTotals(cart),
+      lastSale,
+      canSell
+    })),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   refresh(): void {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
-    combineLatest([this.productsApi.list(), this.salesApi.listCustomers()])
+    // Catalogue (stock du dépôt courant) et clients du backend.
+    forkJoin([this.productsApi.list(), this.salesApi.listCustomers()])
       .pipe(finalize(() => this.isLoadingSubject.next(false)))
       .subscribe({
         next: ([p, c]) => {
-          this.productsSubject.next(p.items);
+          this.productsSubject.next(p.items.filter((x) => x.active !== false));
           this.customersSubject.next(c.items);
         },
         error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
@@ -74,7 +84,7 @@ export class SalesFacade {
     const s = this.formSubject.value;
     this.formSubject.next({ ...s, type });
 
-    // Re-price cart according to sale type
+    // Aperçu au tarif choisi ; le backend applique le même tarif à l'enregistrement.
     const products = this.productsSubject.value;
     const cart = this.cartSubject.value.map((row) => {
       const p = products.find((x) => x.id === row.productId);
@@ -100,6 +110,12 @@ export class SalesFacade {
     this.formSubject.next({ ...s, paidAmount: Number.isFinite(paidAmount) ? paidAmount : 0 });
   }
 
+  /** Paiement partiel (reste dû porté au compte du client) ou paiement de la totalité. */
+  setPartialPayment(partialPayment: boolean): void {
+    const s = this.formSubject.value;
+    this.formSubject.next({ ...s, partialPayment });
+  }
+
   addProductToCart(productId: string): void {
     const products = this.productsSubject.value;
     const p = products.find((x) => x.id === productId);
@@ -121,9 +137,7 @@ export class SalesFacade {
       stockQuantity: p.stockQuantity,
       quantity: 1,
       unitPrice,
-      purchasePrice: p.purchasePrice,
-      lineTotal: 0,
-      lineProfit: 0
+      lineTotal: 0
     });
 
     this.cartSubject.next([row, ...this.cartSubject.value]);
@@ -145,10 +159,14 @@ export class SalesFacade {
   clearCart(): void {
     this.cartSubject.next([]);
     this.lastSaleSubject.next(null);
-    this.setPaidAmount(0);
+    this.formSubject.next({ ...this.formSubject.value, paidAmount: 0, partialPayment: false });
   }
 
-  createSale(): unknown {
+  /**
+   * Enregistre la vente. Aucun prix ni coût envoyé ; paiement de la totalité : `paidAmount`
+   * absent (le backend encaisse son propre total) ; paiement partiel : montant saisi.
+   */
+  createSale(): Observable<Sale> {
     const form = this.formSubject.value;
     const cart = this.cartSubject.value;
 
@@ -159,7 +177,7 @@ export class SalesFacade {
       type: form.type,
       customerId: form.customerId ?? undefined,
       paymentMethod: form.paymentMethod,
-      paidAmount: form.paidAmount,
+      paidAmount: form.partialPayment ? form.paidAmount : undefined,
       items: toSaleItems(cart)
     };
 
@@ -169,7 +187,8 @@ export class SalesFacade {
         next: (sale) => {
           this.lastSaleSubject.next(sale);
           this.cartSubject.next([]);
-          this.setPaidAmount(sale.total);
+          this.formSubject.next({ ...this.formSubject.value, paidAmount: 0, partialPayment: false });
+          // Stocks à jour après les sorties de la vente.
           this.refresh();
         },
         error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
@@ -177,25 +196,16 @@ export class SalesFacade {
     );
   }
 
+  /** Aperçu du panier (estimation) ; les montants qui font foi sont ceux de la vente renvoyée. */
   private computeTotals(cart: CartRow[]): SalesTotals {
     const total = cart.reduce((acc, r) => acc + r.lineTotal, 0);
-    const profit = cart.reduce((acc, r) => acc + r.lineProfit, 0);
     const itemsCount = cart.reduce((acc, r) => acc + r.quantity, 0);
-    return { total, profit, itemsCount };
+    return { total, itemsCount };
   }
 
   private recomputeLine(row: CartRow): CartRow {
     const qty = Number.isFinite(row.quantity) ? row.quantity : 0;
     const unit = Number.isFinite(row.unitPrice) ? row.unitPrice : 0;
-    const purchase = Number.isFinite(row.purchasePrice) ? row.purchasePrice : 0;
-
-    return {
-      ...row,
-      quantity: qty,
-      unitPrice: unit,
-      purchasePrice: purchase,
-      lineTotal: unit * qty,
-      lineProfit: (unit - purchase) * qty
-    };
+    return { ...row, quantity: qty, unitPrice: unit, lineTotal: unit * qty };
   }
 }

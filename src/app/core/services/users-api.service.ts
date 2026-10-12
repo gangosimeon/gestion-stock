@@ -23,8 +23,17 @@ export interface CreateUserRequest {
   phone?: string;
   roles: Role[];
   isActive: boolean;
+  /**
+   * Mot de passe provisoire (le backend applique sa politique). Sans mot de passe, le compte
+   * existe mais ne peut pas se connecter.
+   */
+  password?: string;
 }
 
+/**
+ * PUT /api/users/{id} : identifiant, nom et rôles remplacés ; téléphone absent = inchangé.
+ * Le statut et le mot de passe ont leurs routes dédiées.
+ */
 export interface UpdateUserRequest {
   username: string;
   fullName: string;
@@ -62,6 +71,14 @@ export class UsersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /** Nouveau mot de passe, provisoire par défaut ; ferme les sessions de l'utilisateur (204). */
+  resetPassword(id: string, password: string, temporary = true): Observable<void> {
+    return this.http
+      .put<void>(`${environment.apiUrl}/users/${id}/password`, { password, temporary })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Côté backend, « supprimer » désactive le compte : l'historique garde son auteur. */
   delete(id: string): Observable<{ ok: true } | { ok: boolean }> {
     return this.http
       .delete<{ ok: true } | { ok: boolean }>(`${environment.apiUrl}/users/${id}`)

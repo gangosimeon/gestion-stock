@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+import { SupplierPaymentMethod } from '../models/supplier-payment.model';
 import { PurchaseOrder, SupplierInvoice } from '../models/purchase-order.model';
 import { PaginatedResult } from './products-api.service';
 
@@ -25,18 +26,23 @@ export interface CreatePurchaseOrderRequest {
   }>;
 }
 
+/** Corps vide : tout le reste à recevoir entre en stock (dépôt de la commande). */
 export interface ReceivePurchaseOrderRequest {
   deliveredAtIso?: string;
 }
 
+/** Commande reçue ou soldée, une seule facture ; montant = valeur reçue (backend). */
 export interface CreateSupplierInvoiceRequest {
   invoiceNumber: string;
   invoiceDateIso: string;
 }
 
+/** Même règle que le paiement d'un fournisseur ; plafond = reste à payer de la commande. */
 export interface PayPurchaseOrderRequest {
   amount: number;
   paymentDateIso: string;
+  paymentMethod?: SupplierPaymentMethod;
+  externalReference?: string;
   note?: string;
 }
 

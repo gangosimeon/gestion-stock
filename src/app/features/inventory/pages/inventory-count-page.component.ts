@@ -71,6 +71,7 @@ export class InventoryCountPageComponent {
     return this.qtyGroup.controls[productId] as FormControl<number>;
   }
 
+  /** Aperçu : le backend calcule l'écart sur le stock système au moment de l'enregistrement. */
   diff(p: Product): number {
     const physical = Number(this.physicalCtrl(p.id).value ?? 0);
     return physical - this.systemQty(p);
@@ -95,7 +96,8 @@ export class InventoryCountPageComponent {
 
     this.isSubmitting = true;
 
-    (this.facade.createSession(payload) as any)
+    this.facade
+      .createSession(payload)
       .pipe(
         take(1),
         finalize(() => {
@@ -103,7 +105,14 @@ export class InventoryCountPageComponent {
         })
       )
       .subscribe({
-        next: () => this.snackbar.open('Inventaire enregistré', 'OK', { duration: 2500 }),
+        next: (session) =>
+          this.snackbar.open(
+            session.status === 'COMPLETED'
+              ? `Inventaire ${session.number ?? ''} validé : stock ajusté (écart total ${session.totalDifference}).`
+              : `Inventaire ${session.number ?? ''} enregistré, en attente de validation.`,
+            'OK',
+            { duration: 4000 }
+          ),
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
       });
   }

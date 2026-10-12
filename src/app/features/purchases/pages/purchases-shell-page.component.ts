@@ -15,17 +15,23 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
 
-import { PurchaseOrder, PurchaseOrderStatus } from '../../../core/models/purchase-order.model';
+import { PurchaseOrder } from '../../../core/models/purchase-order.model';
 import { PurchasesFacade } from '../data/purchases.facade';
-import { purchaseStatusLabels, PurchasesVm } from '../data/purchases-vm.model';
+import { purchaseDocumentStatusLabels, purchaseStatusLabels, PurchasesVm } from '../data/purchases-vm.model';
 import { ConfirmReceiveDialogComponent } from '../ui/confirm-receive-dialog.component';
 import { PurchaseDrawerComponent, PurchaseDrawerContext } from '../ui/purchase-drawer.component';
-import { PaySupplierDialogComponent, PaySupplierDialogResult } from '../ui/pay-supplier-dialog.component';
+// Même dialogue que la fiche fournisseur : mode de paiement, référence, date non future.
+import {
+  PaySupplierDialogComponent,
+  PaySupplierDialogResult
+} from '../../suppliers/ui/pay-supplier-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-purchases-shell-page',
   standalone: true,
   imports: [
+    MatTooltipModule,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -56,13 +62,19 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
+  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
+  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
   readonly search = new FormControl<string>('', { nonNullable: true });
 
-  readonly displayedColumns = ['supplier', 'status', 'total', 'createdAt', 'actions'] as const;
+  readonly displayedColumns = ['number', 'supplier', 'status', 'total', 'remaining', 'createdAt', 'actions'] as const;
   readonly dataSource = new MatTableDataSource<PurchaseOrder>([]);
 
   readonly vm$ = this.facade.vm$;
@@ -74,14 +86,26 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
     orders: [],
     suppliers: [],
     products: [],
-    filter: ''
+    filter: '',
+    canCreate: false,
+    canReceive: false,
+    canPay: false
   };
-  drawerCtx: PurchaseDrawerContext = { mode: 'CREATE', orderId: null, orders: [], suppliers: [], products: [] };
+  drawerCtx: PurchaseDrawerContext = {
+    mode: 'CREATE',
+    orderId: null,
+    orders: [],
+    suppliers: [],
+    products: [],
+    canReceive: false,
+    canPay: false
+  };
 
   readonly statusLabel = purchaseStatusLabels;
 
-  statusLabelOf(status: PurchaseOrderStatus): string {
-    return purchaseStatusLabels[status];
+  /** Statut détaillé du backend s'il est présent, sinon statut historique. */
+  statusLabelOf(o: PurchaseOrder): string {
+    return o.documentStatus ? purchaseDocumentStatusLabels[o.documentStatus] : purchaseStatusLabels[o.status];
   }
 
   constructor() {
@@ -96,11 +120,9 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
 
     this.dataSource.filterPredicate = (o: PurchaseOrder, filter: string) => {
-      const v = `${o.supplierName} ${o.status} ${o.totalAmount}`.toLowerCase();
+      const v = `${o.number ?? ''} ${o.supplierName} ${this.statusLabelOf(o)} ${o.totalAmount}`.toLowerCase();
       return v.includes(filter);
     };
 
@@ -116,7 +138,9 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
           orderId: d.orderId,
           orders: this.vmSnapshot.orders,
           suppliers: this.vmSnapshot.suppliers,
-          products: this.vmSnapshot.products
+          products: this.vmSnapshot.products,
+          canReceive: this.vmSnapshot.canReceive,
+          canPay: this.vmSnapshot.canPay
         };
         void this.drawer.open();
       } else {
@@ -153,7 +177,7 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
       .open(ConfirmReceiveDialogComponent, {
         data: {
           title: 'Réception marchandise',
-          message: `Valider la réception de la commande ${o.id} ? Le stock et le prix d'achat seront mis à jour.`
+          message: `Valider la réception de tout le reste à recevoir de la commande ${o.number ?? o.id} ? Le stock du dépôt de la commande sera mis à jour.`
         }
       })
       .afterClosed()
@@ -171,7 +195,8 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   pay(o: PurchaseOrder): void {
-    const remaining = Math.max(0, o.totalAmount - (o.paidAmount ?? 0));
+    // Reste à payer calculé par le backend (dû − payé ; dû = reçu pour une commande soldée).
+    const remaining = o.remainingToPay ?? 0;
     if (remaining <= 0) {
       this.snackbar.open('Commande déjà payée', 'OK', { duration: 2500 });
       return;
@@ -180,7 +205,7 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
     this.dialog
       .open(PaySupplierDialogComponent, {
         data: {
-          title: `Payer commande ${o.id}`,
+          title: `Payer la commande ${o.number ?? o.id}`,
           maxAmount: remaining
         }
       })
@@ -192,6 +217,8 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
         (this.facade.payOrder(o.id, {
           amount: res.amount,
           paymentDateIso: res.paymentDateIso,
+          paymentMethod: res.paymentMethod,
+          externalReference: res.externalReference,
           note: res.note
         }) as any)
           .pipe(take(1))

@@ -10,7 +10,7 @@
       </div>
 
       <nav class="sidebar__nav">
-        @for (item of navItems; track item.route) {
+        @for (item of visibleNavItems$ | async; track item.route) {
           <a class="nav-item"
              [routerLink]="item.route"
              routerLinkActive="nav-item--active"
@@ -35,19 +35,20 @@
   <!-- MAIN CONTENT -->
   <mat-sidenav-content class="main">
     <!-- HEADER -->
-    <header class="header">
-      <button mat-icon-button class="header__toggle" (click)="toggleSidenav()">
+    <header class="shell-header">
+      <button mat-icon-button class="shell-header__toggle" type="button" (click)="toggleSidenav()" [attr.aria-label]="collapsed ? 'Déplier le menu' : 'Replier le menu'">
         <mat-icon>menu</mat-icon>
       </button>
 
-      <div class="header__spacer"></div>
+      <div class="shell-header__spacer"></div>
 
       @if (warehouses$ | async; as w) {
         @if (warehouseId$ | async; as wid) {
-          <mat-form-field appearance="outline" class="header__warehouse" subscriptSizing="dynamic">
+          <mat-form-field appearance="outline" class="shell-header__warehouse" subscriptSizing="dynamic">
             <mat-label>Magasin</mat-label>
-            <mat-select [value]="wid" (valueChange)="setWarehouse($event)">
-              @for (it of w.items; track it.id) {
+            <mat-select [value]="wid" (valueChange)="setWarehouse($event, w)">
+              <app-select-search />
+              @for (it of w; track it.id) {
                 <mat-option [value]="it.id">{{ it.name }}</mat-option>
               }
             </mat-select>

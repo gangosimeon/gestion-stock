@@ -1,0 +1,36 @@
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mat-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.content {
+  flex: 1;
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.error {
+  color: #b00020;
+}
+
+.actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+tr.inactive td {
+  opacity: 0.6;
+}

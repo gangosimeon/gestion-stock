@@ -13,6 +13,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Fournisseur</mat-label>
       <mat-select formControlName="supplierId" [disabled]="ctx.mode !== 'CREATE'">
+        <app-select-search />
         @for (s of ctx.suppliers; track s.id) {
           <mat-option [value]="s.id">{{ s.name }}</mat-option>
         }
@@ -27,6 +28,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Produit</mat-label>
           <mat-select formControlName="lineProductId" (selectionChange)="onProductChange()">
+            <app-select-search />
             @for (p of ctx.products; track p.id) {
               <mat-option [value]="p.id">{{ p.sku }} - {{ p.name }}</mat-option>
             }
@@ -50,21 +52,24 @@
       </div>
     }
 
-    <div class="table">
+    <div class="data-table">
       <table mat-table [dataSource]="lines">
         <ng-container matColumnDef="product">
           <th mat-header-cell *matHeaderCellDef>Produit</th>
           <td mat-cell *matCellDef="let l">
             <div class="prod">
-              <div class="name">{{ productName(l.productId) }}</div>
-              <div class="sku">{{ productSku(l.productId) }}</div>
+              <div class="name">{{ productName(l) }}</div>
+              <div class="sku">{{ productSku(l) }}</div>
             </div>
           </td>
         </ng-container>
 
         <ng-container matColumnDef="qty">
           <th mat-header-cell *matHeaderCellDef class="right">Qté</th>
-          <td mat-cell *matCellDef="let l" class="right">{{ l.quantity }}</td>
+          <td mat-cell *matCellDef="let l" class="right">
+            {{ l.quantity }}
+            @if (l.receivedQuantity !== undefined) { <span class="sku">(reçu {{ l.receivedQuantity }})</span> }
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="price">
@@ -94,21 +99,41 @@
     </div>
 
     <div class="summary">
-      <div class="label">Montant</div>
+      <div class="label">{{ loadedOrder ? 'Montant' : 'Montant estimé (recalculé par le serveur)' }}</div>
       <div class="value">{{ totalAmount() }}</div>
     </div>
 
+    @if (loadedOrder; as o) {
+      <div class="summary">
+        <div class="label">Reçu · payé · reste à payer</div>
+        <div class="value">{{ o.receivedAmount ?? '—' }} · {{ o.paidAmount }} · {{ o.remainingToPay ?? '—' }}</div>
+      </div>
+    }
+
     @if (ctx.mode === 'DETAIL') {
       <div class="detailActions">
-        <button mat-stroked-button type="button" (click)="receive()" [disabled]="isReceiving || loadedOrder?.status !== 'PENDING'">
-          @if (isReceiving) {
-            <mat-spinner diameter="18"></mat-spinner>
-          }
-          Réception
-        </button>
+        @if (ctx.canReceive) {
+          <button mat-stroked-button type="button" (click)="receive()" [disabled]="isReceiving || loadedOrder?.status !== 'PENDING'">
+            @if (isReceiving) {
+              <mat-spinner diameter="18"></mat-spinner>
+            }
+            Réception
+          </button>
+        }
 
         <div class="invoice">
           <div class="invoice__title">Facture fournisseur</div>
+          @if (loadedOrder?.invoice; as inv) {
+            <div>N° {{ inv.invoiceNumber }} du {{ inv.invoiceDateIso | date: 'dd/MM/yyyy' }} · {{ inv.totalAmount }}</div>
+          } @else if (!canInvoice) {
+            <div class="sku">
+              @if (ctx.canPay) {
+                Facture enregistrable une fois la commande entièrement reçue ou soldée.
+              } @else {
+                Permission purchase:pay requise pour enregistrer la facture.
+              }
+            </div>
+          } @else {
           <div class="invoice__grid">
             <mat-form-field appearance="outline">
               <mat-label>Numéro</mat-label>
@@ -117,7 +142,7 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Date</mat-label>
-              <input matInput type="date" formControlName="invoiceDateIso" />
+              <input matInput type="date" formControlName="invoiceDateIso" [max]="today" />
             </mat-form-field>
 
             <button mat-flat-button color="primary" type="button" (click)="createInvoice()" [disabled]="isInvoicing">
@@ -127,6 +152,8 @@
               Enregistrer facture
             </button>
           </div>
+          <div class="sku">Montant facturé = valeur reçue, calculé par le serveur. La facture ne se modifie plus ensuite.</div>
+          }
         </div>
       </div>
     }

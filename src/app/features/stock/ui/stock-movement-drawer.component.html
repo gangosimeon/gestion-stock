@@ -13,6 +13,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Produit</mat-label>
       <mat-select formControlName="productId">
+        <app-select-search />
         @for (p of ctx.products; track p.id) {
           <mat-option [value]="p.id">{{ p.sku }} — {{ p.name }}</mat-option>
         }
@@ -23,8 +24,9 @@
     <mat-form-field appearance="outline">
       <mat-label>Type / motif</mat-label>
       <mat-select formControlName="reason">
-        @for (r of reasons; track r.value) {
-          <mat-option [value]="r.value">{{ r.label }}</mat-option>
+        <app-select-search />
+        @for (r of reasons; track r.key) {
+          <mat-option [value]="r.key">{{ r.label }}</mat-option>
         }
       </mat-select>
       @if (fieldError('reason'); as e) { <mat-error>{{ e }}</mat-error> }

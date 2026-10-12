@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { LayoutShellComponent } from './layout-shell.component';
+import { permissionGuard } from '../auth/guards/permission.guard';
 
 export const LAYOUT_ROUTES: Routes = [
   {
@@ -24,6 +25,12 @@ export const LAYOUT_ROUTES: Routes = [
         loadChildren: () => import('../features/stock/stock.routes').then((m) => m.STOCK_ROUTES)
       },
       {
+        path: 'categories',
+        canMatch: [permissionGuard],
+        data: { permissions: ['category:read'] },
+        loadChildren: () => import('../features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES)
+      },
+      {
         path: 'sales',
         loadChildren: () => import('../features/sales/sales.routes').then((m) => m.SALES_ROUTES)
       },
@@ -33,10 +40,14 @@ export const LAYOUT_ROUTES: Routes = [
       },
       {
         path: 'appointments',
+        canMatch: [permissionGuard],
+        data: { permissions: ['appointment:read'] },
         loadChildren: () => import('../features/appointments/appointments.routes').then((m) => m.APPOINTMENTS_ROUTES)
       },
       {
         path: 'reports',
+        canMatch: [permissionGuard],
+        data: { permissions: ['report:read'] },
         loadChildren: () => import('../features/reports/reports.routes').then((m) => m.REPORTS_ROUTES)
       },
       {
@@ -53,10 +64,14 @@ export const LAYOUT_ROUTES: Routes = [
       },
       {
         path: 'expenses',
+        canMatch: [permissionGuard],
+        data: { permissions: ['expense:read'] },
         loadChildren: () => import('../features/expenses/expenses.routes').then((m) => m.EXPENSES_ROUTES)
       },
       {
         path: 'inventory',
+        canMatch: [permissionGuard],
+        data: { permissions: ['inventory:read'] },
         loadChildren: () => import('../features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES)
       },
       {
@@ -65,10 +80,14 @@ export const LAYOUT_ROUTES: Routes = [
       },
       {
         path: 'audit-logs',
+        canMatch: [permissionGuard],
+        data: { permissions: ['audit:read'] },
         loadChildren: () => import('../features/audit-logs/audit-logs.routes').then((m) => m.AUDIT_LOGS_ROUTES)
       },
       {
         path: 'users',
+        canMatch: [permissionGuard],
+        data: { permissions: ['user:manage'] },
         loadChildren: () => import('../features/users/users.routes').then((m) => m.USERS_ROUTES)
       }
     ]

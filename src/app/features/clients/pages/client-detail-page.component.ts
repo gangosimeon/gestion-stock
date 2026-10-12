@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -8,30 +8,53 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { BehaviorSubject, catchError, forkJoin, map, of, startWith, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, forkJoin, map, of, shareReplay, startWith, switchMap, take } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
 import { CustomerPayment } from '../../../core/models/customer-payment.model';
-import { Sale } from '../../../core/models/sale.model';
+import { PaymentMethod, Sale } from '../../../core/models/sale.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { CreateCustomerPaymentRequest, CustomersApiService } from '../../../core/services/customers-api.service';
 import { PayCustomerDialogComponent, PayCustomerDialogResult } from '../ui/pay-customer-dialog.component';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { ListTable } from '../../../shared/table/list-table';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
 
 type DetailVm = {
   isLoading: boolean;
   errorMessage: string | null;
+  /** Porte la dette (`balance`) et le crédit disponible, calculés par le backend. */
   customer: Customer | null;
   sales: Sale[];
   payments: CustomerPayment[];
-  totalPurchased: number;
-  totalPaidOnSales: number;
-  totalPayments: number;
-  debt: number;
+  /** Permission sale:read : historique des ventes visible. */
+  canReadSales: boolean;
+  /** Permission customer:pay (interface seulement ; le backend la revérifie). */
+  canPay: boolean;
+};
+
+const EMPTY: Omit<DetailVm, 'isLoading' | 'errorMessage'> = {
+  customer: null,
+  sales: [],
+  payments: [],
+  canReadSales: false,
+  canPay: false
+};
+
+const METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: 'Espèces',
+  MOBILE_MONEY: 'Mobile money',
+  BANK_TRANSFER: 'Virement'
 };
 
 @Component({
   selector: 'app-client-detail-page',
   standalone: true,
   imports: [
+    MatPaginatorModule,
+    MatSortModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -49,95 +72,89 @@ type DetailVm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientDetailPageComponent {
+  readonly salesTable = new ListTable<Sale>(
+    (s) => `${s.number ?? ''} ${s.status === 'CANCELLED' ? 'annulée' : ''}`,
+    (s, col) => (col === 'date' ? s.createdAt : col === 'paid' ? s.paidAmount : col === 'due' ? (this.dueAmount(s) ?? 0) : undefined)
+  );
+
+  readonly paymentsTable = new ListTable<CustomerPayment>(
+    (p) => `${p.reference ?? ''} ${p.note ?? ''} ${this.methodLabel(p.paymentMethod)}`,
+    (p, col) => (col === 'date' ? (p.createdAt ?? p.paymentDateIso) : col === 'method' ? this.methodLabel(p.paymentMethod) : undefined)
+  );
+  @ViewChild('salesTablePaginator') set salesTablePaginator(p: MatPaginator | undefined) {
+    this.salesTable.attachPaginator(p);
+  }
+  @ViewChild('salesTableSort') set salesTableSort(s: MatSort | undefined) {
+    this.salesTable.attachSort(s);
+  }
+  @ViewChild('paymentsTablePaginator') set paymentsTablePaginator(p: MatPaginator | undefined) {
+    this.paymentsTable.attachPaginator(p);
+  }
+  @ViewChild('paymentsTableSort') set paymentsTableSort(s: MatSort | undefined) {
+    this.paymentsTable.attachSort(s);
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(CustomersApiService);
+  private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  readonly saleColumns = ['date', 'total', 'paid', 'due'] as const;
-  readonly paymentColumns = ['date', 'amount', 'note'] as const;
+  readonly saleColumns = ['date', 'number', 'total', 'paid', 'due'] as const;
+  readonly paymentColumns = ['date', 'reference', 'amount', 'method', 'note'] as const;
 
-  readonly vm$ = this.refresh$.pipe(
-    switchMap(() => this.route.paramMap.pipe(map((p) => p.get('id')))),
-    switchMap((id) => {
+  readonly vm$: Observable<DetailVm> = combineLatest([
+    this.refresh$,
+    this.route.paramMap.pipe(map((p) => p.get('id'))),
+    this.auth.hasPermission$('sale:read'),
+    this.auth.hasPermission$('customer:pay')
+  ]).pipe(
+    switchMap(([, id, canReadSales, canPay]) => {
       if (!id) {
-        return of({
-          isLoading: false,
-          errorMessage: 'ID client manquant',
-          customer: null,
-          sales: [],
-          payments: [],
-          totalPurchased: 0,
-          totalPaidOnSales: 0,
-          totalPayments: 0,
-          debt: 0
-        } satisfies DetailVm);
+        return of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: 'ID client manquant' });
       }
-
       return forkJoin({
         customer: this.api.getById(id),
-        sales: this.api.salesHistory(id).pipe(map((r) => r.items)),
+        // Sans sale:read, le backend refuse l'historique des ventes : on ne le demande pas.
+        sales: canReadSales ? this.api.salesHistory(id).pipe(map((r) => r.items)) : of([] as Sale[]),
         payments: this.api.payments(id).pipe(map((r) => r.items))
       }).pipe(
-        map((r): DetailVm => {
-          const totalPurchased = r.sales.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
-          const totalPaidOnSales = r.sales.reduce((acc, s) => acc + (Number(s.paidAmount) || 0), 0);
-          const totalPayments = r.payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
-          const debt = totalPurchased - totalPaidOnSales - totalPayments;
-
-          return {
+        map(
+          (r): DetailVm => ({
             isLoading: false,
             errorMessage: null,
             customer: r.customer,
             sales: r.sales,
             payments: r.payments,
-            totalPurchased,
-            totalPaidOnSales,
-            totalPayments,
-            debt
-          };
-        }),
-        startWith({
-          isLoading: true,
-          errorMessage: null,
-          customer: null,
-          sales: [],
-          payments: [],
-          totalPurchased: 0,
-          totalPaidOnSales: 0,
-          totalPayments: 0,
-          debt: 0
-        } satisfies DetailVm),
+            canReadSales,
+            canPay
+          })
+        ),
+        startWith<DetailVm>({ ...EMPTY, isLoading: true, errorMessage: null }),
         catchError((e: unknown) =>
-          of({
-            isLoading: false,
-            errorMessage: e instanceof Error ? e.message : 'Erreur',
-            customer: null,
-            sales: [],
-            payments: [],
-            totalPurchased: 0,
-            totalPaidOnSales: 0,
-            totalPayments: 0,
-            debt: 0
-          } satisfies DetailVm)
+          of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: e instanceof Error ? e.message : 'Erreur' })
         )
       );
-    })
+    }),
+    // Une seule série d'appels pour tous les abonnés de l'écran.
+    shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  methodLabel(method: PaymentMethod | undefined): string {
+    return method ? METHOD_LABELS[method] : '—';
+  }
 
   receivePayment(vm: DetailVm): void {
     const customerId = vm.customer?.id;
-    if (!customerId) return;
-
-    const max = vm.debt > 0 ? vm.debt : undefined;
+    if (!customerId || !vm.canPay) return;
 
     this.dialog
       .open(PayCustomerDialogComponent, {
         data: {
           title: `Encaisser ${vm.customer?.name ?? ''}`,
-          maxAmount: max
+          maxAmount: vm.customer?.balance
         }
       })
       .afterClosed()
@@ -147,7 +164,7 @@ export class ClientDetailPageComponent {
 
         const payload: CreateCustomerPaymentRequest = {
           amount: res.amount,
-          paymentDateIso: res.paymentDateIso,
+          paymentMethod: res.paymentMethod,
           note: res.note
         };
 
@@ -155,8 +172,8 @@ export class ClientDetailPageComponent {
           .createPayment(customerId, payload)
           .pipe(take(1))
           .subscribe({
-            next: () => {
-              this.snackbar.open('Paiement enregistré', 'OK', { duration: 2500 });
+            next: (p) => {
+              this.snackbar.open(`Règlement ${p.reference ?? ''} encaissé`, 'OK', { duration: 2500 });
               this.refresh$.next(undefined);
             },
             error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
@@ -164,7 +181,8 @@ export class ClientDetailPageComponent {
       });
   }
 
-  dueAmount(s: Sale): number {
-    return Math.max(0, (Number(s.total) || 0) - (Number(s.paidAmount) || 0));
+  /** Part de la vente restée à crédit, calculée par le backend. */
+  dueAmount(s: Sale): number | null {
+    return s.creditAmount ?? null;
   }
 }

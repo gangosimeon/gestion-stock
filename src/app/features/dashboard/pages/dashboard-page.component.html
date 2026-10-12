@@ -5,6 +5,71 @@
       <div class="page-header__spacer"></div>
     </div>
 
+    @if (vm.errorMessage) {
+      <div class="error">{{ vm.errorMessage }}</div>
+    }
+
+    @if (!vm.canRead) {
+      <!-- Vue vendeur : mes ventes du jour, ma caisse, alertes stock (calculées par le backend). -->
+      @if (vm.seller; as seller) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-card__icon kpi-card__icon--blue"><mat-icon>point_of_sale</mat-icon></div>
+            <div class="kpi-card__label">Mes ventes du jour</div>
+            <div class="kpi-card__value">{{ (seller.myDay?.salesTotal ?? 0) | number: '1.0-0' }}</div>
+            <div class="kpi-card__hint">
+              {{ seller.myDay?.salesCount ?? 0 }} vente(s)
+              @if (seller.myDay?.cancelledCount) { · {{ seller.myDay?.cancelledCount }} annulée(s) }
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-card__icon kpi-card__icon--green"><mat-icon>payments</mat-icon></div>
+            <div class="kpi-card__label">Encaissé aujourd'hui</div>
+            <div class="kpi-card__value">{{ (seller.myDay?.collectedAmount ?? seller.myDay?.paidAmount ?? 0) | number: '1.0-0' }}</div>
+            <div class="kpi-card__hint">
+              Ventes : {{ (seller.myDay?.paidAmount ?? 0) | number: '1.0-0' }}
+              · Règlements de dettes : {{ (seller.myDay?.customerPaymentsAmount ?? 0) | number: '1.0-0' }}
+            </div>
+            <div class="kpi-card__hint">Crédit accordé sur mes ventes : {{ (seller.myDay?.creditAmount ?? 0) | number: '1.0-0' }}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-card__icon kpi-card__icon--orange"><mat-icon>account_balance_wallet</mat-icon></div>
+            <div class="kpi-card__label">Ma caisse</div>
+            @if (seller.cash; as cash) {
+              <div class="kpi-card__value">{{ cash.expectedCash | number: '1.0-0' }}</div>
+              <div class="kpi-card__hint">Espèces attendues · ouverte {{ cash.openedAt | date: 'HH:mm' }}</div>
+            } @else {
+              <div class="kpi-card__value">—</div>
+              <div class="kpi-card__hint">Aucune caisse ouverte</div>
+            }
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-card__icon kpi-card__icon--red"><mat-icon>warning</mat-icon></div>
+            <div class="kpi-card__label">Alertes stock</div>
+            <div class="kpi-card__value">{{ seller.stockAlerts ?? '—' }}</div>
+            <div class="kpi-card__hint">Ruptures et stocks faibles du dépôt</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <mat-card class="chart-card chart-card--wide">
+            <mat-card-header>
+              <mat-card-title>Mes ventes (7 derniers jours)</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="chart">
+                <canvas #mySalesCanvas></canvas>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      } @else if (!vm.isLoading) {
+        <div class="hint">Les indicateurs du tableau de bord sont réservés aux profils disposant de la permission report:read.</div>
+      }
+    } @else {
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-card__icon kpi-card__icon--blue">
@@ -12,7 +77,7 @@
         </div>
         <div class="kpi-card__label">Ventes du jour</div>
         <div class="kpi-card__value">{{ vm.kpis.todaySalesTotal | number: '1.0-0' }}</div>
-        <div class="kpi-card__hint">Total encaissé</div>
+        <div class="kpi-card__hint">CA net (ventes − retours)</div>
       </div>
 
       <div class="kpi-card">
@@ -21,7 +86,7 @@
         </div>
         <div class="kpi-card__label">Bénéfice du jour</div>
         <div class="kpi-card__value">{{ vm.kpis.todayProfit | number: '1.0-0' }}</div>
-        <div class="kpi-card__hint">Prix vente − achat</div>
+        <div class="kpi-card__hint">Marge brute (CA net − coût)</div>
       </div>
 
       <div class="kpi-card">
@@ -48,7 +113,7 @@
 
       <mat-card class="chart-card">
         <mat-card-header>
-          <mat-card-title>Top produits</mat-card-title>
+          <mat-card-title>Top produits (30 jours)</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="chart chart--sm">
@@ -59,7 +124,7 @@
 
       <mat-card class="chart-card">
         <mat-card-header>
-          <mat-card-title>Évolution stock</mat-card-title>
+          <mat-card-title>Évolution du stock (7 jours)</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="chart chart--sm">
@@ -76,5 +141,6 @@
         </mat-card>
       }
     </div>
+    }
   </div>
 }

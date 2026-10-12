@@ -5,7 +5,7 @@ import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { Category } from '../models/category.model';
-import { Product } from '../models/product.model';
+import { Product, ProductUnit } from '../models/product.model';
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -20,6 +20,46 @@ function toApiError(err: unknown): Error {
 
   if (err instanceof Error) return err;
   return new Error('Une erreur est survenue.');
+}
+
+/**
+ * Corps de POST/PUT /api/products. Le PUT remplace tout : les champs absents du formulaire
+ * doivent être renvoyés tels quels (voir `toProductRequest`). Jamais de stock ici : il ne
+ * change que par des mouvements de stock.
+ */
+export interface ProductRequest {
+  sku: string;
+  name: string;
+  categoryId: string;
+  supplierId?: string | null;
+  purchasePrice: number;
+  retailPrice: number;
+  wholesalePrice: number;
+  alertThreshold: number;
+  barcode?: string | null;
+  description?: string | null;
+  brandId?: string | null;
+  unit?: ProductUnit | null;
+  maxStockLevel?: number | null;
+}
+
+/** Requête de modification reprenant toutes les valeurs actuelles du produit. */
+export function toProductRequest(p: Product): ProductRequest {
+  return {
+    sku: p.sku,
+    name: p.name,
+    categoryId: p.categoryId,
+    supplierId: p.supplierId ?? null,
+    purchasePrice: p.purchasePrice,
+    retailPrice: p.retailPrice,
+    wholesalePrice: p.wholesalePrice,
+    alertThreshold: p.alertThreshold,
+    barcode: p.barcode ?? null,
+    description: p.description ?? null,
+    brandId: p.brandId ?? null,
+    unit: p.unit ?? null,
+    maxStockLevel: p.maxStockLevel ?? null
+  };
 }
 
 @Injectable({
@@ -46,18 +86,19 @@ export class ProductsApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
-  create(payload: Omit<Product, 'id'>): Observable<Product> {
+  create(payload: ProductRequest): Observable<Product> {
     return this.http
       .post<Product>(`${environment.apiUrl}/products`, payload)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
-  update(id: string, patch: Partial<Omit<Product, 'id'>>): Observable<Product> {
+  update(id: string, payload: ProductRequest): Observable<Product> {
     return this.http
-      .put<Product>(`${environment.apiUrl}/products/${id}`, patch)
+      .put<Product>(`${environment.apiUrl}/products/${id}`, payload)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /** Côté backend, « supprimer » désactive le produit : ventes et mouvements passés restent intacts. */
   delete(id: string): Observable<{ ok: true } | { ok: boolean }> {
     return this.http
       .delete<{ ok: true } | { ok: boolean }>(`${environment.apiUrl}/products/${id}`)

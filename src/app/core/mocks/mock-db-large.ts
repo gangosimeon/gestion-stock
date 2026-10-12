@@ -12,7 +12,7 @@ import { Supplier }              from '../models/supplier.model';
 import { Sale }                  from '../models/sale.model';
 import { StockMovement }         from '../models/stock-movement.model';
 import { PurchaseOrder }         from '../models/purchase-order.model';
-import { Expense }               from '../models/expense.model';
+import { Expense }               from './legacy-mock-models';
 import { CustomerPayment }       from '../models/customer-payment.model';
 import { SupplierPayment }       from '../models/supplier-payment.model';
 import { SupplierPurchaseHistory } from '../models/supplier-purchase-history.model';

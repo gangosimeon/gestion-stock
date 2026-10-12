@@ -67,3 +67,19 @@
     grid-template-columns: 1fr;
   }
 }
+
+.readonly-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+
+  &__label {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  small {
+    opacity: 0.6;
+  }
+}

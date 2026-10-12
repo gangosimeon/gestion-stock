@@ -16,6 +16,7 @@ import { StockMovementReason } from '../../../core/models/stock-movement.model';
 import { CreateStockMovementRequest } from '../../../core/services/stock-api.service';
 import { StockFacade } from '../data/stock.facade';
 import { stockReasonLabels } from '../data/stock-vm.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 export interface StockMovementDrawerContext {
   products: Product[];
@@ -25,6 +26,7 @@ export interface StockMovementDrawerContext {
   selector: 'app-stock-movement-drawer',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
@@ -50,16 +52,18 @@ export class StockMovementDrawerComponent {
 
   isSubmitting = false;
 
-  readonly reasons: { value: StockMovementReason; label: string; sign: 1 | -1 }[] = [
-    { value: 'SUPPLY', label: stockReasonLabels.SUPPLY, sign: 1 },
-    { value: 'SALE', label: stockReasonLabels.SALE, sign: -1 },
-    { value: 'LOSS', label: stockReasonLabels.LOSS, sign: -1 },
-    { value: 'ADJUSTMENT', label: stockReasonLabels.ADJUSTMENT, sign: 1 }
+  /** Le backend contrôle le sens : SUPPLY > 0, SALE et LOSS < 0, ADJUSTMENT dans les deux sens. */
+  readonly reasons: { key: string; value: StockMovementReason; label: string; sign: 1 | -1 }[] = [
+    { key: 'SUPPLY', value: 'SUPPLY', label: stockReasonLabels.SUPPLY, sign: 1 },
+    { key: 'SALE', value: 'SALE', label: stockReasonLabels.SALE, sign: -1 },
+    { key: 'LOSS', value: 'LOSS', label: stockReasonLabels.LOSS, sign: -1 },
+    { key: 'ADJUSTMENT_IN', value: 'ADJUSTMENT', label: `${stockReasonLabels.ADJUSTMENT} (+)`, sign: 1 },
+    { key: 'ADJUSTMENT_OUT', value: 'ADJUSTMENT', label: `${stockReasonLabels.ADJUSTMENT} (−)`, sign: -1 }
   ];
 
   readonly form = this.fb.nonNullable.group({
     productId: ['', [Validators.required]],
-    reason: ['SUPPLY' as StockMovementReason, [Validators.required]],
+    reason: ['SUPPLY', [Validators.required]],
     quantityAbs: [1, [Validators.required, Validators.min(1)]],
     note: ['']
   });
@@ -71,11 +75,12 @@ export class StockMovementDrawerComponent {
     }
 
     const raw = this.form.getRawValue();
-    const sign = this.reasons.find((r) => r.value === raw.reason)?.sign ?? 1;
+    const choice = this.reasons.find((r) => r.key === raw.reason) ?? this.reasons[0];
+    const sign = choice.sign;
 
     const payload: CreateStockMovementRequest = {
       productId: raw.productId,
-      reason: raw.reason,
+      reason: choice.value,
       quantity: sign * raw.quantityAbs,
       note: raw.note || undefined
     };
@@ -83,7 +88,8 @@ export class StockMovementDrawerComponent {
     this.isSubmitting = true;
     this.form.disable();
 
-    (this.facade.createMovement(payload) as any)
+    this.facade
+      .createMovement(payload)
       .pipe(
         take(1),
         finalize(() => {

@@ -7,30 +7,40 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { finalize, take } from 'rxjs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { filter, finalize, switchMap, take } from 'rxjs';
 
-import { Expense } from '../../../core/models/expense.model';
+import {
+  Expense,
+  ExpenseCategory,
+  ExpenseFilter,
+  ExpensePaymentMethod,
+  ExpenseStatus,
+  expenseCategoryLabels,
+  expensePaymentMethodLabels,
+  expenseStatusLabels
+} from '../../../core/models/expense.model';
 import { CreateExpenseRequest } from '../../../core/services/expenses-api.service';
-import { ExpensesFacade } from '../data/expenses.facade';
-import { ConfirmDeleteExpenseDialogComponent } from '../ui/confirm-delete-expense-dialog.component';
+import { ExpensesFacade, currentMonthFilter } from '../data/expenses.facade';
+import { CancelExpenseDialogComponent, CancelExpenseDialogData } from '../ui/cancel-expense-dialog.component';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
-const expenseCategories = [
-  { id: 'transport', label: 'Transport' },
-  { id: 'salary', label: 'Salaire' },
-  { id: 'rent', label: 'Loyer' },
-  { id: 'utilities', label: 'Électricité / Eau' },
-  { id: 'supplies', label: 'Fournitures' },
-  { id: 'other', label: 'Autre' }
-] as const;
+function today(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 @Component({
   selector: 'app-expenses-shell-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -42,10 +52,11 @@ const expenseCategories = [
     MatInputModule,
     MatSelectModule,
     MatTableModule,
+    MatPaginatorModule,
     MatProgressBarModule,
     MatSnackBarModule,
     MatDialogModule,
-    // ConfirmDeleteExpenseDialogComponent
+    MatTooltipModule
   ],
   templateUrl: './expenses-shell-page.component.html',
   styleUrl: './expenses-shell-page.component.scss',
@@ -59,26 +70,64 @@ export class ExpensesShellPageComponent {
 
   readonly vm$ = this.facade.vm$;
 
-  readonly displayedColumns = ['date', 'category', 'label', 'amount', 'note', 'actions'] as const;
+  readonly displayedColumns = ['date', 'number', 'category', 'label', 'paymentMethod', 'amount', 'status', 'actions'] as const;
 
-  readonly categories = expenseCategories;
+  readonly categories = Object.keys(expenseCategoryLabels) as ExpenseCategory[];
+  readonly paymentMethods = Object.keys(expensePaymentMethodLabels) as ExpensePaymentMethod[];
+  readonly statuses = Object.keys(expenseStatusLabels) as ExpenseStatus[];
+  readonly categoryLabels = expenseCategoryLabels;
+  readonly paymentMethodLabels = expensePaymentMethodLabels;
+  readonly statusLabels = expenseStatusLabels;
 
-  readonly form = this.fb.nonNullable.group({
-    expenseDateIso: [new Date().toISOString().slice(0, 10), [Validators.required]],
-    category: [expenseCategories[0].id, [Validators.required]],
-    label: ['', [Validators.required]],
-    amount: [0, [Validators.required, Validators.min(1)]],
-    note: ['']
+  readonly filterForm = this.fb.nonNullable.group({
+    dateFrom: [currentMonthFilter().dateFrom ?? ''],
+    dateTo: [currentMonthFilter().dateTo ?? ''],
+    category: ['' as ExpenseCategory | ''],
+    status: ['' as ExpenseStatus | ''],
+    search: ['']
   });
 
+  readonly form = this.fb.nonNullable.group({
+    expenseDateIso: [today(), [Validators.required]],
+    category: ['TRANSPORT' as ExpenseCategory, [Validators.required]],
+    label: ['', [Validators.required, Validators.maxLength(200)]],
+    amount: [0, [Validators.required, Validators.min(1)]],
+    paymentMethod: ['CASH' as ExpensePaymentMethod, [Validators.required]],
+    externalReference: ['', [Validators.maxLength(50)]],
+    note: ['', [Validators.maxLength(500)]]
+  });
+
+  readonly maxDate = today();
+
+  /** Libellé d'un code (ligne de tableau non typée), ou le code s'il est inconnu. */
+  label(labels: Record<string, string>, code: string): string {
+    return labels[code] ?? code;
+  }
   isSubmitting = false;
 
   constructor() {
     this.facade.refresh();
   }
 
-  categoryLabel(id: string): string {
-    return this.categories.find((c) => c.id === id)?.label ?? id;
+  applyFilters(): void {
+    const raw = this.filterForm.getRawValue();
+    const f: ExpenseFilter = {};
+    if (raw.dateFrom) f.dateFrom = raw.dateFrom;
+    if (raw.dateTo) f.dateTo = raw.dateTo;
+    if (raw.category) f.category = raw.category;
+    if (raw.status) f.status = raw.status;
+    if (raw.search.trim()) f.search = raw.search.trim();
+    this.facade.applyFilter(f);
+  }
+
+  resetFilters(): void {
+    const month = currentMonthFilter();
+    this.filterForm.reset({ dateFrom: month.dateFrom, dateTo: month.dateTo, category: '', status: '', search: '' });
+    this.facade.applyFilter(month);
+  }
+
+  onPage(e: PageEvent): void {
+    this.facade.changePage(e.pageIndex, e.pageSize);
   }
 
   submit(): void {
@@ -93,18 +142,19 @@ export class ExpensesShellPageComponent {
       category: raw.category,
       label: raw.label.trim(),
       amount: Number(raw.amount),
-      note: raw.note.trim() ? raw.note.trim() : undefined
+      paymentMethod: raw.paymentMethod,
+      externalReference: raw.externalReference.trim() || undefined,
+      note: raw.note.trim() || undefined
     };
-
     if (!payload.label) {
-      this.snackbar.open('Libellé requis', 'OK', { duration: 3000 });
+      this.form.controls.label.setErrors({ required: true });
       return;
     }
 
     this.isSubmitting = true;
     this.form.disable();
-
-    (this.facade.create(payload) as any)
+    this.facade
+      .create(payload)
       .pipe(
         take(1),
         finalize(() => {
@@ -113,38 +163,34 @@ export class ExpensesShellPageComponent {
         })
       )
       .subscribe({
-        next: () => {
-          this.snackbar.open('Dépense enregistrée', 'OK', { duration: 2500 });
+        next: (created) => {
+          const where = created.paymentMethod === 'CASH' ? ' — sortie de votre caisse' : '';
+          this.snackbar.open(`Dépense ${created.number} enregistrée${where}`, 'OK', { duration: 3000 });
           this.form.reset(
-            {
-              expenseDateIso: new Date().toISOString().slice(0, 10),
-              category: expenseCategories[0].id,
-              label: '',
-              amount: 0,
-              note: ''
-            },
+            { expenseDateIso: today(), category: raw.category, label: '', amount: 0, paymentMethod: raw.paymentMethod, externalReference: '', note: '' },
             { emitEvent: false }
           );
         },
-        error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
+        error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 4000 })
       });
   }
 
-  confirmDelete(e: Expense): void {
+  cancel(e: Expense): void {
+    const data: CancelExpenseDialogData = { expense: e };
     this.dialog
-      .open(ConfirmDeleteExpenseDialogComponent, { data: { label: e.label } })
+      .open(CancelExpenseDialogComponent, { data, width: '460px' })
       .afterClosed()
-      .pipe(take(1))
-      .subscribe((ok: boolean | undefined) => {
-        if (!ok) return;
-
-        (this.facade.delete(e.id) as any)
-          .pipe(take(1))
-          .subscribe({
-            next: () => this.snackbar.open('Dépense supprimée', 'OK', { duration: 2500 }),
-            error: (err: unknown) =>
-              this.snackbar.open(err instanceof Error ? err.message : 'Erreur', 'OK', { duration: 3500 })
-          });
+      .pipe(
+        take(1),
+        filter((reason: string | undefined): reason is string => !!reason),
+        switchMap((reason) => this.facade.cancel(e.id, reason))
+      )
+      .subscribe({
+        next: (cancelled) => {
+          const back = cancelled.paymentMethod === 'CASH' ? ' — montant remis dans votre caisse' : '';
+          this.snackbar.open(`Dépense ${cancelled.number} annulée${back}`, 'OK', { duration: 3000 });
+        },
+        error: (err: unknown) => this.snackbar.open(err instanceof Error ? err.message : 'Erreur', 'OK', { duration: 4000 })
       });
   }
 }

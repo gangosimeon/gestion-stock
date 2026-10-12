@@ -3,10 +3,16 @@
     <mat-toolbar color="primary">
       <span>Produits</span>
       <span class="spacer"></span>
-      <button mat-flat-button type="button" (click)="openCreate()">
-        <mat-icon>add</mat-icon>
-        Nouveau
-      </button>
+      <a mat-button routerLink="/categories">
+        <mat-icon>category</mat-icon>
+        Catégories
+      </a>
+      @if ((vm$ | async)?.canCreate) {
+        <button mat-flat-button type="button" (click)="openCreate()">
+          <mat-icon>add</mat-icon>
+          Nouveau
+        </button>
+      }
     </mat-toolbar>
 
     @if (vm$ | async; as vm) {
@@ -29,7 +35,7 @@
           }
         </div>
 
-        <div class="table">
+        <div class="data-table">
           <table mat-table [dataSource]="dataSource" matSort>
             <ng-container matColumnDef="sku">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>SKU</th>
@@ -82,18 +88,26 @@
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let p" class="actions">
-                <button mat-icon-button type="button" (click)="openEdit(p)" aria-label="Modifier">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button type="button" (click)="confirmDelete(p)" aria-label="Supprimer">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                @if (vm.canUpdate) {
+                  <button mat-icon-button type="button" (click)="openEdit(p)" aria-label="Modifier">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                @if (vm.canDelete) {
+                  <button mat-icon-button type="button" (click)="confirmDelete(p)" aria-label="Supprimer">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
+
+          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+            <div class="data-table-empty">Aucun résultat.</div>
+          }
 
           <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
         </div>
@@ -104,7 +118,7 @@
   <mat-drawer #drawer position="end" mode="over">
     @if (drawer$ | async; as d) {
       <app-product-drawer
-        [ctx]="{ mode: d.mode, productId: d.productId, categories: vmSnapshot.categories, suppliers: vmSnapshot.suppliers }"
+        [ctx]="{ mode: d.mode, productId: d.productId, categories: vmSnapshot.categories, suppliers: vmSnapshot.suppliers, canUpdate: vmSnapshot.canUpdate }"
         (close)="closeDrawer()"
         (saved)="onSaved()"
       />

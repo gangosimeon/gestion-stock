@@ -58,8 +58,7 @@ export class LoginComponent {
       },
       error: (err: unknown) => {
         this.isLoading = false;
-        this.errorMessage =
-          err instanceof Error ? err.message : 'Identifiants incorrects. Veuillez réessayer.';
+        this.errorMessage = this.auth.loginErrorMessage(err);
       }
     });
   }

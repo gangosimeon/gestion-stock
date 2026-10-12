@@ -17,11 +17,21 @@ import { Subject, takeUntil } from 'rxjs';
 
 import { ReportsFacade } from '../data/reports.facade';
 import { ReportsTab } from '../data/reports-vm.model';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { TopProductRow } from '../data/reports-vm.model';
+import { ListTable } from '../../../shared/table/list-table';
+import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
 @Component({
   selector: 'app-reports-shell-page',
   standalone: true,
   imports: [
+    SelectSearchComponent,
+    MatPaginatorModule,
+    MatSortModule,
+    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -43,6 +53,17 @@ import { ReportsTab } from '../data/reports-vm.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
+  readonly table = new ListTable<TopProductRow>(
+    (r) => `${r.name} ${r.sku ?? ''}`,
+    (r, col) => (col === 'product' ? r.name : undefined)
+  );
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    this.table.attachPaginator(p);
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    this.table.attachSort(s);
+  }
+
   readonly facade = inject(ReportsFacade);
   private readonly destroy$ = new Subject<void>();
 

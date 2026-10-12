@@ -16,16 +16,19 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
+import { StockAlertType } from '../../../core/models/alert.model';
 import { Product } from '../../../core/models/product.model';
 import { Supplier } from '../../../core/models/supplier.model';
 import { ProductsFacade } from '../data/products.facade';
 import { ConfirmDeleteDialogComponent } from '../ui/confirm-delete-dialog.component';
 import { ProductDrawerComponent } from '../ui/product-drawer.component';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-products-shell-page',
   standalone: true,
   imports: [
+    RouterLink,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
@@ -54,8 +57,14 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
+  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
+  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
+    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
+  }
+  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
+    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
+  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
   readonly search = new FormControl<string>('', { nonNullable: true });
@@ -66,9 +75,16 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
 
-  vmSnapshot: { categories: { id: string; name: string }[]; suppliers: Supplier[] } = {
+  vmSnapshot: {
+    categories: { id: string; name: string }[];
+    suppliers: Supplier[];
+    stockLevels: ReadonlyMap<string, StockAlertType>;
+    canUpdate: boolean;
+  } = {
     categories: [],
-    suppliers: []
+    suppliers: [],
+    stockLevels: new Map(),
+    canUpdate: false
   };
 
   constructor() {
@@ -83,9 +99,6 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
-
     this.dataSource.filterPredicate = (data: Product, filter: string) => {
       const v = `${data.sku} ${data.name} ${data.categoryName ?? ''} ${(data as any).supplierName ?? ''}`.toLowerCase();
       return v.includes(filter);
@@ -94,6 +107,8 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
       this.vmSnapshot.categories = vm.categories;
       this.vmSnapshot.suppliers = vm.suppliers;
+      this.vmSnapshot.stockLevels = vm.stockLevels;
+      this.vmSnapshot.canUpdate = vm.canUpdate;
       this.dataSource.data = vm.products.map((p) => ({
         ...p,
         categoryName: this.facade.resolveCategoryName(p, vm.categories),
@@ -137,25 +152,25 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
     const ref = this.dialog.open(ConfirmDeleteDialogComponent, {
       data: {
         title: 'Supprimer le produit',
-        message: `Confirmer la suppression de "${p.name}" ?`
+        message: `Confirmer la suppression de "${p.name}" ? Le produit sera désactivé ; son historique est conservé.`
       }
     });
 
     ref.afterClosed().subscribe((confirmed: boolean) => {
       if (!confirmed) return;
 
-      (this.facade.delete(p.id) as any).subscribe({
-        next: () => this.snackbar.open('Produit supprimé', 'OK'),
+      this.facade.delete(p.id).subscribe({
+        next: () => this.snackbar.open('Produit désactivé', 'OK'),
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK')
       });
     });
   }
 
   lowStock(p: Product): boolean {
-    return this.facade.isLowStock(p);
+    return this.facade.isLowStock(p, this.vmSnapshot.stockLevels);
   }
 
   availability(p: Product): string {
-    return this.facade.availabilityLabel(p);
+    return this.facade.availabilityLabel(p, this.vmSnapshot.stockLevels);
   }
 }

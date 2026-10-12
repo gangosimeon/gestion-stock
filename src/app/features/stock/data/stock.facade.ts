@@ -1,11 +1,22 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, combineLatest, finalize, map, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { StockMovement } from '../../../core/models/stock-movement.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateStockMovementRequest, StockApiService, StockMovementsQuery } from '../../../core/services/stock-api.service';
 import { StockDrawerState, StockFilters, StockMovementRow, StockVm } from './stock-vm.model';
+
+/** Tous les abonnés de l'écran (pipes async, table) partagent un seul appel. */
+const SHARED = { bufferSize: 1, refCount: true } as const;
+
+/** Fin de la journée choisie (« Au » inclus), en heure locale. */
+function endOfDay(date: Date): Date {
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +24,7 @@ import { StockDrawerState, StockFilters, StockMovementRow, StockVm } from './sto
 export class StockFacade {
   private readonly stockApi = inject(StockApiService);
   private readonly productsApi = inject(ProductsApiService);
+  private readonly auth = inject(AuthService);
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -28,9 +40,15 @@ export class StockFacade {
 
   readonly drawer$ = this.drawerSubject.asObservable();
 
+  // Catalogue du backend (identifiants réels), comme les mouvements.
   private readonly products$ = this.refreshSubject.pipe(
-    switchMap(() => this.productsApi.list()),
-    map((r) => r.items)
+    switchMap(() =>
+      this.productsApi.list().pipe(
+        map((r) => r.items),
+        catchError(() => of([] as Product[]))
+      )
+    ),
+    shareReplay(SHARED)
   );
 
   private readonly movements$ = combineLatest([this.refreshSubject, this.filtersSubject]).pipe(
@@ -41,37 +59,41 @@ export class StockFacade {
     switchMap(([, filters]) => {
       const query: StockMovementsQuery = {
         from: filters.from ? filters.from.toISOString() : undefined,
-        to: filters.to ? filters.to.toISOString() : undefined,
+        to: filters.to ? endOfDay(filters.to).toISOString() : undefined,
         productId: filters.productId ?? undefined
       };
 
       return this.stockApi.listMovements(query).pipe(
         map((r) => r.items),
-        finalize(() => this.isLoadingSubject.next(false)),
-        tap({
-          error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement')
-        })
+        // Une erreur ne doit pas couper le flux : l'écran reste utilisable.
+        catchError((e: unknown) => {
+          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement');
+          return of([] as StockMovement[]);
+        }),
+        finalize(() => this.isLoadingSubject.next(false))
       );
-    })
+    }),
+    shareReplay(SHARED)
   );
 
-  readonly vm$ = combineLatest([
+  readonly vm$: Observable<StockVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
     this.products$,
     this.movements$,
-    this.filtersSubject
+    this.filtersSubject,
+    // Interface seulement : le backend exige stock:adjust pour un mouvement manuel.
+    this.auth.hasPermission$('stock:adjust')
   ]).pipe(
-    map(([isLoading, errorMessage, products, movements, filters]): StockVm => {
-      const enriched = this.enrich(movements, products);
-      return {
-        isLoading,
-        errorMessage,
-        products,
-        movements: enriched,
-        filters
-      };
-    })
+    map(([isLoading, errorMessage, products, movements, filters, canAdjust]): StockVm => ({
+      isLoading,
+      errorMessage,
+      products,
+      movements: movements.map((m) => this.toRow(m)),
+      filters,
+      canAdjust
+    })),
+    shareReplay(SHARED)
   );
 
   refresh(): void {
@@ -90,7 +112,7 @@ export class StockFacade {
     this.drawerSubject.next({ opened: false });
   }
 
-  createMovement(payload: CreateStockMovementRequest): unknown {
+  createMovement(payload: CreateStockMovementRequest): Observable<StockMovement> {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
@@ -107,15 +129,13 @@ export class StockFacade {
     return m.quantity >= 0 ? 'IN' : 'OUT';
   }
 
-  private enrich(movements: StockMovement[], products: Product[]): StockMovementRow[] {
-    return movements.map((m) => {
-      const p = products.find((x) => x.id === m.productId);
-      return {
-        ...m,
-        productName: p?.name,
-        sku: p?.sku,
-        uiType: this.toUiType(m)
-      };
-    });
+  /** Nom, référence et solde viennent du backend : plus de jointure avec le catalogue. */
+  private toRow(m: StockMovement): StockMovementRow {
+    return {
+      ...m,
+      productName: m.productName,
+      sku: m.productSku,
+      uiType: this.toUiType(m)
+    };
   }
 }
