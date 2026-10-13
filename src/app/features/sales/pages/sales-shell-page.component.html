@@ -1,19 +1,19 @@
 <mat-drawer-container class="container" autosize>
   <mat-drawer-content>
-    <mat-toolbar color="primary">
-      <span>Vente</span>
-      <span class="spacer"></span>
+    <header class="page-header page-header--bar">
+      <h1 class="page-header__title">Vente</h1>
+      <div class="page-header__spacer"></div>
       <button mat-stroked-button type="button" (click)="clear()">
         <mat-icon>delete</mat-icon>
         Vider
       </button>
       @if ((vm$ | async)?.canSell) {
-        <button mat-flat-button type="button" (click)="checkout()">
+        <button mat-flat-button color="primary" type="button" (click)="checkout()">
           <mat-icon>shopping_cart_checkout</mat-icon>
           Encaisser
         </button>
       }
-    </mat-toolbar>
+    </header>
 
     @if (vm$ | async; as vm) {
       @if (vm.isLoading) { <mat-progress-bar mode="indeterminate" /> }

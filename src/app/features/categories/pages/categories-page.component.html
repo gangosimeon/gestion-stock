@@ -1,15 +1,15 @@
 <mat-drawer-container class="container" autosize>
   <mat-drawer-content>
-    <mat-toolbar color="primary">
-      <span>Catégories de produits</span>
-      <span class="spacer"></span>
+    <header class="page-header page-header--bar">
+      <h1 class="page-header__title">Catégories de produits</h1>
+      <div class="page-header__spacer"></div>
       @if ((vm$ | async)?.canManage) {
-        <button mat-flat-button type="button" (click)="openCreate()">
+        <button mat-flat-button color="primary" type="button" (click)="openCreate()">
           <mat-icon>add</mat-icon>
           Nouvelle catégorie
         </button>
       }
-    </mat-toolbar>
+    </header>
 
     @if (vm$ | async; as vm) {
       @if (vm.isLoading) {

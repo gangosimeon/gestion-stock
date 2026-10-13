@@ -1,16 +1,16 @@
 <mat-drawer-container class="container" autosize>
   <mat-drawer-content>
     @if (vm$ | async; as vm) {
-      <mat-toolbar class="toolbar" color="primary">
-        <div class="toolbar__title">Fournisseurs</div>
-        <span class="spacer"></span>
+      <header class="page-header page-header--bar">
+        <h1 class="page-header__title">Fournisseurs</h1>
+        <div class="page-header__spacer"></div>
         @if (vm.canCreate) {
-          <button mat-flat-button type="button" (click)="openCreate()">
+          <button mat-flat-button color="primary" type="button" (click)="openCreate()">
             <mat-icon>add</mat-icon>
             Nouveau
           </button>
         }
-      </mat-toolbar>
+      </header>
 
       @if (vm.isLoading) {
         <mat-progress-bar mode="indeterminate" />

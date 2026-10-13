@@ -1,16 +1,16 @@
 <mat-drawer-container class="container" autosize>
   <mat-drawer-content>
     <!-- TOOLBAR -->
-    <mat-toolbar color="primary">
-      <span class="toolbar__title">Rendez-vous</span>
-      <span class="spacer"></span>
+    <header class="page-header page-header--bar">
+      <h1 class="page-header__title">Rendez-vous</h1>
+      <div class="page-header__spacer"></div>
       @if (canManage$ | async) {
-        <button mat-flat-button type="button" (click)="openCreate()">
+        <button mat-flat-button color="primary" type="button" (click)="openCreate()">
           <mat-icon>add</mat-icon>
           Nouveau rendez-vous
         </button>
       }
-    </mat-toolbar>
+    </header>
 
     @if (isLoading) {
       <mat-progress-bar mode="indeterminate" />

@@ -1,11 +1,19 @@
-<mat-sidenav-container [class.sidebar-collapsed]="collapsed">
-  <!-- SIDEBAR -->
-  <mat-sidenav #sidenav mode="side" [opened]="true">
+<mat-sidenav-container [class.sidebar-collapsed]="collapsed && !isMobile" [class.shell--mobile]="isMobile">
+  <!-- SIDEBAR : fixe sur grand écran, menu superposé sous 960 px -->
+  <mat-sidenav #sidenav
+               [mode]="isMobile ? 'over' : 'side'"
+               [opened]="!isMobile || mobileMenuOpen"
+               (closedStart)="mobileMenuOpen = false">
     <div class="sidebar-inner">
       <div class="sidebar__brand">
-        <mat-icon class="sidebar__logo">inventory</mat-icon>
-        @if (!collapsed) {
-          <span class="sidebar__title">GestStock</span>
+        <span class="sidebar__logo-box" aria-hidden="true">
+          <mat-icon class="sidebar__logo">inventory_2</mat-icon>
+        </span>
+        @if (!collapsed || isMobile) {
+          <span class="sidebar__brand-text">
+            <span class="sidebar__title">GestStock</span>
+            <span class="sidebar__subtitle">Gestion de stock</span>
+          </span>
         }
       </div>
 
@@ -14,21 +22,25 @@
           <a class="nav-item"
              [routerLink]="item.route"
              routerLinkActive="nav-item--active"
-             [matTooltip]="collapsed ? item.label : ''"
-             matTooltipPosition="right">
+             [matTooltip]="collapsed && !isMobile ? item.label : ''"
+             matTooltipPosition="right"
+             (click)="onNavigate()">
             <mat-icon class="nav-item__icon">{{ item.icon }}</mat-icon>
-            @if (!collapsed) {
+            @if (!collapsed || isMobile) {
               <span class="nav-item__label">{{ item.label }}</span>
             }
           </a>
         }
       </nav>
 
-      <div class="sidebar__footer">
-        <button mat-icon-button class="collapse-btn" (click)="toggleSidenav()">
-          <mat-icon>{{ collapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-        </button>
-      </div>
+      @if (!isMobile) {
+        <div class="sidebar__footer">
+          <button mat-icon-button class="collapse-btn" type="button" (click)="toggleSidenav()"
+                  [attr.aria-label]="collapsed ? 'Déplier le menu' : 'Replier le menu'">
+            <mat-icon>{{ collapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+          </button>
+        </div>
+      }
     </div>
   </mat-sidenav>
 
@@ -36,7 +48,7 @@
   <mat-sidenav-content class="main">
     <!-- HEADER -->
     <header class="shell-header">
-      <button mat-icon-button class="shell-header__toggle" type="button" (click)="toggleSidenav()" [attr.aria-label]="collapsed ? 'Déplier le menu' : 'Replier le menu'">
+      <button mat-icon-button class="shell-header__toggle" type="button" (click)="toggleSidenav()" [attr.aria-label]="isMobile ? (mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu') : (collapsed ? 'Déplier le menu' : 'Replier le menu')">
         <mat-icon>menu</mat-icon>
       </button>
 
@@ -46,6 +58,7 @@
         @if (warehouseId$ | async; as wid) {
           <mat-form-field appearance="outline" class="shell-header__warehouse" subscriptSizing="dynamic">
             <mat-label>Magasin</mat-label>
+            <mat-icon matPrefix class="shell-header__warehouse-icon">storefront</mat-icon>
             <mat-select [value]="wid" (valueChange)="setWarehouse($event, w)">
               <app-select-search />
               @for (it of w; track it.id) {
@@ -60,7 +73,7 @@
       @if (currentUser$ | async; as user) {
         <div class="user-menu">
           <button class="user-menu__trigger" (click)="toggleUserMenu()" type="button">
-            <span class="user-avatar">{{ user.username[0].toUpperCase() }}</span>
+            <span class="user-avatar">{{ initials(user.username) }}</span>
             <div class="user-info">
               <span class="user-info__name">{{ user.username }}</span>
               <span class="user-info__role user-info__role--{{ user.role ? user.role.toLowerCase() : 'employee' }}">
@@ -76,7 +89,7 @@
             <div class="user-dropdown-overlay" (click)="closeUserMenu()"></div>
             <div class="user-dropdown">
               <div class="user-dropdown__header">
-                <span class="user-avatar user-avatar--lg">{{ user.username[0].toUpperCase() }}</span>
+                <span class="user-avatar user-avatar--lg">{{ initials(user.username) }}</span>
                 <div>
                   <div class="user-dropdown__name">{{ user.username }}</div>
                   <div class="user-dropdown__email">{{ user.email }}</div>

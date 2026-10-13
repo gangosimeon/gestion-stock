@@ -13,7 +13,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, Subject, filter, switchMap, take, takeUntil } from 'rxjs';
 
@@ -54,7 +53,6 @@ function isoDate(d: Date): string {
     MatSidenavModule,
     MatSnackBarModule,
     MatTableModule,
-    MatToolbarModule,
     MatTooltipModule,
     AppointmentDrawerComponent
   ],

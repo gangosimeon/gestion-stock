@@ -32,6 +32,9 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     Chart.register(...registerables);
+    // Typographie de l'application dans les graphiques.
+    Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    Chart.defaults.color = CHART.text;
     this.facade.refresh();
   }
 
@@ -49,8 +52,8 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
 
   private render(vm: DashboardVm): void {
     const days = vm.salesByDay;
-    this.draw('salesByDay', this.salesByDayCanvas, 'line', 'Ventes', days.map((p) => p.date), days.map((p) => p.total), '#2563EB');
-    this.draw('topProducts', this.topProductsCanvas, 'bar', 'CA', vm.topProducts.map((p) => p.name), vm.topProducts.map((p) => p.total), '#10B981');
+    this.draw('salesByDay', this.salesByDayCanvas, 'line', 'Ventes', days.map((p) => p.date), days.map((p) => p.total), CHART.blue);
+    this.draw('topProducts', this.topProductsCanvas, 'bar', 'CA', vm.topProducts.map((p) => p.name), vm.topProducts.map((p) => p.total), CHART.lightBlue);
     this.draw(
       'stockEvolution',
       this.stockEvolutionCanvas,
@@ -58,10 +61,10 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
       'Stock total',
       vm.stockEvolution.map((p) => p.label),
       vm.stockEvolution.map((p) => p.stockTotal),
-      '#F59E0B'
+      CHART.violet
     );
     const mine = vm.seller?.myDay?.last7Days ?? [];
-    this.draw('mySales', this.mySalesCanvas, 'line', 'Mes ventes', mine.map((p) => p.label), mine.map((p) => p.total), '#2563EB');
+    this.draw('mySales', this.mySalesCanvas, 'line', 'Mes ventes', mine.map((p) => p.label), mine.map((p) => p.total), CHART.blue);
   }
 
   /** Crée le graphique, le met à jour, ou le recrée si Angular a remplacé son canevas. */
@@ -95,10 +98,39 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
   }
 }
 
-const tooltip = { backgroundColor: '#0F172A', cornerRadius: 6, padding: 10, titleFont: { size: 12 }, bodyFont: { size: 12 } };
+/** Palette des graphiques (charte : bleu dominant, violet pour un indicateur secondaire). */
+const CHART = {
+  blue: '#2563EB',
+  lightBlue: '#60A5FA',
+  violet: '#7C3AED',
+  navy: '#0B1F3A',
+  text: '#64748B',
+  grid: 'rgba(226, 232, 240, 0.8)'
+};
+
+/** Montants et quantités au format français (séparateur de milliers), présentation seule. */
+const fr = (value: unknown) => (typeof value === 'number' ? value.toLocaleString('fr-FR') : String(value ?? ''));
+
+const tooltip = {
+  backgroundColor: CHART.navy,
+  cornerRadius: 8,
+  padding: 12,
+  displayColors: false,
+  titleFont: { size: 12, weight: 600 as const },
+  bodyFont: { size: 13 },
+  callbacks: {
+    label: (ctx: { dataset: { label?: string }; parsed: { y: number | null } }) =>
+      `${ctx.dataset.label ?? ''} : ${fr(ctx.parsed.y)}`
+  }
+};
 const scales = {
-  x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
-  y: { beginAtZero: true, grid: { color: 'rgba(226, 232, 240, 0.6)' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, border: { display: false } }
+  x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11 }, color: CHART.text } },
+  y: {
+    beginAtZero: true,
+    grid: { color: CHART.grid },
+    border: { display: false },
+    ticks: { font: { size: 11 }, color: CHART.text, padding: 8, callback: (v: string | number) => fr(v) }
+  }
 };
 
 function lineConfig(label: string, labels: string[], data: number[], color: string): ChartConfiguration<'line'> {
@@ -111,12 +143,15 @@ function lineConfig(label: string, labels: string[], data: number[], color: stri
           label,
           data,
           borderColor: color,
-          backgroundColor: `${color}10`,
+          backgroundColor: `${color}1A`,
           fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#FFFFFF',
+          pointBorderColor: color,
+          pointBorderWidth: 2,
+          pointHoverRadius: 5,
           pointHoverBackgroundColor: color
         }
       ]
@@ -136,7 +171,7 @@ function barConfig(label: string, labels: string[], data: number[], color: strin
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label, data, backgroundColor: color, borderRadius: 4, borderSkipped: false, maxBarThickness: 32 }]
+      datasets: [{ label, data, backgroundColor: color, hoverBackgroundColor: CHART.blue, borderRadius: 6, borderSkipped: false, maxBarThickness: 28 }]
     },
     options: {
       responsive: true,

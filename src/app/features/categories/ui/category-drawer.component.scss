@@ -23,7 +23,7 @@
 }
 
 .drawer__error {
-  color: #b00020;
+  color: var(--color-danger);
   font-size: 13px;
   font-weight: 600;
 }

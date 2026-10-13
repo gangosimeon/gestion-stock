@@ -1,5 +1,5 @@
 .page {
-  padding: 16px;
+  padding: var(--page-padding);
   display: grid;
   gap: 12px;
 }
@@ -11,7 +11,7 @@
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
   font-weight: 700;
 }
 

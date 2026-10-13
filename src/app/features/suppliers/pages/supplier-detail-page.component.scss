@@ -1,5 +1,5 @@
 .page {
-  padding: 16px;
+  padding: var(--page-padding);
   display: grid;
   gap: 12px;
 }
@@ -14,7 +14,7 @@
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
 }
 
 .grid {
@@ -52,5 +52,5 @@
 
 .debt {
   font-weight: 900;
-  color: #b00020;
+  color: var(--color-danger);
 }

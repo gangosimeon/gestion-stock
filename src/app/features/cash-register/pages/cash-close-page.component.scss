@@ -1,5 +1,5 @@
 .page {
-  padding: 16px;
+  padding: var(--page-padding);
   display: grid;
   gap: 12px;
 }
@@ -11,7 +11,7 @@
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
   font-weight: 700;
 }
 
@@ -26,7 +26,7 @@
 }
 
 .kpi {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 10px 12px;
 }
@@ -67,11 +67,11 @@
 }
 
 .diff__value--neg {
-  color: #b00020;
+  color: var(--color-danger);
 }
 
 .diff__value--pos {
-  color: #1b5e20;
+  color: var(--color-success);
 }
 
 @media (max-width: 900px) {

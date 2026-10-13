@@ -8,7 +8,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subject, finalize, take, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
@@ -27,7 +26,6 @@ import { TableSearchComponent } from '../../../shared/table/table-search.compone
     TableSearchComponent,
     CommonModule,
     AsyncPipe,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatTableModule,

@@ -14,7 +14,6 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subject, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 
@@ -33,7 +32,6 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,

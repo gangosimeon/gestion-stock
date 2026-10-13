@@ -66,14 +66,14 @@ function normalize(text: string): string {
         position: sticky;
         top: 0;
         z-index: 2;
-        background: var(--mat-select-panel-background-color, #fff);
+        background: var(--mat-select-panel-background-color, var(--color-surface));
       }
       .select-search {
         display: flex;
         align-items: center;
         gap: 8px;
         padding: 6px 12px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+        border-bottom: 1px solid var(--color-border);
       }
       .select-search__icon {
         font-size: 18px;

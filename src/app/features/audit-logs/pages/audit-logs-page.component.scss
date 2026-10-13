@@ -43,10 +43,10 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3) var(--spacing-4);
-  background: #FEF2F2;
+  background: var(--color-danger-soft);
   border: 1px solid #FECACA;
   border-radius: var(--radius-md);
-  color: #991B1B;
+  color: #B91C1C;
   font-size: 13px;
   font-weight: 500;
 }
@@ -58,7 +58,7 @@
   transition: background 120ms ease;
 
   &:hover {
-    background: rgba(59, 130, 246, 0.03) !important;
+    background: var(--color-surface-hover) !important;
   }
 }
 

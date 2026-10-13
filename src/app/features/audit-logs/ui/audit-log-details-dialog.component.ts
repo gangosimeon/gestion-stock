@@ -32,52 +32,52 @@ export type AuditLogDetailsDialogData = {
       margin-bottom: 16px;
     }
     .detail-label {
-      color: #64748B;
+      color: var(--color-text-secondary);
       font-weight: 500;
     }
     .detail-value {
-      color: #0F172A;
+      color: var(--color-text);
       word-break: break-all;
     }
     .changes-title {
       font-size: 14px;
       font-weight: 600;
       margin: 16px 0 8px;
-      color: #0F172A;
+      color: var(--color-text);
     }
     .changes-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      border: 1px solid #E2E8F0;
+      border: 1px solid var(--color-border);
       border-radius: 8px;
       overflow: hidden;
     }
     .changes-table th {
-      background: #F1F5F9;
+      background: var(--color-surface-muted);
       padding: 8px 12px;
       text-align: left;
       font-weight: 600;
-      color: #64748B;
+      color: var(--color-text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.04em;
       font-size: 11px;
     }
     .changes-table td {
       padding: 8px 12px;
-      border-top: 1px solid #E2E8F0;
+      border-top: 1px solid var(--color-border);
     }
     .old-value {
-      background: #FEF2F2;
-      color: #991B1B;
+      background: var(--color-danger-soft);
+      color: #B91C1C;
       padding: 2px 6px;
       border-radius: 4px;
       font-family: monospace;
       font-size: 12px;
     }
     .new-value {
-      background: #ECFDF5;
-      color: #065F46;
+      background: var(--color-success-soft);
+      color: #15803D;
       padding: 2px 6px;
       border-radius: 4px;
       font-family: monospace;
@@ -90,8 +90,8 @@ export type AuditLogDetailsDialogData = {
       font-size: 11px;
       font-weight: 500;
     }
-    .status-badge--success { background: #ECFDF5; color: #065F46; }
-    .status-badge--failure { background: #FEF2F2; color: #991B1B; }
+    .status-badge--success { background: var(--color-success-soft); color: #15803D; }
+    .status-badge--failure { background: var(--color-danger-soft); color: #B91C1C; }
   `]
 })
 export class AuditLogDetailsDialogComponent {

@@ -49,7 +49,7 @@ export type CancelExpenseDialogData = {
       }
       .hint {
         font-size: 13px;
-        color: #64748b;
+        color: var(--color-text-secondary);
       }
     `
   ]

@@ -1,16 +1,16 @@
 <mat-drawer-container class="container" autosize>
   <mat-drawer-content>
-    <mat-toolbar color="primary">
-      <span>Utilisateurs</span>
-      <span class="spacer"></span>
+    <header class="page-header page-header--bar">
+      <h1 class="page-header__title">Utilisateurs</h1>
+      <div class="page-header__spacer"></div>
 
       @if (vm$ | async; as vm) {
-        <button mat-flat-button type="button" (click)="openCreate()" [disabled]="!vm.canManage">
+        <button mat-flat-button color="primary" type="button" (click)="openCreate()" [disabled]="!vm.canManage">
           <mat-icon>person_add</mat-icon>
           Ajouter
         </button>
       }
-    </mat-toolbar>
+    </header>
 
     @if (vm$ | async; as vm) {
       @if (vm.isLoading) {

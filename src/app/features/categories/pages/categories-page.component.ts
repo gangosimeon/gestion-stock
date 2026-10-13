@@ -8,7 +8,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Category } from '../../../core/models/category.model';
@@ -31,7 +30,6 @@ import { CategoryDrawerComponent, CategoryDrawerContext } from '../ui/category-d
     MatSnackBarModule,
     MatSortModule,
     MatTableModule,
-    MatToolbarModule,
     MatTooltipModule,
     TableSearchComponent,
     CategoryDrawerComponent

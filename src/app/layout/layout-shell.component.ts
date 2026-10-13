@@ -1,6 +1,8 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { catchError, map, of, shareReplay, switchMap, tap } from 'rxjs';
-import { Component, inject, ViewChild, ViewEncapsulation } from '@angular/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { Component, DestroyRef, inject, ViewChild, ViewEncapsulation } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -60,6 +62,11 @@ export class LayoutShellComponent {
   collapsed = false;
   userMenuOpen = false;
 
+  /** Petit écran (< 960 px) : la barre latérale devient un menu superposé, fermé par défaut. */
+  isMobile = false;
+  /** Menu superposé ouvert (petit écran uniquement). */
+  mobileMenuOpen = false;
+
   readonly currentUser$ = this.auth.currentUser$;
 
   /**
@@ -109,6 +116,15 @@ export class LayoutShellComponent {
   constructor() {
     // Session ouverte avant cette version (sans permissions en cache) : un seul GET /auth/me.
     this.auth.ensureCurrentUser().subscribe();
+
+    inject(BreakpointObserver)
+      .observe('(max-width: 959.98px)')
+      .pipe(takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((state) => {
+        this.isMobile = state.matches;
+        // Changement de taille d'écran : menu superposé refermé.
+        this.mobileMenuOpen = false;
+      });
   }
 
   logout(): void {
@@ -136,7 +152,24 @@ export class LayoutShellComponent {
     if (warehouse) this.warehouseCtx.select(warehouse);
   }
 
+  /** Grand écran : replie / déplie la barre latérale ; petit écran : ouvre / ferme le menu superposé. */
   toggleSidenav(): void {
-    this.collapsed = !this.collapsed;
+    if (this.isMobile) {
+      this.mobileMenuOpen = !this.mobileMenuOpen;
+    } else {
+      this.collapsed = !this.collapsed;
+    }
+  }
+
+  /** Après un choix dans le menu superposé, il se referme (petit écran). */
+  onNavigate(): void {
+    if (this.isMobile) this.mobileMenuOpen = false;
+  }
+
+  /** Initiales affichées dans l'avatar (premières lettres du nom d'utilisateur). */
+  initials(username: string | null | undefined): string {
+    const parts = (username ?? '').split(/[.\s_-]+/).filter(Boolean);
+    const letters = parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] ?? '?').slice(0, 2);
+    return letters.toUpperCase();
   }
 }

@@ -175,8 +175,8 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
           {
             label: 'Ventes',
             data,
-            borderColor: '#3f51b5',
-            backgroundColor: 'rgba(63, 81, 181, 0.15)',
+            borderColor: '#2563EB',
+            backgroundColor: 'rgba(37, 99, 235, 0.10)',
             fill: true,
             tension: 0.35,
             pointRadius: 3
@@ -204,7 +204,7 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
           {
             label: 'Bénéfice',
             data,
-            backgroundColor: 'rgba(76, 175, 80, 0.6)'
+            backgroundColor: 'rgba(22, 163, 74, 0.75)'
           }
         ]
       },

@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: var(--page-padding);
   gap: 12px;
 }
 
@@ -28,7 +28,7 @@
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
 }
 
 .kpis {

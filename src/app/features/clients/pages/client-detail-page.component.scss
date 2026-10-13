@@ -1,5 +1,5 @@
 .page {
-  padding: 16px;
+  padding: var(--page-padding);
   display: grid;
   gap: 12px;
 }
@@ -15,7 +15,7 @@
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
   font-weight: 700;
 }
 
@@ -49,7 +49,7 @@
 
 .debt {
   font-weight: 900;
-  color: #b00020;
+  color: var(--color-danger);
 }
 
 @media (max-width: 900px) {

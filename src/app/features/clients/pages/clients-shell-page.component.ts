@@ -12,7 +12,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
 
@@ -32,7 +31,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     DecimalPipe,
     RouterLink,
     ReactiveFormsModule,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,

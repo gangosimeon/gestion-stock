@@ -4,9 +4,10 @@
   }
 
   <div class="page">
-    <div class="top">
+    <div class="page-header">
       <a mat-button [routerLink]="['/clients']">Retour</a>
-      <span class="spacer"></span>
+      <h1 class="page-header__title">Fiche client</h1>
+      <div class="page-header__spacer"></div>
       @if (vm.canPay) {
         <button
           mat-flat-button

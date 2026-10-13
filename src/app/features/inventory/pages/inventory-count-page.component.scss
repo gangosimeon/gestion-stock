@@ -1,5 +1,5 @@
 .page {
-  padding: 16px;
+  padding: var(--page-padding);
   display: grid;
   gap: 12px;
 }
@@ -15,7 +15,7 @@
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-danger);
   font-weight: 700;
 }
 
@@ -48,18 +48,18 @@
   width: 90px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
   padding: 0 8px;
   text-align: right;
 }
 
 .neg {
-  color: #b00020;
+  color: var(--color-danger);
   font-weight: 900;
 }
 
 .pos {
-  color: #1b5e20;
+  color: var(--color-success);
   font-weight: 900;
 }
 

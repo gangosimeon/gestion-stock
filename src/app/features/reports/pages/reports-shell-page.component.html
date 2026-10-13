@@ -1,8 +1,8 @@
 @if (vm$ | async; as vm) {
   <div class="page">
-    <div class="header">
-      <div class="title">Bilans & Rapports</div>
-      <span class="spacer"></span>
+    <div class="page-header">
+      <h1 class="page-header__title">Bilans & Rapports</h1>
+      <div class="page-header__spacer"></div>
       <button mat-stroked-button type="button" (click)="exportExcel()">
         <mat-icon>download</mat-icon>
         Exporter Excel

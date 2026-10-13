@@ -1,11 +1,12 @@
 @if (vm$ | async; as vm) {
   <div class="page">
-    <div class="header">
+    <div class="page-header">
       <button mat-stroked-button type="button" routerLink="/suppliers">
         <mat-icon>arrow_back</mat-icon>
         Retour
       </button>
-      <span class="spacer"></span>
+      <h1 class="page-header__title">Fiche fournisseur</h1>
+      <div class="page-header__spacer"></div>
     </div>
 
     @if (vm.isLoading) {

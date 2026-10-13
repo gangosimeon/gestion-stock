@@ -11,7 +11,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
@@ -28,7 +27,6 @@ import { SupplierDrawerComponent, SupplierDrawerContext } from '../ui/supplier-d
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,

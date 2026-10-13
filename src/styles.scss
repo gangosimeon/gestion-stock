@@ -1,12 +1,13 @@
 @use '@angular/material' as mat;
 
 // ═══════════════════════════════════════════════════════════════════
-// CUSTOM THEME — SaaS Premium (Stripe / Notion inspired)
+// THÈME GESTSTOCK — bleu nuit, bleu royal, blanc et gris bleuté
+// Le bleu domine ; vert, rouge et violet sont réservés aux indicateurs.
 // ═══════════════════════════════════════════════════════════════════
 
 $app-primary-palette: (
   50: #eff6ff, 100: #dbeafe, 200: #bfdbfe, 300: #93c5fd, 400: #60a5fa,
-  500: #3B82F6, 600: #2563eb, 700: #1d4ed8, 800: #1E3A8A, 900: #1e3a5f,
+  500: #3B82F6, 600: #2563eb, 700: #1d4ed8, 800: #12345A, 900: #0B1F3A,
   contrast: (50: #111827, 100: #111827, 200: #111827, 300: #111827, 400: #fff,
              500: #fff, 600: #fff, 700: #fff, 800: #fff, 900: #fff)
 );
@@ -53,28 +54,51 @@ $app-theme: mat.m2-define-light-theme((
 // ═══════════════════════════════════════════════════════════════════
 
 :root {
-  --color-primary: #2563EB;
+  // Charte
+  --color-navy: #0B1F3A;            // bleu nuit
+  --color-navy-2: #12345A;          // bleu profond
+  --color-primary: #2563EB;         // bleu principal
   --color-primary-hover: #1D4ED8;
-  --color-secondary: #6366F1;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
+  --color-primary-soft: #EFF6FF;    // bleu clair
+  --color-secondary: #7C3AED;       // violet secondaire
+  --color-secondary-soft: #F5F3FF;
+  --color-success: #16A34A;
+  --color-success-soft: #ECFDF3;
+  --color-danger: #DC2626;
+  --color-danger-soft: #FEF2F2;
+  // Pas d'orange : un avertissement s'affiche en violet (indicateur contextuel).
+  --color-warning: #7C3AED;
+  --color-warning-soft: #F5F3FF;
 
-  --color-bg: #F8FAFC;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F8FAFC;
+  --color-bg: #F5F8FC;              // fond général
+  --color-surface: #FFFFFF;         // cartes
+  --color-surface-hover: #F5F9FF;
+  --color-surface-muted: #F8FAFD;   // en-têtes de tableau, zones secondaires
   --color-border: #E2E8F0;
-  --color-border-light: #F1F5F9;
-  --color-text: #0F172A;
-  --color-text-secondary: #64748B;
+  --color-border-light: #EEF2F7;
+  --color-text: #172B4D;            // texte principal
+  --color-text-secondary: #64748B;  // texte secondaire
   --color-text-muted: #94A3B8;
 
-  --color-sidebar: #0F172A;
-  --color-sidebar-hover: #1E293B;
-  --color-sidebar-text: #94A3B8;
-  --color-sidebar-text-active: #F8FAFC;
-  --color-sidebar-active: #3B82F6;
-  --color-sidebar-active-bg: rgba(59, 130, 246, 0.1);
+  --color-sidebar: #0B1F3A;
+  --color-sidebar-hover: #12345A;
+  --color-sidebar-text: #B8C4D6;
+  --color-sidebar-text-active: #FFFFFF;
+  --color-sidebar-active: #2563EB;
+  --color-sidebar-active-bg: #2563EB;
+
+  // Contrôles : hauteur commune des champs et boutons, rayon commun.
+  --control-height: 40px;
+  --control-radius: 8px;
+
+  // Formes Material (variables officielles --mat-* de Material 21 : pas de sélecteur interne forcé).
+  --mat-form-field-outlined-container-shape: 8px;
+  --mat-button-filled-container-shape: 8px;
+  --mat-button-protected-container-shape: 8px;
+  --mat-button-outlined-container-shape: 8px;
+  --mat-button-text-container-shape: 8px;
+  --mat-form-field-outlined-outline-color: #E2E8F0;
+  --mat-form-field-outlined-hover-outline-color: #CBD5E1;
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -82,12 +106,13 @@ $app-theme: mat.m2-define-light-theme((
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  // Ombres légères, teintées de bleu nuit.
+  --shadow-xs: 0 1px 2px 0 rgba(11, 31, 58, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(11, 31, 58, 0.06), 0 1px 2px -1px rgba(11, 31, 58, 0.04);
+  --shadow-md: 0 4px 10px -2px rgba(11, 31, 58, 0.08), 0 2px 4px -2px rgba(11, 31, 58, 0.04);
+  --shadow-lg: 0 12px 24px -6px rgba(11, 31, 58, 0.12), 0 4px 8px -4px rgba(11, 31, 58, 0.05);
+  --shadow-xl: 0 24px 48px -12px rgba(11, 31, 58, 0.22);
+  --shadow-ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
 
   --spacing-1: 4px;
   --spacing-2: 8px;
@@ -98,14 +123,22 @@ $app-theme: mat.m2-define-light-theme((
   --spacing-8: 32px;
   --spacing-10: 40px;
 
-  --header-height: 56px;
+  --header-height: 64px;
   --sidebar-width: 256px;
+  --page-padding: 24px;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
+}
+
+// Marges de page plus serrées sur petit écran.
+@media (max-width: 768px) {
+  :root {
+    --page-padding: 16px;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -130,6 +163,21 @@ body {
   color: var(--color-text);
   background-color: var(--color-bg);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+// Titres : couleur héritée (texte du body), jamais imposée — un titre sur fond sombre reste clair.
+h1, h2, h3, h4 {
+  letter-spacing: -0.01em;
+}
+
+// Focus clavier visible (sans changer le focus souris), limité aux éléments sans indicateur propre :
+// pas les composants Material (boutons, options… ont le leur) ni les conteneurs focalisés par
+// programme à l'ouverture (dialogue, drawer : tabindex="-1"), qui seraient entourés en entier.
+a:focus-visible,
+button:not(.mat-mdc-button-base):focus-visible,
+[tabindex]:not([tabindex='-1']):not(.mat-mdc-option):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 a {
@@ -180,13 +228,24 @@ a {
 
 .mat-mdc-card {
   border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-sm) !important;
+  box-shadow: var(--shadow-xs) !important;
   border: 1px solid var(--color-border);
-  transition: box-shadow var(--duration-normal) var(--ease-in-out),
-              transform var(--duration-normal) var(--ease-in-out);
+  background: var(--color-surface);
+  transition: box-shadow var(--duration-normal) var(--ease-in-out);
 
   &:hover {
-    box-shadow: var(--shadow-md) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .mat-mdc-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .mat-mdc-card-subtitle {
+    font-size: 12px;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -206,6 +265,7 @@ a {
 .mat-mdc-outlined-button {
   border-radius: var(--radius-sm) !important;
   border-color: var(--color-border) !important;
+  background: var(--color-surface);
   transition: all var(--duration-fast) var(--ease-in-out) !important;
 
   &:hover {
@@ -234,8 +294,8 @@ a {
   font-size: 13px;
 
   .mat-mdc-header-row {
-    background: var(--color-border-light);
-    height: 40px;
+    background: var(--color-surface-muted);
+    height: 44px;
   }
 
   .mat-mdc-header-cell {
@@ -244,20 +304,17 @@ a {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-text-secondary);
+    background: var(--color-surface-muted);
     border-bottom: 1px solid var(--color-border);
     padding: 0 16px;
   }
 
   .mat-mdc-row {
-    height: 48px;
+    height: 52px;
     transition: background var(--duration-fast) var(--ease-in-out);
 
-    &:nth-child(even) {
-      background: rgba(248, 250, 252, 0.5);
-    }
-
     &:hover {
-      background: rgba(59, 130, 246, 0.03);
+      background: var(--color-surface-hover);
     }
   }
 
@@ -269,15 +326,18 @@ a {
   }
 }
 
+// Champs : fond blanc, bordure grise, focus bleu (couleur primaire du thème, donc sans forçage).
 .mat-mdc-form-field {
   width: 100%;
 
-  .mdc-text-field--outlined .mdc-notched-outline {
-    .mdc-notched-outline__leading,
-    .mdc-notched-outline__notch,
-    .mdc-notched-outline__trailing {
-      border-color: var(--color-border) !important;
-    }
+  .mdc-text-field--outlined:not(.mdc-text-field--disabled) {
+    background: var(--color-surface);
+    border-radius: var(--control-radius);
+  }
+
+  .mat-mdc-form-field-error {
+    font-size: 12px;
+    color: var(--color-danger);
   }
 }
 
@@ -285,25 +345,48 @@ a {
   border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-lg) !important;
 
+  // Par défaut : bleu nuit, bouton d'action en bleu clair.
+  --mat-snack-bar-container-color: var(--color-navy);
+  --mat-snack-bar-supporting-text-color: #fff;
+  --mat-snack-bar-button-color: #93C5FD;
+
   &.snack-success {
-    --mdc-snackbar-container-color: #059669;
-    --mdc-snackbar-supporting-text-color: #fff;
+    --mat-snack-bar-container-color: var(--color-success);
+    --mat-snack-bar-supporting-text-color: #fff;
+    --mat-snack-bar-button-color: #fff;
   }
 
   &.snack-error {
-    --mdc-snackbar-container-color: #DC2626;
-    --mdc-snackbar-supporting-text-color: #fff;
+    --mat-snack-bar-container-color: var(--color-danger);
+    --mat-snack-bar-supporting-text-color: #fff;
+    --mat-snack-bar-button-color: #fff;
   }
 
   &.snack-info {
-    --mdc-snackbar-container-color: #0F172A;
-    --mdc-snackbar-supporting-text-color: #fff;
+    --mat-snack-bar-container-color: var(--color-navy);
+    --mat-snack-bar-supporting-text-color: #fff;
   }
 }
 
 .mat-mdc-dialog-container {
   border-radius: var(--radius-xl) !important;
   box-shadow: var(--shadow-xl) !important;
+
+  .mat-mdc-dialog-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .mat-mdc-dialog-actions {
+    gap: 8px;
+    padding: 12px 24px 20px;
+  }
+}
+
+// Fond assombri des fenêtres modales : bleu nuit translucide (dialogues uniquement).
+.cdk-overlay-dark-backdrop {
+  background: rgba(11, 31, 58, 0.45);
 }
 
 .mat-mdc-menu-panel {
@@ -316,6 +399,11 @@ a {
   background: transparent !important;
   font-size: 12px;
   color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.mat-mdc-progress-bar {
+  --mat-progress-bar-track-color: var(--color-primary-soft);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -332,17 +420,19 @@ a {
   line-height: 1.7;
   letter-spacing: -0.01em;
 
-  &--success { background: #ECFDF5; color: #065F46; }
-  &--warning { background: #FFFBEB; color: #92400E; }
-  &--danger  { background: #FEF2F2; color: #991B1B; }
-  &--info    { background: #EFF6FF; color: #1E40AF; }
+  &--success { background: var(--color-success-soft); color: #15803D; }
+  &--warning { background: var(--color-warning-soft); color: #6D28D9; }
+  &--danger  { background: var(--color-danger-soft); color: #B91C1C; }
+  &--info    { background: var(--color-primary-soft); color: #1D4ED8; }
   &--neutral { background: #F1F5F9; color: #475569; }
 }
 
+// En-tête de page : titre, sous-titre existant, actions alignées à droite.
 .page-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4);
+  flex-wrap: wrap;
+  gap: var(--spacing-3) var(--spacing-4);
   margin-bottom: var(--spacing-6);
 
   &__title {
@@ -351,6 +441,7 @@ a {
     color: var(--color-text);
     margin: 0;
     letter-spacing: -0.02em;
+    line-height: 1.3;
   }
 
   &__subtitle {
@@ -360,6 +451,87 @@ a {
   }
 
   &__spacer { flex: 1; }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+
+  // En-tête d'une page plein écran (liste + drawer) : collé en haut, aligné sur le contenu.
+  &--bar {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 20px 16px 4px;
+    min-height: 64px;
+
+    .mat-mdc-button-base {
+      height: var(--control-height);
+    }
+  }
+}
+
+// Carte de contenu générique (sections de page).
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4) var(--spacing-5);
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  &__body {
+    padding: var(--spacing-5);
+  }
+}
+
+// États visuels (chargement, erreur, succès) : présentation seule.
+.state-error {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.state-success {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+  border: 1px solid #BBF7D0;
+  color: #15803D;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.state-hint {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: #1E40AF;
+  font-size: 13px;
 }
 
 // ─── Modèle de tableau (référence : liste des produits) ─────────────────────────
@@ -420,20 +592,21 @@ a {
   }
 
   &__icon {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-md);
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    margin-bottom: 2px;
+    font-size: 22px;
+    margin-bottom: 4px;
 
-    &--blue    { background: #EFF6FF; color: #2563EB; }
-    &--green   { background: #ECFDF5; color: #059669; }
-    &--orange  { background: #FFFBEB; color: #D97706; }
-    &--red     { background: #FEF2F2; color: #DC2626; }
-    &--purple  { background: #F5F3FF; color: #7C3AED; }
+    &--blue    { background: var(--color-primary-soft); color: var(--color-primary); }
+    &--green   { background: var(--color-success-soft); color: var(--color-success); }
+    // « orange » conservé pour les templates existants : rendu en violet (pas d'orange dans la charte).
+    &--orange  { background: var(--color-secondary-soft); color: var(--color-secondary); }
+    &--red     { background: var(--color-danger-soft); color: var(--color-danger); }
+    &--purple  { background: var(--color-secondary-soft); color: var(--color-secondary); }
   }
 
   &__label {
@@ -444,7 +617,7 @@ a {
   }
 
   &__value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     color: var(--color-text);
     letter-spacing: -0.03em;
@@ -463,8 +636,8 @@ a {
     align-items: center;
     gap: 2px;
 
-    &--up { color: #059669; }
-    &--down { color: #DC2626; }
+    &--up { color: var(--color-success); }
+    &--down { color: var(--color-danger); }
   }
 }
 
@@ -523,8 +696,8 @@ a {
   transition: all var(--duration-fast) var(--ease-in-out);
 
   &:hover {
-    background: #DC2626 !important;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    background: #B91C1C !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
   }
 
   &:active { transform: scale(0.97); }
@@ -602,8 +775,63 @@ a {
 
 .mat-drawer:not(.mat-sidenav) {
   width: 45vw !important;
-  background: #ffffff !important;
+  background: var(--color-surface) !important;
   color: inherit !important;
-  border-left: 1px solid #E2E8F0 !important;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08) !important;
+  border-left: 1px solid var(--color-border) !important;
+  box-shadow: -8px 0 32px rgba(11, 31, 58, 0.12) !important;
+}
+
+// Contenu des drawers de formulaire : en-tête et pied d'actions harmonisés (deux conventions de
+// nommage existent : drawer__header / header, drawer__actions / actions). Sélecteur limité au
+// panneau de drawer, un cran plus spécifique que les styles des composants, sans changer leur HTML.
+.mat-drawer:not(.mat-sidenav) {
+  .drawer__header,
+  .drawer > .header {
+    min-height: 64px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-border-light);
+    gap: 12px;
+  }
+
+  .drawer__title,
+  .drawer > .header > .title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: -0.01em;
+  }
+
+  .drawer__subtitle {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  .drawer__icon {
+    color: var(--color-primary);
+  }
+
+  .drawer__actions,
+  .drawer .actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 16px;
+    margin-top: 8px;
+    border-top: 1px solid var(--color-border-light);
+  }
+
+  .drawer__error,
+  .form-error {
+    color: var(--color-danger);
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
+// Drawers de formulaire : pleine largeur sur petit écran (aucun débordement).
+@media (max-width: 768px) {
+  .mat-drawer:not(.mat-sidenav) {
+    width: 100vw !important;
+  }
 }
