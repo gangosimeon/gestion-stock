@@ -3,28 +3,36 @@ import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Subject, finalize, take, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Observable, Subject, take, takeUntil } from 'rxjs';
 
 import { User } from '../../../core/models/user.model';
+import { Role } from '../../../core/models/role.model';
+import { ServerTable } from '../../../shared/table/server-table';
 import { UsersFacade } from '../data/users.facade';
+import { UsersVm, roleLabels } from '../data/users-vm.model';
 import { ConfirmDeleteUserDialogComponent } from '../ui/confirm-delete-user-dialog.component';
 import { UserDrawerComponent } from '../ui/user-drawer.component';
-import { FormControl } from '@angular/forms';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-users-shell-page',
   standalone: true,
   imports: [
-    TableSearchComponent,
     CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
     AsyncPipe,
     MatButtonModule,
     MatIconModule,
@@ -47,39 +55,37 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly snackbar = inject(MatSnackBar);
   private readonly destroy$ = new Subject<void>();
 
-  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
-  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
-  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
   readonly displayedColumns = ['username', 'fullName', 'roles', 'active', 'actions'] as const;
-  readonly dataSource = new MatTableDataSource<User>([]);
-  readonly search = new FormControl<string>('', { nonNullable: true });
+
+  readonly roleOptions = Object.entries(roleLabels).map(([value, label]) => ({ value: value as Role, label }));
+  readonly activeOptions: { value: boolean; label: string }[] = [
+    { value: true, label: 'Actifs' },
+    { value: false, label: 'Désactivés' }
+  ];
+
+  /** Recherche, filtres, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({
+      role: new FormControl<Role | null>(null),
+      active: new FormControl<boolean | null>(null)
+    }),
+    sortFields: { username: 'username', fullName: 'fullName' },
+    reload$: this.facade.refresh$
+  });
 
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
 
-  vmSnapshot: any = null;
-
-  constructor() {
-    this.dataSource.filterPredicate = (row: User, filter: string) => (`${row.username} ${row.fullName ?? ''} ${(row.roles ?? []).join(' ')}`).toLowerCase().includes(filter);
-    this.search.valueChanges.pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe((v) => {
-      this.dataSource.filter = v.trim().toLowerCase();
-      this.dataSource.paginator?.firstPage();
-    });
-    this.facade.refresh();
-  }
+  vmSnapshot: UsersVm | null = null;
+  /** Utilisateur ouvert dans le panneau (ligne de la page affichée). */
+  editing: User[] = [];
 
   ngAfterViewInit(): void {
 
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
       this.vmSnapshot = vm;
-      this.dataSource.data = vm.items;
     });
 
     this.drawer$.pipe(takeUntil(this.destroy$)).subscribe((d) => {
@@ -100,6 +106,7 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
 
   openEdit(u: User): void {
     if (!this.vmSnapshot?.canManage) return;
+    this.editing = [u];
     this.facade.openEdit(u.id);
   }
 
@@ -114,11 +121,8 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
   toggleActive(u: User, ev: MatSlideToggleChange): void {
     if (!this.vmSnapshot?.canManage) return;
 
-    (this.facade.setActive(u.id, ev.checked) as any)
-      .pipe(
-        take(1),
-        finalize(() => {})
-      )
+    (this.facade.setActive(u.id, ev.checked) as Observable<unknown>)
+      .pipe(take(1))
       .subscribe({
         next: () => this.snackbar.open('Statut mis à jour', 'OK', { duration: 2000 }),
         error: (e: unknown) => {
@@ -144,7 +148,7 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
       .subscribe((ok) => {
         if (!ok) return;
 
-        (this.facade.delete(u.id) as any)
+        (this.facade.delete(u.id) as Observable<unknown>)
           .pipe(take(1))
           .subscribe({
             next: () => this.snackbar.open('Utilisateur désactivé', 'OK', { duration: 2500 }),

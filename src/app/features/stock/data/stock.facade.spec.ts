@@ -67,42 +67,51 @@ describe('StockFacade (API Spring Boot /api/stock)', () => {
     return firstValueFrom((facade.vm$ as Observable<StockVm>).pipe(skipWhile((vm) => !predicate(vm))));
   }
 
-  it('mouvements et catalogue lus sur Spring Boot ; nom, référence et solde fournis par le backend', async () => {
+  it('historique paginé côté serveur ; nom, référence et solde fournis par le backend', async () => {
     init(['stock:read', 'stock:adjust']);
-    const vm = nextVm((v) => v.movements.length > 0);
-    http.expectOne(`${API}/products`).flush({ items: [{ id: PRODUCT_ID, sku: 'MON-RB3025', name: 'Monture' }], total: 1 });
-    http.expectOne((r) => r.url === `${API}/stock/movements`).flush({ items: [RECEPTION], total: 1 });
+    const page = firstValueFrom(
+      facade.search({ q: 'ray', page: 1, size: 25, sort: ['quantity,desc'] }, { from: null, to: null, productId: null, types: ['RECEIPT', 'SALE'] })
+    );
+    const req = http.expectOne((r) => r.url === `${API}/stock/movements`);
+    expect(req.request.params.get('q')).toBe('ray');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.getAll('type')).toEqual(['RECEIPT', 'SALE']);
+    expect(req.request.params.getAll('sort')).toEqual(['quantity,desc']);
+    expect(req.request.params.has('from')).toBe(false);
+    req.flush({ items: [RECEPTION], total: 26 });
 
-    const loaded = await vm;
-    expect(loaded.movements[0]).toMatchObject({
+    const loaded = await page;
+    expect(loaded.total).toBe(26);
+    expect(loaded.items[0]).toMatchObject({
       productName: 'Monture Ray-Ban RB3025',
       sku: 'MON-RB3025',
       balanceAfter: 12,
       uiType: 'IN'
     });
-    expect(loaded.canAdjust).toBe(true);
+
+    const vm = nextVm((v) => v.products.length > 0);
+    http.expectOne(`${API}/products`).flush({ items: [{ id: PRODUCT_ID, sku: 'MON-RB3025', name: 'Monture' }], total: 1 });
+    expect((await vm).canAdjust).toBe(true);
   });
 
   it('filtre « Au » : toute la journée choisie est incluse', async () => {
     init(['stock:read']);
-    const screen = facade.vm$.subscribe();
-    http.expectOne(`${API}/products`).flush({ items: [], total: 0 });
-    http.expectOne((r) => r.url === `${API}/stock/movements`).flush({ items: [], total: 0 });
-
-    facade.setFilters({ from: new Date(2026, 9, 1), to: new Date(2026, 9, 10), productId: PRODUCT_ID });
+    const page = firstValueFrom(
+      facade.search({ page: 0, size: 10 }, { from: new Date(2026, 9, 1), to: new Date(2026, 9, 10), productId: PRODUCT_ID })
+    );
     const req = http.expectOne((r) => r.url === `${API}/stock/movements`);
     expect(new Date(req.request.params.get('from') ?? '').getTime()).toBe(new Date(2026, 9, 1).getTime());
     expect(new Date(req.request.params.get('to') ?? '').getTime()).toBe(new Date(2026, 9, 10, 23, 59, 59, 999).getTime());
     expect(req.request.params.get('productId')).toBe(PRODUCT_ID);
+    expect(req.request.params.has('type')).toBe(false);
     req.flush({ items: [], total: 0 });
-    screen.unsubscribe();
+    await page;
   });
 
   it('caissier (stock:read seul) : lecture seule', async () => {
     init(['stock:read']);
     const vm = nextVm((v) => !v.isLoading);
     http.expectOne(`${API}/products`).flush({ items: [], total: 0 });
-    http.expectOne((r) => r.url === `${API}/stock/movements`).flush({ items: [], total: 0 });
     expect((await vm).canAdjust).toBe(false);
   });
 

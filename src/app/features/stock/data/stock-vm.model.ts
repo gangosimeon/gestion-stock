@@ -13,14 +13,14 @@ export interface StockFilters {
   from: Date | null;
   to: Date | null;
   productId: string | null;
+  /** Types détaillés du backend ; vide : tous. */
+  types?: StockMovementType[] | null;
 }
 
 export interface StockVm {
   isLoading: boolean;
   errorMessage: string | null;
   products: Product[];
-  movements: StockMovementRow[];
-  filters: StockFilters;
   /** Permission stock:adjust (interface seulement). */
   canAdjust: boolean;
 }

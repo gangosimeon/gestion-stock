@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, combineLatest, finalize, map, shareReplay, tap } from 'rxjs';
 
 import { Supplier } from '../../../core/models/supplier.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { PageRequest } from '../../../core/services/page-params';
+import { ActiveStatusFilter, PaginatedResult } from '../../../core/services/products-api.service';
 import { CreateSupplierRequest, SuppliersApiService, UpdateSupplierRequest } from '../../../core/services/suppliers-api.service';
 import { SupplierDrawerState, SuppliersVm } from './suppliers-vm.model';
 
@@ -15,8 +17,7 @@ export class SuppliersFacade {
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
-  private readonly refreshSubject = new BehaviorSubject<void>(undefined);
-  private readonly filterSubject = new BehaviorSubject<string>('');
+  private readonly refreshSubject = new Subject<void>();
 
   private readonly drawerSubject = new BehaviorSubject<SupplierDrawerState>({
     opened: false,
@@ -26,23 +27,8 @@ export class SuppliersFacade {
 
   readonly drawer$ = this.drawerSubject.asObservable();
 
-  private readonly suppliers$ = this.refreshSubject.pipe(
-    tap(() => {
-      this.isLoadingSubject.next(true);
-      this.errorSubject.next(null);
-    }),
-    switchMap(() =>
-      this.api.list().pipe(
-        map((r) => r.items),
-        catchError((e: unknown) => {
-          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement');
-          return of([] as Supplier[]);
-        }),
-        finalize(() => this.isLoadingSubject.next(false))
-      )
-    ),
-    shareReplay({ bufferSize: 1, refCount: true })
-  );
+  /** Rechargements demandés après création, modification ou suppression (liste paginée de l'écran). */
+  readonly refresh$ = this.refreshSubject.asObservable();
 
   // Interface seulement : le backend contrôle supplier:create / update / delete à chaque appel.
   private readonly rights$ = combineLatest([
@@ -54,15 +40,11 @@ export class SuppliersFacade {
   readonly vm$: Observable<SuppliersVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
-    this.suppliers$,
-    this.filterSubject,
     this.rights$
   ]).pipe(
-    map(([isLoading, errorMessage, suppliers, filter, [canCreate, canUpdate, canDelete]]): SuppliersVm => ({
+    map(([isLoading, errorMessage, [canCreate, canUpdate, canDelete]]): SuppliersVm => ({
       isLoading,
       errorMessage,
-      suppliers,
-      filter,
       canCreate,
       canUpdate,
       canDelete
@@ -71,11 +53,12 @@ export class SuppliersFacade {
   );
 
   refresh(): void {
-    this.refreshSubject.next(undefined);
+    this.refreshSubject.next();
   }
 
-  setFilter(v: string): void {
-    this.filterSubject.next(v);
+  /** Page de la liste : recherche, filtres, tri et pagination traités par le backend. */
+  search(page: PageRequest, filters: { status: ActiveStatusFilter }): Observable<PaginatedResult<Supplier>> {
+    return this.api.findPage(page, filters);
   }
 
   openCreate(): void {

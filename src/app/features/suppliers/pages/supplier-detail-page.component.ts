@@ -1,14 +1,17 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { BehaviorSubject, Observable, catchError, combineLatest, forkJoin, map, of, shareReplay, startWith, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, forkJoin, map, merge, of, shareReplay, skip, startWith, switchMap, take } from 'rxjs';
 
 import { Supplier, SupplierAccount } from '../../../core/models/supplier.model';
 import { SupplierPurchaseHistory } from '../../../core/models/supplier-purchase-history.model';
@@ -16,17 +19,14 @@ import { SupplierPayment, SupplierPaymentMethod } from '../../../core/models/sup
 import { AuthService } from '../../../core/services/auth.service';
 import { CreateSupplierPaymentRequest, SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { PaySupplierDialogComponent, PaySupplierDialogResult } from '../ui/pay-supplier-dialog.component';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { ListTable } from '../../../shared/table/list-table';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
+import { ServerTable } from '../../../shared/table/server-table';
 
 type DetailVm = {
   isLoading: boolean;
   errorMessage: string | null;
   supplier: Supplier | null;
-  history: SupplierPurchaseHistory[];
-  payments: SupplierPayment[];
   /** Totaux calculés par le backend ; `null` sans la permission purchase:read. */
   account: SupplierAccount | null;
   /** Permission purchase:read : achats, paiements et dette visibles. */
@@ -37,8 +37,6 @@ type DetailVm = {
 
 const EMPTY: Omit<DetailVm, 'isLoading' | 'errorMessage'> = {
   supplier: null,
-  history: [],
-  payments: [],
   account: null,
   canReadPurchases: false,
   canPay: false
@@ -56,7 +54,9 @@ const METHOD_LABELS: Record<SupplierPaymentMethod, string> = {
   imports: [
     MatPaginatorModule,
     MatSortModule,
-    TableSearchComponent,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -73,28 +73,6 @@ const METHOD_LABELS: Record<SupplierPaymentMethod, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SupplierDetailPageComponent {
-  readonly historyTable = new ListTable<SupplierPurchaseHistory>(
-    (h) => `${h.reference ?? ''} ${h.purchaseOrderNumber ?? ''}`,
-    (h, col) => (col === 'date' ? h.purchaseDateIso : col === 'order' ? h.purchaseOrderNumber : col === 'items' ? h.itemsCount : col === 'total' ? h.totalAmount : undefined)
-  );
-
-  readonly paymentsTable = new ListTable<SupplierPayment>(
-    (p) => `${p.number ?? ''} ${p.externalReference ?? ''} ${this.methodLabel(p.paymentMethod)} ${this.ordersOf(p)} ${p.note ?? ''}`,
-    (p, col) => (col === 'date' ? p.paymentDateIso : col === 'method' ? this.methodLabel(p.paymentMethod) : col === 'order' ? this.ordersOf(p) : undefined)
-  );
-  @ViewChild('historyTablePaginator') set historyTablePaginator(p: MatPaginator | undefined) {
-    this.historyTable.attachPaginator(p);
-  }
-  @ViewChild('historyTableSort') set historyTableSort(s: MatSort | undefined) {
-    this.historyTable.attachSort(s);
-  }
-  @ViewChild('paymentsTablePaginator') set paymentsTablePaginator(p: MatPaginator | undefined) {
-    this.paymentsTable.attachPaginator(p);
-  }
-  @ViewChild('paymentsTableSort') set paymentsTableSort(s: MatSort | undefined) {
-    this.paymentsTable.attachSort(s);
-  }
-
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(SuppliersApiService);
   private readonly auth = inject(AuthService);
@@ -102,6 +80,39 @@ export class SupplierDetailPageComponent {
   private readonly snackbar = inject(MatSnackBar);
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  /** Rechargement des historiques : après un paiement, ou en passant à un autre fournisseur. */
+  private readonly reloadTables$ = merge(this.refresh$.pipe(skip(1)), this.route.paramMap.pipe(skip(1)));
+
+  private get supplierId(): string {
+    return this.route.snapshot.paramMap.get('id') ?? '';
+  }
+
+  /** Droits lus au moment de la requête : sans purchase:read, le backend refuserait les historiques. */
+  private readonly rights$ = combineLatest([this.auth.hasPermission$('purchase:read'), this.auth.hasPermission$('warehouse:all')]).pipe(take(1));
+
+  /** Réceptions du fournisseur : recherche, tri et pagination traités par le backend. */
+  readonly historyTable = new ServerTable<SupplierPurchaseHistory>(
+    (query) =>
+      this.rights$.pipe(
+        switchMap(([canRead, allWarehouses]) =>
+          canRead
+            ? this.api.purchaseHistoryPage(this.supplierId, query, allWarehouses)
+            : of({ items: [] as SupplierPurchaseHistory[], total: 0 })
+        )
+      ),
+    { sortFields: { date: 'purchaseDateIso', total: 'totalAmount' }, reload$: this.reloadTables$ }
+  );
+
+  /** Paiements du fournisseur : recherche, tri et pagination traités par le backend. */
+  readonly paymentsTable = new ServerTable<SupplierPayment>(
+    (query) =>
+      this.rights$.pipe(
+        switchMap(([canRead]) =>
+          canRead ? this.api.paymentsPage(this.supplierId, query) : of({ items: [] as SupplierPayment[], total: 0 })
+        )
+      ),
+    { sortFields: { date: 'paymentDate', number: 'number', amount: 'amount' }, reload$: this.reloadTables$ }
+  );
 
   readonly displayedColumns = ['date', 'reference', 'order', 'items', 'total'] as const;
   readonly paymentColumns = ['date', 'number', 'amount', 'method', 'order', 'note'] as const;
@@ -110,31 +121,22 @@ export class SupplierDetailPageComponent {
     this.refresh$,
     this.route.paramMap.pipe(map((p) => p.get('id'))),
     this.auth.hasPermission$('purchase:read'),
-    this.auth.hasPermission$('purchase:pay'),
-    this.auth.hasPermission$('warehouse:all')
+    this.auth.hasPermission$('purchase:pay')
   ]).pipe(
-    switchMap(([, id, canReadPurchases, canPay, allWarehouses]) => {
+    switchMap(([, id, canReadPurchases, canPay]) => {
       if (!id) {
         return of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: 'ID fournisseur manquant' });
       }
       const supplier$ = this.api.getById(id);
-      // Sans purchase:read, le backend refuse achats, paiements et compte : on ne les demande pas.
-      const purchases$ = canReadPurchases
-        ? forkJoin({
-            history: this.api.purchaseHistory(id, allWarehouses).pipe(map((r) => r.items)),
-            payments: this.api.payments(id).pipe(map((r) => r.items)),
-            account: this.api.account(id)
-          })
-        : of({ history: [], payments: [], account: null });
-      return forkJoin({ supplier: supplier$, purchases: purchases$ }).pipe(
+      // Sans purchase:read, le backend refuse le compte : on ne le demande pas (historiques paginés à part).
+      const account$ = canReadPurchases ? this.api.account(id) : of(null);
+      return forkJoin({ supplier: supplier$, account: account$ }).pipe(
         map(
           (r): DetailVm => ({
             isLoading: false,
             errorMessage: null,
             supplier: r.supplier,
-            history: r.purchases.history,
-            payments: r.purchases.payments,
-            account: r.purchases.account,
+            account: r.account,
             canReadPurchases,
             canPay: canPay && canReadPurchases
           })

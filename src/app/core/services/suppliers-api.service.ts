@@ -6,7 +6,8 @@ import { environment } from '../../../environments/environment';
 import { Supplier, SupplierAccount } from '../models/supplier.model';
 import { SupplierPurchaseHistory } from '../models/supplier-purchase-history.model';
 import { SupplierPayment, SupplierPaymentMethod } from '../models/supplier-payment.model';
-import { PaginatedResult } from './products-api.service';
+import { PageRequest, pageParams } from './page-params';
+import { ActiveStatusFilter, PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
   if (err instanceof HttpErrorResponse) {
@@ -60,6 +61,13 @@ export class SuppliersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /** Page de fournisseurs : recherche (code, nom, contact, email, téléphone), statut et tri côté serveur. */
+  findPage(page: PageRequest, filters: { status?: ActiveStatusFilter | null } = {}): Observable<PaginatedResult<Supplier>> {
+    return this.http
+      .get<PaginatedResult<Supplier>>(`${environment.apiUrl}/suppliers`, { params: pageParams(page, { ...filters }) })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
   getById(id: string): Observable<Supplier> {
     return this.http
       .get<Supplier>(`${environment.apiUrl}/suppliers/${id}`)
@@ -97,6 +105,27 @@ export class SuppliersApiService {
     const params = allWarehouses ? new HttpParams().set('allWarehouses', 'true') : undefined;
     return this.http
       .get<PaginatedResult<SupplierPurchaseHistory>>(`${environment.apiUrl}/suppliers/${supplierId}/purchases`, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page de l'historique d'achats : recherche (n° de réception, n° de commande) et tri côté serveur. */
+  purchaseHistoryPage(
+    supplierId: string,
+    page: PageRequest,
+    allWarehouses = false
+  ): Observable<PaginatedResult<SupplierPurchaseHistory>> {
+    const params = pageParams(page, { allWarehouses: allWarehouses || null });
+    return this.http
+      .get<PaginatedResult<SupplierPurchaseHistory>>(`${environment.apiUrl}/suppliers/${supplierId}/purchases`, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page des paiements : recherche (n°, référence externe, note) et tri côté serveur. */
+  paymentsPage(supplierId: string, page: PageRequest): Observable<PaginatedResult<SupplierPayment>> {
+    return this.http
+      .get<PaginatedResult<SupplierPayment>>(`${environment.apiUrl}/suppliers/${supplierId}/payments`, {
+        params: pageParams(page)
+      })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

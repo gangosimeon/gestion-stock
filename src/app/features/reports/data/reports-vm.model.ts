@@ -39,7 +39,6 @@ export interface ReportsVm {
   errorMessage: string | null;
   filters: ReportsFilters;
   kpis: ReportsKpis;
-  topProducts: TopProductRow[];
   salesSeries: SeriesPoint[];
   profitSeries: SeriesPoint[];
 }

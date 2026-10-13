@@ -6,7 +6,8 @@ import { environment } from '../../../environments/environment';
 import { Customer } from '../models/customer.model';
 import { CustomerPayment } from '../models/customer-payment.model';
 import { PaymentMethod, Sale } from '../models/sale.model';
-import { PaginatedResult } from './products-api.service';
+import { PageRequest, pageParams } from './page-params';
+import { ActiveStatusFilter, PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
   if (err instanceof HttpErrorResponse) {
@@ -22,6 +23,13 @@ function toApiError(err: unknown): Error {
  * Création et modification (PATCH) d'un client. En modification, `creditLimit` absent est
  * conservé par le backend ; le changer exige la permission customer:credit.
  */
+/** Critères de la liste des clients (GET /api/customers). */
+export interface CustomerSearchFilters {
+  status?: ActiveStatusFilter | null;
+  type?: 'INDIVIDUAL' | 'COMPANY' | null;
+  priceCategory?: 'RETAIL' | 'WHOLESALE' | null;
+}
+
 export interface CreateCustomerRequest {
   name: string;
   phone?: string;
@@ -49,6 +57,13 @@ export class CustomersApiService {
   list(): Observable<PaginatedResult<Customer>> {
     return this.http
       .get<PaginatedResult<Customer>>(`${environment.apiUrl}/customers`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page de clients : recherche (code, nom, email, téléphone), filtres et tri côté serveur. */
+  findPage(page: PageRequest, filters: CustomerSearchFilters = {}): Observable<PaginatedResult<Customer>> {
+    return this.http
+      .get<PaginatedResult<Customer>>(`${environment.apiUrl}/customers`, { params: pageParams(page, { ...filters }) })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
@@ -88,6 +103,20 @@ export class CustomersApiService {
   salesHistory(customerId: string): Observable<PaginatedResult<Sale>> {
     return this.http
       .get<PaginatedResult<Sale>>(`${environment.apiUrl}/customers/${customerId}/sales`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page des ventes du client : recherche (n° de vente) et tri côté serveur. */
+  salesHistoryPage(customerId: string, page: PageRequest): Observable<PaginatedResult<Sale>> {
+    return this.http
+      .get<PaginatedResult<Sale>>(`${environment.apiUrl}/customers/${customerId}/sales`, { params: pageParams(page) })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page des règlements du client : recherche (référence, note) et tri côté serveur. */
+  paymentsPage(customerId: string, page: PageRequest): Observable<PaginatedResult<CustomerPayment>> {
+    return this.http
+      .get<PaginatedResult<CustomerPayment>>(`${environment.apiUrl}/customers/${customerId}/payments`, { params: pageParams(page) })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

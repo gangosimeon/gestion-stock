@@ -1,5 +1,3 @@
-import { Customer } from '../../../core/models/customer.model';
-
 export type ClientDrawerMode = 'CREATE' | 'EDIT';
 
 export type ClientDrawerState =
@@ -13,8 +11,6 @@ export type ClientDrawerState =
 export interface ClientsVm {
   isLoading: boolean;
   errorMessage: string | null;
-  customers: Customer[];
-  filter: string;
   drawer: ClientDrawerState;
   // Interface seulement : le backend revérifie chaque permission.
   canCreate: boolean;

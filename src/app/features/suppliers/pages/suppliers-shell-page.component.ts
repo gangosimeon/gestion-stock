@@ -1,21 +1,24 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, ViewChild, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
+import { Observable, Subject, take, takeUntil } from 'rxjs';
 
 import { Supplier } from '../../../core/models/supplier.model';
+import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { ServerTable } from '../../../shared/table/server-table';
 import { SuppliersFacade } from '../data/suppliers.facade';
 import { ConfirmDeleteSupplierDialogComponent } from '../ui/confirm-delete-supplier-dialog.component';
 import { SupplierDrawerComponent, SupplierDrawerContext } from '../ui/supplier-drawer.component';
@@ -38,6 +41,7 @@ import { SupplierDrawerComponent, SupplierDrawerContext } from '../ui/supplier-d
     MatSnackBarModule,
     MatDialogModule,
     MatSidenavModule,
+    MatSelectModule,
     SupplierDrawerComponent
   ],
   templateUrl: './suppliers-shell-page.component.html',
@@ -52,53 +56,34 @@ export class SuppliersShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
-  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
-  }
   @ViewChild('drawer') drawer!: MatDrawer;
 
-  readonly search = new FormControl<string>('', { nonNullable: true });
-
   readonly displayedColumns = ['name', 'phone', 'email', 'leadTime', 'actions'] as const;
-  readonly dataSource = new MatTableDataSource<Supplier>([]);
+
+  readonly statusOptions: { value: ActiveStatusFilter; label: string }[] = [
+    { value: 'ACTIVE', label: 'Actifs' },
+    { value: 'INACTIVE', label: 'Désactivés' },
+    { value: 'ALL', label: 'Tous' }
+  ];
+
+  /** Recherche, filtres, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({ status: new FormControl<ActiveStatusFilter>('ACTIVE', { nonNullable: true }) }),
+    sortFields: { name: 'name', leadTime: 'deliveryLeadTimeDays' },
+    reload$: this.facade.refresh$
+  });
 
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
 
-  vmSnapshot: { suppliers: Supplier[] } = { suppliers: [] };
+  /** Fournisseur en cours de modification (ligne de la page affichée). */
+  private editing: Supplier[] = [];
   drawerCtx: SupplierDrawerContext = { mode: 'CREATE', supplier: null };
 
-  constructor() {
-    this.facade.refresh();
-
-    this.search.valueChanges
-      .pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe((v) => {
-        this.dataSource.filter = v.trim().toLowerCase();
-        if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
-      });
-  }
-
   ngAfterViewInit(): void {
-
-    this.dataSource.filterPredicate = (data: Supplier, filter: string) => {
-      const v = `${data.name} ${data.phone ?? ''} ${data.email ?? ''} ${data.address ?? ''}`.toLowerCase();
-      return v.includes(filter);
-    };
-
-    this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
-      this.vmSnapshot.suppliers = vm.suppliers;
-      this.dataSource.data = vm.suppliers;
-    });
-
     this.drawer$.pipe(takeUntil(this.destroy$)).subscribe((d) => {
       if (d.opened) {
-        const supplier = this.facade.findSupplier(this.vmSnapshot.suppliers, d.supplierId);
+        const supplier = this.facade.findSupplier(this.editing, d.supplierId);
         this.drawerCtx = { mode: d.mode, supplier };
         void this.drawer.open();
       } else {
@@ -117,6 +102,7 @@ export class SuppliersShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   openEdit(s: Supplier): void {
+    this.editing = [s];
     this.facade.openEdit(s.id);
   }
 
@@ -145,7 +131,7 @@ export class SuppliersShellPageComponent implements AfterViewInit, OnDestroy {
       .subscribe((ok) => {
         if (!ok) return;
 
-        (this.facade.delete(s.id) as any)
+        (this.facade.delete(s.id) as Observable<unknown>)
           .pipe(take(1))
           .subscribe({
             next: () => this.snackbar.open('Fournisseur désactivé', 'OK', { duration: 2500 }),

@@ -12,32 +12,51 @@
     </header>
 
     @if (vm$ | async; as vm) {
-      @if (vm.isLoading) {
+    @if (table.state$ | async; as s) {
+      @if (vm.isLoading || s.loading) {
         <mat-progress-bar mode="indeterminate" />
       }
 
       <div class="content">
-        <div class="data-table-toolbar">
-          <app-table-search [control]="table.search" placeholder="Nom, description" />
-          @if (vm.errorMessage) {
-            <div class="error">{{ vm.errorMessage }}</div>
+        <div class="data-table-toolbar" [formGroup]="table.filters">
+          <mat-form-field appearance="outline" class="search filter-bar__wide" subscriptSizing="dynamic">
+            <mat-label>Rechercher</mat-label>
+            <input matInput [formControl]="table.search" placeholder="Nom, description" />
+            @if (table.search.value) {
+              <button mat-icon-button matSuffix type="button" (click)="table.search.setValue('')" aria-label="Vider">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="status">
+              @for (o of statusOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          @if (vm.errorMessage || s.error) {
+            <div class="error">{{ vm.errorMessage ?? s.error }}</div>
           }
         </div>
 
         <div class="data-table">
-          <table mat-table [dataSource]="table.bind(vm.categories)" matSort>
+          <table mat-table [dataSource]="s.rows" matSort (matSortChange)="table.onSort($event)">
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom</th>
               <td mat-cell *matCellDef="let c"><strong>{{ c.name }}</strong></td>
             </ng-container>
 
             <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Description</th>
+              <th mat-header-cell *matHeaderCellDef>Description</th>
               <td mat-cell *matCellDef="let c">{{ c.description || '—' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+              <th mat-header-cell *matHeaderCellDef>Statut</th>
               <td mat-cell *matCellDef="let c">
                 <span class="badge" [class.badge--success]="c.active !== false" [class.badge--neutral]="c.active === false">
                   {{ c.active === false ? 'Désactivée' : 'Active' }}
@@ -46,7 +65,7 @@
             </ng-container>
 
             <ng-container matColumnDef="updatedAt">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Modifiée le</th>
+              <th mat-header-cell *matHeaderCellDef>Modifiée le</th>
               <td mat-cell *matCellDef="let c">{{ c.updatedAt | date: 'dd/MM/yyyy' }}</td>
             </ng-container>
 
@@ -69,12 +88,20 @@
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.inactive]="row.active === false"></tr>
           </table>
-          @if (!vm.isLoading && table.isEmpty) {
+          @if (!s.loading && s.rows.length === 0) {
             <div class="data-table-empty">Aucune catégorie.</div>
           }
-          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
+          <mat-paginator
+            [length]="s.total"
+            [pageIndex]="table.pageIndex"
+            [pageSize]="table.pageSize"
+            [pageSizeOptions]="table.pageSizeOptions"
+            (page)="table.onPage($event)"
+            showFirstLastButtons
+          />
         </div>
       </div>
+    }
     }
   </mat-drawer-content>
 

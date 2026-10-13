@@ -1,18 +1,22 @@
 import { AsyncPipe, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ViewChild, inject } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
-import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Category } from '../../../core/models/category.model';
-import { ListTable } from '../../../shared/table/list-table';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { ServerTable } from '../../../shared/table/server-table';
 import { CategoriesFacade } from '../data/categories.facade';
 import { CategoryDrawerComponent, CategoryDrawerContext } from '../ui/category-drawer.component';
 
@@ -22,8 +26,12 @@ import { CategoryDrawerComponent, CategoryDrawerContext } from '../ui/category-d
   imports: [
     AsyncPipe,
     DatePipe,
+    ReactiveFormsModule,
     MatButtonModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
+    MatSelectModule,
     MatPaginatorModule,
     MatProgressBarModule,
     MatSidenavModule,
@@ -31,7 +39,6 @@ import { CategoryDrawerComponent, CategoryDrawerContext } from '../ui/category-d
     MatSortModule,
     MatTableModule,
     MatTooltipModule,
-    TableSearchComponent,
     CategoryDrawerComponent
   ],
   templateUrl: './categories-page.component.html',
@@ -42,16 +49,18 @@ export class CategoriesPageComponent {
   private readonly facade = inject(CategoriesFacade);
   private readonly snackbar = inject(MatSnackBar);
 
-  readonly table = new ListTable<Category>(
-    (c) => `${c.name} ${c.description ?? ''}`,
-    (c, col) => (col === 'status' ? (c.active === false ? 1 : 0) : undefined)
-  );
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    this.table.attachPaginator(p);
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    this.table.attachSort(s);
-  }
+  readonly statusOptions: { value: ActiveStatusFilter; label: string }[] = [
+    { value: 'ALL', label: 'Toutes' },
+    { value: 'ACTIVE', label: 'Actives' },
+    { value: 'INACTIVE', label: 'Désactivées' }
+  ];
+
+  /** Recherche, statut, tri et pagination traités par le backend (écran de gestion : toutes par défaut). */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({ status: new FormControl<ActiveStatusFilter>('ALL', { nonNullable: true }) }),
+    sortFields: { name: 'name' },
+    reload$: this.facade.refresh$
+  });
 
   @ViewChild('drawer') drawer!: MatDrawer;
 
@@ -60,10 +69,6 @@ export class CategoriesPageComponent {
 
   readonly displayedColumns = ['name', 'description', 'status', 'updatedAt', 'actions'] as const;
   readonly vm$ = this.facade.vm$;
-
-  constructor() {
-    this.facade.refresh();
-  }
 
   openCreate(): void {
     this.openDrawer(null);

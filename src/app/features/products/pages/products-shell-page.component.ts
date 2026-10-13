@@ -1,23 +1,27 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
 import { StockAlertType } from '../../../core/models/alert.model';
 import { Product } from '../../../core/models/product.model';
 import { Supplier } from '../../../core/models/supplier.model';
+import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { ServerTable } from '../../../shared/table/server-table';
 import { ProductsFacade } from '../data/products.facade';
 import { ConfirmDeleteDialogComponent } from '../ui/confirm-delete-dialog.component';
 import { ProductDrawerComponent } from '../ui/product-drawer.component';
@@ -43,6 +47,8 @@ import { RouterLink } from '@angular/router';
     MatSnackBarModule,
     MatDialogModule,
     MatSidenavModule,
+    MatSelectModule,
+    SelectSearchComponent,
     ProductDrawerComponent
   ],
   templateUrl: './products-shell-page.component.html',
@@ -55,20 +61,26 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
-  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
-  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
-  readonly search = new FormControl<string>('', { nonNullable: true });
-
   readonly displayedColumns = ['sku', 'name', 'category', 'supplier', 'stock', 'prices', 'actions'] as const;
-  readonly dataSource = new MatTableDataSource<Product>([]);
+
+  readonly statusOptions: { value: ActiveStatusFilter; label: string }[] = [
+    { value: 'ACTIVE', label: 'Actifs' },
+    { value: 'INACTIVE', label: 'Désactivés' },
+    { value: 'ALL', label: 'Tous' }
+  ];
+
+  /** Recherche, filtres, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({
+      categoryId: new FormControl<string | null>(null),
+      supplierId: new FormControl<string | null>(null),
+      status: new FormControl<ActiveStatusFilter>('ACTIVE', { nonNullable: true })
+    }),
+    sortFields: { sku: 'sku', name: 'name', category: 'categoryName' },
+    reload$: this.facade.refresh$
+  });
 
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
@@ -87,31 +99,14 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     this.facade.refresh();
-
-    this.search.valueChanges
-      .pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe((v) => {
-        this.dataSource.filter = v.trim().toLowerCase();
-        if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
-      });
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.filterPredicate = (data: Product, filter: string) => {
-      const v = `${data.sku} ${data.name} ${data.categoryName ?? ''} ${(data as any).supplierName ?? ''}`.toLowerCase();
-      return v.includes(filter);
-    };
-
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
       this.vmSnapshot.categories = vm.categories;
       this.vmSnapshot.suppliers = vm.suppliers;
       this.vmSnapshot.stockLevels = vm.stockLevels;
       this.vmSnapshot.canUpdate = vm.canUpdate;
-      this.dataSource.data = vm.products.map((p) => ({
-        ...p,
-        categoryName: this.facade.resolveCategoryName(p, vm.categories),
-        supplierName: this.facade.resolveSupplierName(p, vm.suppliers)
-      }));
     });
 
     this.drawer$.pipe(takeUntil(this.destroy$)).subscribe((d) => {
@@ -162,6 +157,14 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK')
       });
     });
+  }
+
+  categoryName(p: Product): string {
+    return this.facade.resolveCategoryName(p, this.vmSnapshot.categories);
+  }
+
+  supplierName(p: Product): string {
+    return this.facade.resolveSupplierName(p, this.vmSnapshot.suppliers);
   }
 
   lowStock(p: Product): boolean {

@@ -1,30 +1,28 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { catchError, map, of, startWith, take } from 'rxjs';
+import { take } from 'rxjs';
 
-import { CashOperation, CashRegisterSession } from '../../../core/models/cash-register.model';
+import { CashOperation, CashRegisterSession, CashRegisterSessionStatus } from '../../../core/models/cash-register.model';
 import { PaginatedResult } from '../../../core/services/products-api.service';
 import { CashRegisterFacade } from '../data/cash-register.facade';
 import { CashSessionDetailsDialogComponent } from '../ui/cash-session-details-dialog.component';
 
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { ListTable } from '../../../shared/table/list-table';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
+import { ServerTable } from '../../../shared/table/server-table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-
-type HistoryVm = {
-  isLoading: boolean;
-  errorMessage: string | null;
-  sessions: CashRegisterSession[];
-};
 
 @Component({
   selector: 'app-cash-history-page',
@@ -33,7 +31,11 @@ type HistoryVm = {
     MatTooltipModule,
     MatPaginatorModule,
     MatSortModule,
-    TableSearchComponent,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    DatePickerDirective,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -50,34 +52,26 @@ type HistoryVm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CashHistoryPageComponent {
-  readonly table = new ListTable<CashRegisterSession>(
-    (s) => `${s.number ?? ''} ${s.status === 'OPEN' ? 'ouverte' : 'fermée'}`,
-    (s, col) => (col === 'expected' ? s.expectedCash : col === 'counted' ? s.countedCash : col === 'diff' ? s.difference : undefined)
-  );
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    this.table.attachPaginator(p);
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    this.table.attachSort(s);
-  }
-
   private readonly facade = inject(CashRegisterFacade);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
 
-  readonly displayedColumns = ['openedAt', 'status', 'expected', 'counted', 'diff', 'actions'] as const;
+  readonly displayedColumns = ['openedAt', 'number', 'status', 'expected', 'counted', 'diff', 'actions'] as const;
 
-  readonly vm$ = this.facade
-    .sessions()
-    .pipe(
-      map((r: PaginatedResult<CashRegisterSession>) =>
-        ({ isLoading: false, errorMessage: null, sessions: r.items } satisfies HistoryVm)
-      ),
-      startWith({ isLoading: true, errorMessage: null, sessions: [] } satisfies HistoryVm),
-      catchError((e: unknown) =>
-        of({ isLoading: false, errorMessage: e instanceof Error ? e.message : 'Erreur', sessions: [] } satisfies HistoryVm)
-      )
-    );
+  readonly statusOptions: { value: CashRegisterSessionStatus; label: string }[] = [
+    { value: 'OPEN', label: 'Ouverte' },
+    { value: 'CLOSED', label: 'Fermée' }
+  ];
+
+  /** Recherche, statut, période d'ouverture, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.sessionsPage(query, query.filters), {
+    filters: new FormGroup({
+      status: new FormControl<CashRegisterSessionStatus | null>(null),
+      from: new FormControl<string | null>(null),
+      to: new FormControl<string | null>(null)
+    }),
+    sortFields: { openedAt: 'openedAt', number: 'number' }
+  });
 
   openDetails(s: CashRegisterSession): void {
     this.facade.operationsBySession(s.id)

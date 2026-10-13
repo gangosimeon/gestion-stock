@@ -1,21 +1,25 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, ViewChild, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { RouterLink } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
+import { Subject, take, takeUntil } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
+import { CustomerSearchFilters } from '../../../core/services/customers-api.service';
+import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { ServerTable } from '../../../shared/table/server-table';
 import { ClientsFacade } from '../data/clients.facade';
 import { ConfirmDeleteClientDialogComponent } from '../ui/confirm-delete-client-dialog.component';
 import { ClientDrawerComponent, ClientDrawerContext } from '../ui/client-drawer.component';
@@ -42,6 +46,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSnackBarModule,
     MatDialogModule,
     MatSidenavModule,
+    MatSelectModule,
     ClientDrawerComponent
   ],
   templateUrl: './clients-shell-page.component.html',
@@ -55,54 +60,49 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
-  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
-  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
-  readonly search = new FormControl<string>('', { nonNullable: true });
-
   readonly displayedColumns = ['name', 'phone', 'email', 'creditLimit', 'balance', 'actions'] as const;
-  readonly dataSource = new MatTableDataSource<Customer>([]);
+
+  readonly statusOptions: { value: ActiveStatusFilter; label: string }[] = [
+    { value: 'ACTIVE', label: 'Actifs' },
+    { value: 'INACTIVE', label: 'Désactivés' },
+    { value: 'ALL', label: 'Tous' }
+  ];
+  readonly typeOptions: { value: NonNullable<CustomerSearchFilters['type']>; label: string }[] = [
+    { value: 'INDIVIDUAL', label: 'Particulier' },
+    { value: 'COMPANY', label: 'Entreprise' }
+  ];
+  readonly priceCategoryOptions: { value: NonNullable<CustomerSearchFilters['priceCategory']>; label: string }[] = [
+    { value: 'RETAIL', label: 'Prix de détail' },
+    { value: 'WHOLESALE', label: 'Prix de gros' }
+  ];
+
+  /** Recherche, filtres, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({
+      status: new FormControl<ActiveStatusFilter>('ACTIVE', { nonNullable: true }),
+      type: new FormControl<CustomerSearchFilters['type']>(null),
+      priceCategory: new FormControl<CustomerSearchFilters['priceCategory']>(null)
+    }),
+    sortFields: { name: 'name', creditLimit: 'creditLimit' },
+    reload$: this.facade.refresh$
+  });
 
   readonly vm$ = this.facade.vm$;
 
-  vmSnapshot = { customers: [] as Customer[] };
+  /** Client en cours de modification (ligne de la page affichée). */
+  private editing: Customer[] = [];
   drawerCtx: ClientDrawerContext = { mode: 'CREATE', customerId: null, customers: [], canCredit: false };
-
-  constructor() {
-    this.facade.refresh();
-
-    this.search.valueChanges
-      .pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe((v) => {
-        this.dataSource.filter = v.trim().toLowerCase();
-        if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
-      });
-
-    this.dataSource.filterPredicate = (data: Customer, filter: string) => {
-      const f = filter.trim().toLowerCase();
-      if (!f) return true;
-      return `${data.name} ${data.phone ?? ''} ${data.email ?? ''}`.toLowerCase().includes(f);
-    };
-  }
 
   ngAfterViewInit(): void {
 
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
-      this.vmSnapshot = { customers: vm.customers };
-      this.dataSource.data = vm.customers;
-
       if (vm.drawer.opened) {
         this.drawerCtx = {
           mode: vm.drawer.mode,
           customerId: vm.drawer.customerId,
-          customers: vm.customers,
+          customers: this.editing,
           canCredit: vm.canCredit
         };
         void this.drawer.open();
@@ -122,6 +122,7 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   openEdit(c: Customer): void {
+    this.editing = [c];
     this.facade.openEdit(c.id);
   }
 

@@ -67,25 +67,37 @@ describe('PurchasesFacade (API Spring Boot /api/purchases)', () => {
   }
 
   function flushScreen(): void {
-    http.expectOne(`${API}/purchases/orders`).flush({ items: [ORDER], total: 1 });
     http.expectOne(`${API}/suppliers`).flush({ items: [{ id: ORDER.supplierId, name: 'Essilor' }], total: 1 });
     http.expectOne(`${API}/products`).flush({ items: [], total: 0 });
   }
 
-  it('commandes, fournisseurs et catalogue lus sur Spring Boot, droits issus des permissions', async () => {
+  it('fournisseurs et catalogue lus sur Spring Boot, droits issus des permissions', async () => {
     init(['purchase:read', 'purchase:create', 'purchase:receive', 'purchase:pay']);
-    const vm = nextVm((v) => v.orders.length > 0);
+    const vm = nextVm((v) => v.suppliers.length > 0);
     flushScreen();
     const loaded = await vm;
 
-    expect(loaded.orders[0].remainingToPay).toBe(10000);
     expect(loaded.suppliers[0].id).toBe(ORDER.supplierId);
     expect(loaded).toMatchObject({ canCreate: true, canReceive: true, canPay: true });
   });
 
+  it('commandes paginées côté serveur : recherche, statut, fournisseur et tri envoyés au backend', async () => {
+    init(['purchase:read']);
+    const page = firstValueFrom(
+      facade.search({ q: 'CMD', page: 0, size: 10, sort: ['totalAmount,asc'] }, { status: 'PARTIALLY_RECEIVED', supplierId: ORDER.supplierId })
+    );
+    const req = http.expectOne((r) => r.url === `${API}/purchases/orders`);
+    expect(req.request.params.get('q')).toBe('CMD');
+    expect(req.request.params.get('status')).toBe('PARTIALLY_RECEIVED');
+    expect(req.request.params.get('supplierId')).toBe(ORDER.supplierId);
+    expect(req.request.params.getAll('sort')).toEqual(['totalAmount,asc']);
+    req.flush({ items: [ORDER], total: 1 });
+    expect((await page).items[0].remainingToPay).toBe(10000);
+  });
+
   it('lecture seule sans permission d’achat', async () => {
     init(['purchase:read']);
-    const vm = nextVm((v) => v.orders.length > 0);
+    const vm = nextVm((v) => v.suppliers.length > 0);
     flushScreen();
     expect(await vm).toMatchObject({ canCreate: false, canReceive: false, canPay: false });
   });
@@ -95,17 +107,16 @@ describe('PurchasesFacade (API Spring Boot /api/purchases)', () => {
     const screen = facade.vm$.subscribe();
     const failed = nextVm((v) => v.errorMessage !== null);
     http
-      .expectOne(`${API}/purchases/orders`)
+      .expectOne(`${API}/suppliers`)
       .flush({ status: 403, code: 'ACCESS_DENIED', message: 'Accès refusé.' }, { status: 403, statusText: 'Forbidden' });
-    // forkJoin annule les deux autres appels dès le premier échec.
-    expect(http.expectOne(`${API}/suppliers`).cancelled).toBe(true);
+    // forkJoin annule l'autre appel dès le premier échec.
     expect(http.expectOne(`${API}/products`).cancelled).toBe(true);
     expect((await failed).errorMessage).toBe('Accès refusé.');
 
-    const recovered = nextVm((v) => v.orders.length > 0);
+    const recovered = nextVm((v) => v.suppliers.length > 0);
     facade.refresh();
     flushScreen();
-    expect((await recovered).orders).toHaveLength(1);
+    expect((await recovered).suppliers).toHaveLength(1);
     screen.unsubscribe();
   });
 

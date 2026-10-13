@@ -5,7 +5,11 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { StockMovement } from '../models/stock-movement.model';
 import { Warehouse } from '../models/warehouse.model';
-import { PaginatedResult } from './products-api.service';
+import { PageRequest, pageParams } from './page-params';
+import { ActiveStatusFilter, PaginatedResult } from './products-api.service';
+
+/** Type de dépôt (magasin de vente ou entrepôt). */
+export type WarehouseTypeFilter = 'STORE' | 'WAREHOUSE';
 
 function toApiError(err: unknown): Error {
   if (err instanceof HttpErrorResponse) {
@@ -49,6 +53,19 @@ export class WarehousesApiService {
   private readonly http = inject(HttpClient);
 
   /** Dépôts visibles par l'utilisateur (filtrés par le backend selon ses droits). */
+  /**
+   * Page de dépôts : recherche (code, nom), type et tri côté serveur ; le statut n'est appliqué
+   * que pour un utilisateur qui voit tous les dépôts (warehouse:all).
+   */
+  findPage(
+    page: PageRequest,
+    filters: { status?: ActiveStatusFilter | null; type?: WarehouseTypeFilter | null } = {}
+  ): Observable<PaginatedResult<Warehouse>> {
+    return this.http
+      .get<PaginatedResult<Warehouse>>(`${environment.apiUrl}/warehouses`, { params: pageParams(page, { ...filters }) })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
   list(): Observable<PaginatedResult<Warehouse>> {
     return this.http
       .get<PaginatedResult<Warehouse>>(`${environment.apiUrl}/warehouses`)

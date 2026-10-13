@@ -76,8 +76,7 @@ describe('ProductsFacade (écran Produits sur Spring Boot)', () => {
     return firstValueFrom((facade.vm$ as Observable<ProductListVm>).pipe(skipWhile((vm) => !predicate(vm))));
   }
 
-  function flushScreen(products: Product[], alerts: { type: string; entityId: string }[] = []): void {
-    http.expectOne(`${API}/products`).flush({ items: products, total: products.length });
+  function flushScreen(alerts: { type: string; entityId: string }[] = []): void {
     http.expectOne(`${API}/categories`).flush({ items: [{ id: MONTURE.categoryId, name: 'Montures' }], total: 1 });
     // Fournisseurs du backend (identifiants réels, assignables au produit).
     http.expectOne(`${API}/suppliers`).flush({ items: [{ id: MONTURE.supplierId, name: 'Essilor' }], total: 1 });
@@ -86,14 +85,35 @@ describe('ProductsFacade (écran Produits sur Spring Boot)', () => {
     alertsReq.flush({ items: alerts, total: alerts.length });
   }
 
-  it('catalogue et catégories lus sur Spring Boot, une seule fois pour tous les abonnés', async () => {
+  it('catégories et fournisseurs lus sur Spring Boot, une seule fois pour tous les abonnés', async () => {
     init(['product:read']);
-    const a = nextVm((v) => v.products.length > 0);
-    const b = nextVm((v) => v.products.length > 0);
-    flushScreen([MONTURE]);
+    const a = nextVm((v) => v.categories.length > 0);
+    const b = nextVm((v) => v.categories.length > 0);
+    flushScreen();
 
-    expect((await a).products).toEqual([MONTURE]);
+    expect((await a).suppliers).toEqual([{ id: MONTURE.supplierId, name: 'Essilor' }]);
     expect((await b).categories).toEqual([{ id: MONTURE.categoryId, name: 'Montures' }]);
+  });
+
+  it('liste paginée côté serveur : recherche, filtres, tri et page envoyés au backend', async () => {
+    init(['product:read']);
+    const page = firstValueFrom(
+      facade.search(
+        { q: ' ray ', page: 2, size: 25, sort: ['name,desc'] },
+        { categoryId: MONTURE.categoryId, supplierId: null, status: 'INACTIVE' }
+      )
+    );
+    const req = http.expectOne((r) => r.url === `${API}/products`);
+    const p = req.request.params;
+    expect(p.get('q')).toBe('ray');
+    expect(p.get('page')).toBe('2');
+    expect(p.get('size')).toBe('25');
+    expect(p.getAll('sort')).toEqual(['name,desc']);
+    expect(p.get('categoryId')).toBe(MONTURE.categoryId);
+    expect(p.has('supplierId')).toBe(false);
+    expect(p.get('status')).toBe('INACTIVE');
+    req.flush({ items: [MONTURE], total: 51 });
+    expect(await page).toEqual({ items: [MONTURE], total: 51 });
   });
 
   it('catalogue jamais simulé, quel que soit l’écran appelant', () => {
@@ -104,9 +124,9 @@ describe('ProductsFacade (écran Produits sur Spring Boot)', () => {
 
   it('statut de stock fourni par le backend (alertes), sans recalcul côté front', async () => {
     init(['product:read']);
-    const vm = nextVm((v) => v.products.length > 0);
+    const vm = nextVm((v) => v.categories.length > 0);
     // MONTURE : 2 en stock pour un seuil de 3, mais aucune alerte backend → « Disponible ».
-    flushScreen([MONTURE, VERRE], [{ type: 'OUT_OF_STOCK', entityId: VERRE.id }]);
+    flushScreen([{ type: 'OUT_OF_STOCK', entityId: VERRE.id }]);
     const loaded = await vm;
 
     expect(facade.availabilityLabel(MONTURE, loaded.stockLevels)).toBe('Disponible');
@@ -116,8 +136,7 @@ describe('ProductsFacade (écran Produits sur Spring Boot)', () => {
 
   it('alertes indisponibles : liste affichée quand même, aucun statut inventé', async () => {
     init(['product:read']);
-    const vm = nextVm((v) => v.products.length > 0);
-    http.expectOne(`${API}/products`).flush({ items: [MONTURE], total: 1 });
+    const vm = nextVm(() => true);
     http.expectOne(`${API}/categories`).flush({ items: [], total: 0 });
     http.expectOne(`${API}/suppliers`).flush({ items: [], total: 0 });
     http.expectOne((r) => r.url === `${API}/alerts`).flush({}, { status: 403, statusText: 'Forbidden' });
@@ -127,8 +146,8 @@ describe('ProductsFacade (écran Produits sur Spring Boot)', () => {
 
   it('droits issus des permissions : caissier en lecture seule, gestionnaire sans suppression', async () => {
     init(['product:read']);
-    const caissier = nextVm((v) => v.products.length > 0);
-    flushScreen([MONTURE]);
+    const caissier = nextVm((v) => v.categories.length > 0);
+    flushScreen();
     expect(await caissier).toMatchObject({ canCreate: false, canUpdate: false, canDelete: false });
   });
 

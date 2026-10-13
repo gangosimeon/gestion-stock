@@ -1,6 +1,6 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,22 +8,17 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { catchError, finalize, map, of, startWith, take } from 'rxjs';
+import { finalize, take } from 'rxjs';
 
 import { Warehouse } from '../../../core/models/warehouse.model';
-import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
-import { PaginatedResult } from '../../../core/services/products-api.service';
+import { WarehouseTypeFilter, WarehousesApiService } from '../../../core/services/warehouses-api.service';
+import { ActiveStatusFilter } from '../../../core/services/products-api.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { ListTable } from '../../../shared/table/list-table';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
-
-type Vm = {
-  isLoading: boolean;
-  errorMessage: string | null;
-  warehouses: Warehouse[];
-};
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { ServerTable } from '../../../shared/table/server-table';
 
 @Component({
   selector: 'app-warehouses-list-page',
@@ -31,7 +26,8 @@ type Vm = {
   imports: [
     MatPaginatorModule,
     MatSortModule,
-    TableSearchComponent,
+    MatIconModule,
+    MatSelectModule,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
@@ -48,17 +44,6 @@ type Vm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WarehousesListPageComponent {
-  readonly table = new ListTable<Warehouse>(
-    (w) => `${w.code ?? ''} ${w.name}`,
-    (w, col) => (col === 'main' ? (w.main ? 1 : 0) : undefined)
-  );
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    this.table.attachPaginator(p);
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    this.table.attachSort(s);
-  }
-
   private readonly api = inject(WarehousesApiService);
   private readonly fb = inject(FormBuilder);
   private readonly snackbar = inject(MatSnackBar);
@@ -66,22 +51,37 @@ export class WarehousesListPageComponent {
 
   /** Interface seulement : le backend exige warehouse:manage pour créer un dépôt. */
   readonly canManage$ = this.auth.hasPermission$('warehouse:manage');
+  /** Le filtre de statut n'a d'effet que pour qui voit tous les dépôts (warehouse:all). */
+  readonly canSeeAll$ = this.auth.hasPermission$('warehouse:all');
+
+  readonly typeLabels: Record<WarehouseTypeFilter, string> = { STORE: 'Magasin', WAREHOUSE: 'Entrepôt' };
+  readonly typeOptions = Object.entries(this.typeLabels).map(([value, label]) => ({ value: value as WarehouseTypeFilter, label }));
+  readonly statusOptions: { value: ActiveStatusFilter; label: string }[] = [
+    { value: 'ACTIVE', label: 'Actifs' },
+    { value: 'INACTIVE', label: 'Désactivés' },
+    { value: 'ALL', label: 'Tous' }
+  ];
+
+  /** Recherche, filtres, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.api.findPage(query, query.filters), {
+    filters: new FormGroup({
+      type: new FormControl<WarehouseTypeFilter | null>(null),
+      status: new FormControl<ActiveStatusFilter>('ACTIVE', { nonNullable: true })
+    }),
+    sortFields: { code: 'code', name: 'name', type: 'type' }
+  });
 
   isSubmitting = false;
 
-  readonly displayedColumns = ['code', 'name', 'main'] as const;
+  readonly displayedColumns = ['code', 'name', 'type', 'main'] as const;
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]]
   });
 
-  readonly vm$ = this.api.list().pipe(
-    map((r: PaginatedResult<Warehouse>) => ({ isLoading: false, errorMessage: null, warehouses: r.items } satisfies Vm)),
-    startWith({ isLoading: true, errorMessage: null, warehouses: [] } satisfies Vm),
-    catchError((e: unknown) =>
-      of({ isLoading: false, errorMessage: e instanceof Error ? e.message : 'Erreur', warehouses: [] } satisfies Vm)
-    )
-  );
+  typeLabel(w: Warehouse): string {
+    return (w.type && this.typeLabels[w.type as WarehouseTypeFilter]) || w.type || '—';
+  }
 
   submit(): void {
     if (this.form.invalid || this.isSubmitting) {

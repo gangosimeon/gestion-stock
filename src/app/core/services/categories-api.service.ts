@@ -4,7 +4,8 @@ import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { Category, CategoryRequest } from '../models/category.model';
-import { PaginatedResult } from './products-api.service';
+import { PageRequest, pageParams } from './page-params';
+import { ActiveStatusFilter, PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
   if (err instanceof HttpErrorResponse) {
@@ -29,6 +30,13 @@ export class CategoriesApiService {
     const params = new HttpParams().set('status', 'ALL').set('sort', 'name,asc');
     return this.http
       .get<PaginatedResult<Category>>(this.baseUrl, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page de catégories (écran de gestion) : recherche (nom, description), statut et tri côté serveur. */
+  findPage(page: PageRequest, filters: { status?: ActiveStatusFilter | null } = {}): Observable<PaginatedResult<Category>> {
+    return this.http
+      .get<PaginatedResult<Category>>(this.baseUrl, { params: pageParams(page, { ...filters }) })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

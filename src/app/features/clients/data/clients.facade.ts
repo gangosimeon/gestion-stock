@@ -1,13 +1,16 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, finalize, map, shareReplay, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, combineLatest, finalize, map, shareReplay, tap } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
 import { AuthService } from '../../../core/services/auth.service';
 import {
   CreateCustomerRequest,
+  CustomerSearchFilters,
   CustomersApiService,
   UpdateCustomerRequest
 } from '../../../core/services/customers-api.service';
+import { PageRequest } from '../../../core/services/page-params';
+import { PaginatedResult } from '../../../core/services/products-api.service';
 import { ClientDrawerState, ClientsVm } from './clients-vm.model';
 
 @Injectable({
@@ -19,8 +22,7 @@ export class ClientsFacade {
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
-  private readonly customersSubject = new BehaviorSubject<Customer[]>([]);
-  private readonly filterSubject = new BehaviorSubject<string>('');
+  private readonly refreshSubject = new Subject<void>();
   private readonly drawerSubject = new BehaviorSubject<ClientDrawerState>({ opened: false });
 
   // Interface seulement : le backend contrôle chaque permission à chaque appel.
@@ -34,16 +36,12 @@ export class ClientsFacade {
   readonly vm$: Observable<ClientsVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
-    this.customersSubject,
-    this.filterSubject,
     this.drawerSubject,
     this.rights$
   ]).pipe(
-    map(([isLoading, errorMessage, customers, filter, drawer, [canCreate, canUpdate, canDelete, canCredit]]): ClientsVm => ({
+    map(([isLoading, errorMessage, drawer, [canCreate, canUpdate, canDelete, canCredit]]): ClientsVm => ({
       isLoading,
       errorMessage,
-      customers,
-      filter,
       drawer,
       canCreate,
       canUpdate,
@@ -53,21 +51,16 @@ export class ClientsFacade {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
-  refresh(): void {
-    this.isLoadingSubject.next(true);
-    this.errorSubject.next(null);
+  /** Rechargements demandés après création, modification ou suppression (liste paginée de l'écran). */
+  readonly refresh$ = this.refreshSubject.asObservable();
 
-    this.api
-      .list()
-      .pipe(finalize(() => this.isLoadingSubject.next(false)))
-      .subscribe({
-        next: (r) => this.customersSubject.next(r.items),
-        error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
-      });
+  refresh(): void {
+    this.refreshSubject.next();
   }
 
-  setFilter(filter: string): void {
-    this.filterSubject.next(filter);
+  /** Page de la liste : recherche, filtres, tri et pagination traités par le backend. */
+  search(page: PageRequest, filters: CustomerSearchFilters): Observable<PaginatedResult<Customer>> {
+    return this.api.findPage(page, filters);
   }
 
   openCreate(): void {

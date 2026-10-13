@@ -6,10 +6,21 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Category } from '../models/category.model';
 import { Product, ProductUnit } from '../models/product.model';
+import { PageRequest, pageParams } from './page-params';
 
 export interface PaginatedResult<T> {
   items: T[];
   total: number;
+}
+
+/** Statut d'un référentiel (actifs par défaut côté backend). */
+export type ActiveStatusFilter = 'ACTIVE' | 'INACTIVE' | 'ALL';
+
+/** Critères de la liste des produits (GET /api/products). */
+export interface ProductSearchFilters {
+  categoryId?: string | null;
+  supplierId?: string | null;
+  status?: ActiveStatusFilter | null;
 }
 
 function toApiError(err: unknown): Error {
@@ -71,6 +82,14 @@ export class ProductsApiService {
   list(): Observable<PaginatedResult<Product>> {
     return this.http
       .get<PaginatedResult<Product>>(`${environment.apiUrl}/products`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page de produits : recherche (référence, nom, code-barres), filtres et tri côté serveur. */
+  findPage(page: PageRequest, filters: ProductSearchFilters = {}): Observable<PaginatedResult<Product>> {
+    const params = pageParams(page, { ...filters });
+    return this.http
+      .get<PaginatedResult<Product>>(`${environment.apiUrl}/products`, { params })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

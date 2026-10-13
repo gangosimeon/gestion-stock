@@ -1,29 +1,25 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { catchError, map, of, startWith, take } from 'rxjs';
 
-import { InventorySession, inventoryStatusLabels } from '../../../core/models/inventory.model';
-import { PaginatedResult } from '../../../core/services/products-api.service';
+import { InventorySession, InventoryStatus, inventoryStatusLabels } from '../../../core/models/inventory.model';
 import { InventoryApiService } from '../../../core/services/inventory-api.service';
 import { InventorySessionDetailsDialogComponent } from '../ui/inventory-session-details-dialog.component';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { ListTable } from '../../../shared/table/list-table';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
+import { ServerTable } from '../../../shared/table/server-table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
-
-type HistoryVm = {
-  isLoading: boolean;
-  errorMessage: string | null;
-  sessions: InventorySession[];
-};
 
 @Component({
   selector: 'app-inventory-history-page',
@@ -33,7 +29,11 @@ type HistoryVm = {
     MatTooltipModule,
     MatPaginatorModule,
     MatSortModule,
-    TableSearchComponent,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    DatePickerDirective,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -49,17 +49,6 @@ type HistoryVm = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InventoryHistoryPageComponent {
-  readonly table = new ListTable<InventorySession>(
-    (s) => `${s.number ?? ''} ${this.statusLabel(s)}`,
-    (s, col) => (col === 'date' ? s.createdAt : col === 'status' ? this.statusLabel(s) : col === 'diff' ? s.totalDifference : undefined)
-  );
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    this.table.attachPaginator(p);
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    this.table.attachSort(s);
-  }
-
   private readonly api = inject(InventoryApiService);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
@@ -69,13 +58,17 @@ export class InventoryHistoryPageComponent {
     return s.status ? inventoryStatusLabels[s.status] : '—';
   }
 
-  readonly vm$ = this.api.listSessions().pipe(
-    map((r: PaginatedResult<InventorySession>) => ({ isLoading: false, errorMessage: null, sessions: r.items } satisfies HistoryVm)),
-    startWith({ isLoading: true, errorMessage: null, sessions: [] } satisfies HistoryVm),
-    catchError((e: unknown) =>
-      of({ isLoading: false, errorMessage: e instanceof Error ? e.message : 'Erreur', sessions: [] } satisfies HistoryVm)
-    )
-  );
+  readonly statusOptions = Object.entries(inventoryStatusLabels).map(([value, label]) => ({ value: value as InventoryStatus, label }));
+
+  /** Recherche, statut, période, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.api.listSessionsPage(query, query.filters), {
+    filters: new FormGroup({
+      status: new FormControl<InventoryStatus | null>(null),
+      from: new FormControl<string | null>(null),
+      to: new FormControl<string | null>(null)
+    }),
+    sortFields: { date: 'createdAt', number: 'number' }
+  });
 
   openDetails(s: InventorySession): void {
     this.dialog.open(InventorySessionDetailsDialogComponent, { data: { session: s } });

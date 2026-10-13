@@ -1,16 +1,18 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, combineLatest, finalize, forkJoin, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, forkJoin, map, of, shareReplay, skip, switchMap, tap } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { PurchaseOrder } from '../../../core/models/purchase-order.model';
 import { Supplier } from '../../../core/models/supplier.model';
-import { ProductsApiService } from '../../../core/services/products-api.service';
+import { PageRequest } from '../../../core/services/page-params';
+import { PaginatedResult, ProductsApiService } from '../../../core/services/products-api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
   PurchasesApiService,
   CreatePurchaseOrderRequest,
   CreateSupplierInvoiceRequest,
-  PayPurchaseOrderRequest
+  PayPurchaseOrderRequest,
+  PurchaseOrderSearchFilters
 } from '../../../core/services/purchases-api.service';
 import { SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { PurchaseDrawerState, PurchasesVm } from './purchases-vm.model';
@@ -27,7 +29,6 @@ export class PurchasesFacade {
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
   private readonly refreshSubject = new BehaviorSubject<void>(undefined);
-  private readonly filterSubject = new BehaviorSubject<string>('');
 
   private readonly drawerSubject = new BehaviorSubject<PurchaseDrawerState>({
     opened: false,
@@ -43,16 +44,15 @@ export class PurchasesFacade {
       this.errorSubject.next(null);
     }),
     switchMap(() =>
-      // Commandes, fournisseurs et catalogue du backend : identifiants réels de bout en bout.
+      // Fournisseurs et catalogue du backend (sélections du formulaire de commande).
       forkJoin({
-        orders: this.purchasesApi.listOrders().pipe(map((r) => r.items)),
         suppliers: this.suppliersApi.list().pipe(map((r) => r.items)),
         products: this.productsApi.list().pipe(map((r) => r.items))
       }).pipe(
         // Une erreur ne coupe pas le flux : message affiché, nouvelle tentative possible.
         catchError((e: unknown) => {
           this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
-          return of({ orders: [] as PurchaseOrder[], suppliers: [] as Supplier[], products: [] as Product[] });
+          return of({ suppliers: [] as Supplier[], products: [] as Product[] });
         }),
         finalize(() => this.isLoadingSubject.next(false))
       )
@@ -67,26 +67,23 @@ export class PurchasesFacade {
     this.auth.hasPermission$('purchase:pay')
   ]);
 
-  private readonly orders$ = this.data$.pipe(map((d) => d.orders));
+  /** Rechargements demandés après création, réception ou paiement (liste paginée de l'écran). */
+  readonly refresh$ = this.refreshSubject.pipe(skip(1));
   private readonly suppliers$ = this.data$.pipe(map((d) => d.suppliers));
   private readonly products$ = this.data$.pipe(map((d) => d.products));
 
   readonly vm$: Observable<PurchasesVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
-    this.orders$,
     this.suppliers$,
     this.products$,
-    this.filterSubject,
     this.rights$
   ]).pipe(
-    map(([isLoading, errorMessage, orders, suppliers, products, filter, [canCreate, canReceive, canPay]]): PurchasesVm => ({
+    map(([isLoading, errorMessage, suppliers, products, [canCreate, canReceive, canPay]]): PurchasesVm => ({
       isLoading,
       errorMessage,
-      orders,
       suppliers,
       products,
-      filter,
       canCreate,
       canReceive,
       canPay
@@ -98,8 +95,9 @@ export class PurchasesFacade {
     this.refreshSubject.next(undefined);
   }
 
-  setFilter(v: string): void {
-    this.filterSubject.next(v);
+  /** Page de la liste : recherche, filtres, tri et pagination traités par le backend. */
+  search(page: PageRequest, filters: PurchaseOrderSearchFilters): Observable<PaginatedResult<PurchaseOrder>> {
+    return this.purchasesApi.findOrdersPage(page, filters);
   }
 
   openCreate(): void {

@@ -63,14 +63,22 @@ describe('ClientsFacade (écrans Clients sur Spring Boot)', () => {
     return firstValueFrom((facade.vm$ as Observable<ClientsVm>).pipe(skipWhile((vm) => !predicate(vm))));
   }
 
-  it('liste servie par le backend (dette incluse), droits issus des permissions', async () => {
+  it('liste paginée servie par le backend (dette incluse), droits issus des permissions', async () => {
     const facade = init(['customer:read', 'customer:create', 'customer:update', 'customer:pay']);
-    const vm = nextVm(facade, (v) => v.customers.length > 0);
-    facade.refresh();
-    http.expectOne(`${API}/customers`).flush({ items: [CLIENT], total: 1 });
-    const loaded = await vm;
+    const page = firstValueFrom(
+      facade.search({ q: 'vision', page: 1, size: 10, sort: ['creditLimit,desc'] }, { status: 'ALL', type: 'COMPANY', priceCategory: null })
+    );
+    const req = http.expectOne((r) => r.url === `${API}/customers`);
+    expect(req.request.params.get('q')).toBe('vision');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('status')).toBe('ALL');
+    expect(req.request.params.get('type')).toBe('COMPANY');
+    expect(req.request.params.has('priceCategory')).toBe(false);
+    expect(req.request.params.getAll('sort')).toEqual(['creditLimit,desc']);
+    req.flush({ items: [CLIENT], total: 11 });
+    expect((await page).items[0].balance).toBe(120000);
 
-    expect(loaded.customers[0].balance).toBe(120000);
+    const loaded = await nextVm(facade, () => true);
     expect(loaded).toMatchObject({ canCreate: true, canUpdate: true, canDelete: false, canCredit: false });
   });
 
@@ -95,8 +103,6 @@ describe('ClientsFacade (écrans Clients sur Spring Boot)', () => {
     expect(patch.request.method).toBe('PATCH');
     expect(patch.request.body).toEqual({ name: 'Clinique Vision Plus (Cocody)', phone: undefined, email: undefined });
     patch.flush({ ...CLIENT, name: 'Clinique Vision Plus (Cocody)' });
-    // Rechargement de la liste après enregistrement.
-    http.expectOne(`${API}/customers`).flush({ items: [CLIENT], total: 1 });
   });
 
   it('avec customer:credit : le plafond est envoyé', () => {
@@ -110,6 +116,5 @@ describe('ClientsFacade (écrans Clients sur Spring Boot)', () => {
     const patch = http.expectOne(`${API}/customers/${CLIENT.id}`);
     expect(patch.request.body).toMatchObject({ creditLimit: 800000 });
     patch.flush(CLIENT);
-    http.expectOne(`${API}/customers`).flush({ items: [CLIENT], total: 1 });
   });
 });

@@ -41,7 +41,10 @@ describe('ClientDetailPageComponent (fiche client sur Spring Boot)', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: ID })) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ id: ID })), snapshot: { paramMap: convertToParamMap({ id: ID }) } }
+        }
       ]
     });
     TestBed.overrideProvider(MatDialog, {
@@ -58,18 +61,11 @@ describe('ClientDetailPageComponent (fiche client sur Spring Boot)', () => {
 
   afterEach(() => http.verify());
 
-  function flushAll(withSales = true): void {
+  function flushAll(): void {
     http.expectOne(`${API}/customers/${ID}`).flush(CLIENT);
-    if (withSales) {
-      http.expectOne(`${API}/customers/${ID}/sales`).flush({
-        items: [{ id: 's1', number: 'VTE-2026-000004', total: 200000, paidAmount: 80000, creditAmount: 120000 }],
-        total: 1
-      });
-    }
-    http.expectOne(`${API}/customers/${ID}/payments`).flush({ items: [], total: 0 });
   }
 
-  it('dette et crédit disponible du backend ; part à crédit de chaque vente fournie par le backend', async () => {
+  it('dette et crédit disponible du backend ; ventes paginées côté serveur, part à crédit fournie par le backend', async () => {
     const page = setup(['customer:read', 'sale:read', 'customer:pay']);
     const vm = firstValueFrom(page.vm$.pipe(skipWhile((v) => v.isLoading)));
     flushAll();
@@ -77,17 +73,36 @@ describe('ClientDetailPageComponent (fiche client sur Spring Boot)', () => {
 
     expect(loaded.customer?.balance).toBe(120000);
     expect(loaded.customer?.availableCredit).toBe(380000);
-    expect(page.dueAmount(loaded.sales[0])).toBe(120000);
     expect(loaded.canPay).toBe(true);
+
+    const sales = firstValueFrom(page.salesTable.state$.pipe(skipWhile((s) => s.loading)));
+    const req = http.expectOne((r) => r.url === `${API}/customers/${ID}/sales`);
+    expect(req.request.params.get('page')).toBe('0');
+    expect(req.request.params.get('size')).toBe('10');
+    req.flush({
+      items: [{ id: 's1', number: 'VTE-2026-000004', total: 200000, paidAmount: 80000, creditAmount: 120000 }],
+      total: 1
+    });
+    const rows = (await sales).rows;
+    expect(page.dueAmount(rows[0])).toBe(120000);
   });
 
   it('sans sale:read : pas de demande d’historique des ventes', async () => {
     const page = setup(['customer:read']);
     const vm = firstValueFrom(page.vm$.pipe(skipWhile((v) => v.isLoading)));
-    flushAll(false);
+    flushAll();
     const loaded = await vm;
     expect(loaded.canReadSales).toBe(false);
     expect(loaded.canPay).toBe(false);
+
+    const sales = await firstValueFrom(page.salesTable.state$.pipe(skipWhile((s) => s.loading)));
+    expect(sales.rows).toEqual([]);
+    http.expectNone((r) => r.url === `${API}/customers/${ID}/sales`);
+
+    // Règlements : recherche envoyée au backend.
+    const payments = firstValueFrom(page.paymentsTable.state$.pipe(skipWhile((s) => s.loading)));
+    http.expectOne((r) => r.url === `${API}/customers/${ID}/payments`).flush({ items: [], total: 0 });
+    await payments;
   });
 
   it('règlement : plafond = dette du backend, mode envoyé, pas de date (encaissé maintenant)', async () => {

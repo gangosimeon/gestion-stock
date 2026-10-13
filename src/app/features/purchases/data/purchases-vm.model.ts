@@ -5,10 +5,8 @@ import { Supplier } from '../../../core/models/supplier.model';
 export interface PurchasesVm {
   isLoading: boolean;
   errorMessage: string | null;
-  orders: PurchaseOrder[];
   suppliers: Supplier[];
   products: Product[];
-  filter: string;
   /** purchase:create — nouvelle commande (interface seulement). */
   canCreate: boolean;
   /** purchase:receive — réception. */

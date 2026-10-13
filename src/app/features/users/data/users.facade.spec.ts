@@ -59,46 +59,32 @@ describe('UsersFacade (API Spring Boot /api/users)', () => {
     return firstValueFrom((facade.vm$ as Observable<UsersVm>).pipe(skipWhile((vm) => !predicate(vm))));
   }
 
-  it('liste servie par le backend (plus par le mock), droits issus des permissions', async () => {
+  it('liste paginée servie par le backend (plus par le mock), droits issus des permissions', async () => {
     init(['user:manage']);
-    const vm = nextVm((v) => v.items.length > 0);
-    http.expectOne(`${API}/users`).flush({ items: [ALICE], total: 1, page: 0, size: 1, totalPages: 1 });
+    const page = firstValueFrom(facade.search({ q: 'ali', page: 0, size: 10, sort: ['fullName,asc'] }, { role: 'CAISSIER', active: false }));
+    const req = http.expectOne((r) => r.url === `${API}/users`);
+    expect(req.request.params.get('q')).toBe('ali');
+    expect(req.request.params.get('role')).toBe('CAISSIER');
+    expect(req.request.params.get('active')).toBe('false');
+    expect(req.request.params.getAll('sort')).toEqual(['fullName,asc']);
+    req.flush({ items: [ALICE], total: 1, page: 0, size: 1, totalPages: 1 });
 
-    const loaded = await vm;
-    expect(loaded.items).toEqual([ALICE]);
-    expect(loaded.canManage).toBe(true);
-  });
-
-  it("un seul GET /users quel que soit le nombre d'abonnés de l'écran", async () => {
-    init(['user:manage']);
-    const subscribers = [nextVm((v) => v.items.length > 0), nextVm((v) => v.items.length > 0), nextVm((v) => v.items.length > 0)];
-    http.expectOne(`${API}/users`).flush({ items: [ALICE], total: 1 });
-    await Promise.all(subscribers);
+    expect((await page).items).toEqual([ALICE]);
+    expect((await nextVm(() => true)).canManage).toBe(true);
   });
 
   it('sans user:manage : lecture seule', async () => {
     init(['sale:create']);
-    const vm = nextVm((v) => !v.isLoading);
-    http.expectOne(`${API}/users`).flush({ items: [], total: 0 });
-    expect((await vm).canManage).toBe(false);
+    expect((await nextVm(() => true)).canManage).toBe(false);
   });
 
-  it('refus du backend : message affiché et écran toujours alimenté', async () => {
+  it('refus du backend remonté tel quel', async () => {
     init(['user:manage']);
-    // Abonnement permanent, comme la page ouverte.
-    const screen = facade.vm$.subscribe();
-    const failed = nextVm((v) => v.errorMessage !== null);
+    const result = firstValueFrom(facade.search({ page: 0, size: 10 }, { role: null, active: null })).catch((e: unknown) => e);
     http
-      .expectOne(`${API}/users`)
+      .expectOne((r) => r.url === `${API}/users`)
       .flush({ status: 403, code: 'ACCESS_DENIED', message: 'Accès refusé.' }, { status: 403, statusText: 'Forbidden' });
-    expect((await failed).errorMessage).toBe('Accès refusé.');
-
-    // Le flux n'est pas coupé : une nouvelle demande recharge la liste.
-    const recovered = nextVm((v) => v.items.length > 0);
-    facade.refresh();
-    http.expectOne(`${API}/users`).flush({ items: [ALICE], total: 1 });
-    expect((await recovered).items).toEqual([ALICE]);
-    screen.unsubscribe();
+    expect(((await result) as Error).message).toBe('Accès refusé.');
   });
 
   it('création : mot de passe provisoire transmis au backend', async () => {

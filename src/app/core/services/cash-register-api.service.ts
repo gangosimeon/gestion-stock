@@ -3,7 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CashOperation, CashRegisterSession } from '../models/cash-register.model';
+import { CashOperation, CashRegisterSession, CashRegisterSessionStatus } from '../models/cash-register.model';
+import { PageRequest, dayEndIso, dayStartIso, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -39,6 +40,17 @@ export class CashRegisterApiService {
   current(): Observable<CashRegisterSession | null> {
     return this.http
       .get<CashRegisterSession | null>(`${environment.apiUrl}/cash-register/current`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Page de l'historique : recherche (n°), statut, période d'ouverture (jours inclus) et tri côté serveur. */
+  sessionsPage(
+    page: PageRequest,
+    filters: { status?: CashRegisterSessionStatus | null; from?: string | null; to?: string | null } = {}
+  ): Observable<PaginatedResult<CashRegisterSession>> {
+    const params = pageParams(page, { status: filters.status, from: dayStartIso(filters.from), to: dayEndIso(filters.to) });
+    return this.http
+      .get<PaginatedResult<CashRegisterSession>>(`${environment.apiUrl}/cash-register/sessions`, { params })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

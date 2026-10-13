@@ -5,6 +5,7 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Role } from '../models/role.model';
 import { User } from '../models/user.model';
+import { PageRequest, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -46,6 +47,13 @@ export interface UpdateUserRequest {
 })
 export class UsersApiService {
   private readonly http = inject(HttpClient);
+
+  /** Page d'utilisateurs : recherche (identifiant, nom, prénom, email), rôle, statut et tri côté serveur. */
+  findPage(page: PageRequest, filters: { role?: Role | null; active?: boolean | null } = {}): Observable<PaginatedResult<User>> {
+    return this.http
+      .get<PaginatedResult<User>>(`${environment.apiUrl}/users`, { params: pageParams(page, { ...filters }) })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
 
   list(): Observable<PaginatedResult<User>> {
     return this.http

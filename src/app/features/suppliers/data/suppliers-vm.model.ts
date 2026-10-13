@@ -1,10 +1,6 @@
-import { Supplier } from '../../../core/models/supplier.model';
-
 export interface SuppliersVm {
   isLoading: boolean;
   errorMessage: string | null;
-  suppliers: Supplier[];
-  filter: string;
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;

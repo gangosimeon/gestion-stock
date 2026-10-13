@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+import { PageRequest, pageParams } from './page-params';
 import { ProductSalesReportRow, ReportPage, SalesGroupBy, SalesPeriodReportRow } from '../models/report.model';
 
 function toApiError(err: unknown): Error {
@@ -30,6 +31,18 @@ export class ReportsApiService {
     const params = new HttpParams().set('from', from).set('to', to).set('groupBy', groupBy);
     return this.http
       .get<SalesPeriodReportRow[]>(`${environment.apiUrl}/reports/sales/by-period`, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /**
+   * Ventes par produit sur la période, nettes des retours : recherche (nom, référence), tri et
+   * pagination côté serveur (CA net décroissant par défaut).
+   */
+  salesByProductPage(from: string, to: string, page: PageRequest): Observable<ReportPage<ProductSalesReportRow>> {
+    return this.http
+      .get<ReportPage<ProductSalesReportRow>>(`${environment.apiUrl}/reports/sales/by-product`, {
+        params: pageParams(page, { from, to })
+      })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

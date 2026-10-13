@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, skip, switchMap, tap } from 'rxjs';
 
 import { StockAlertType } from '../../../core/models/alert.model';
 import { Category } from '../../../core/models/category.model';
@@ -7,7 +7,13 @@ import { Product } from '../../../core/models/product.model';
 import { Supplier } from '../../../core/models/supplier.model';
 import { AlertsApiService } from '../../../core/services/alerts-api.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { ProductRequest, ProductsApiService } from '../../../core/services/products-api.service';
+import { PageRequest } from '../../../core/services/page-params';
+import {
+  PaginatedResult,
+  ProductRequest,
+  ProductSearchFilters,
+  ProductsApiService
+} from '../../../core/services/products-api.service';
 import { SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { ProductDrawerMode, ProductDrawerState, ProductListVm } from './product-vm.model';
 
@@ -25,7 +31,6 @@ export class ProductsFacade {
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
-  private readonly filterSubject = new BehaviorSubject<string>('');
 
   private readonly refreshSubject = new BehaviorSubject<void>(undefined);
 
@@ -37,23 +42,8 @@ export class ProductsFacade {
 
   readonly drawer$ = this.drawerSubject.asObservable();
 
-  private readonly products$ = this.refreshSubject.pipe(
-    tap(() => {
-      this.isLoadingSubject.next(true);
-      this.errorSubject.next(null);
-    }),
-    switchMap(() =>
-      this.api.list().pipe(
-        map((r) => r.items),
-        catchError((e: unknown) => {
-          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement');
-          return of([] as Product[]);
-        }),
-        finalize(() => this.isLoadingSubject.next(false))
-      )
-    ),
-    shareReplay(SHARED)
-  );
+  /** Rechargements demandés après création, modification ou suppression (liste paginée de l'écran). */
+  readonly refresh$ = this.refreshSubject.pipe(skip(1));
 
   /** Niveaux de stock calculés par le backend (alertes), rechargés avec la liste. */
   private readonly stockLevels$ = this.refreshSubject.pipe(
@@ -83,21 +73,17 @@ export class ProductsFacade {
   readonly vm$: Observable<ProductListVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
-    this.products$,
     this.stockLevels$,
     this.categories$,
     this.suppliers$,
-    this.filterSubject,
     this.rights$
   ]).pipe(
-    map(([isLoading, errorMessage, products, stockLevels, categories, suppliers, filter, [canCreate, canUpdate, canDelete]]): ProductListVm => ({
+    map(([isLoading, errorMessage, stockLevels, categories, suppliers, [canCreate, canUpdate, canDelete]]): ProductListVm => ({
       isLoading,
       errorMessage,
-      products,
       stockLevels,
       categories,
       suppliers,
-      filter,
       canCreate,
       canUpdate,
       canDelete
@@ -109,8 +95,9 @@ export class ProductsFacade {
     this.refreshSubject.next(undefined);
   }
 
-  setFilter(value: string): void {
-    this.filterSubject.next(value);
+  /** Page de la liste : recherche, filtres, tri et pagination traités par le backend. */
+  search(page: PageRequest, filters: ProductSearchFilters): Observable<PaginatedResult<Product>> {
+    return this.api.findPage(page, filters);
   }
 
   openDrawer(mode: ProductDrawerMode, productId: string | null): void {

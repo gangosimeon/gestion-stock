@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, combineLatest, finalize, forkJoin, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, forkJoin, map, merge, of, shareReplay, skip, switchMap, take, tap } from 'rxjs';
 
-import { ProductSalesReportRow, SalesGroupBy, SalesPeriodReportRow } from '../../../core/models/report.model';
+import { SalesGroupBy, SalesPeriodReportRow } from '../../../core/models/report.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { PageRequest } from '../../../core/services/page-params';
+import { PaginatedResult } from '../../../core/services/products-api.service';
 import { ReportsApiService } from '../../../core/services/reports-api.service';
 import {
   ReportsFilters,
@@ -15,9 +17,9 @@ import {
   isoMonth
 } from './reports-vm.model';
 
-type ReportData = { totals: SalesPeriodReportRow[]; series: SalesPeriodReportRow[]; top: ProductSalesReportRow[] };
+type ReportData = { totals: SalesPeriodReportRow[]; series: SalesPeriodReportRow[] };
 
-const EMPTY: ReportData = { totals: [], series: [], top: [] };
+const EMPTY: ReportData = { totals: [], series: [] };
 
 /** Bornes demandées au backend pour un onglet. */
 interface Period {
@@ -89,8 +91,7 @@ export class ReportsFacade {
       this.errorSubject.next(null);
       return forkJoin({
         totals: this.api.salesByPeriod(p.from, p.to, p.totalsGroup),
-        series: this.api.salesByPeriod(p.seriesFrom, p.to, p.seriesGroup),
-        top: this.api.salesByProduct(p.from, p.to).pipe(map((r) => r.items))
+        series: this.api.salesByPeriod(p.seriesFrom, p.to, p.seriesGroup)
       }).pipe(
         catchError((e: unknown) => {
           this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
@@ -115,16 +116,6 @@ export class ReportsFacade {
         errorMessage,
         filters,
         kpis: this.kpisOf(data.totals),
-        topProducts: data.top.map(
-          (r): TopProductRow => ({
-            productId: r.productId,
-            sku: r.sku,
-            name: r.name,
-            quantity: r.netQuantity,
-            total: r.netRevenue,
-            profit: r.profit
-          })
-        ),
         salesSeries: data.series.map((r): SeriesPoint => ({ label: labelOf(r, group), value: r.netSales })),
         profitSeries: data.series.map((r): SeriesPoint => ({ label: labelOf(r, group), value: r.profit }))
       };
@@ -132,8 +123,37 @@ export class ReportsFacade {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
+  /** Période ou onglet changé, ou actualisation : la liste paginée des produits est rechargée. */
+  readonly topProductsReload$ = merge(this.refreshSubject.pipe(skip(1)), this.filtersSubject.pipe(skip(1)));
+
   refresh(): void {
     this.refreshSubject.next(undefined);
+  }
+
+  /** Produits vendus sur la période affichée : recherche, tri et pagination traités par le backend. */
+  topProducts(page: PageRequest): Observable<PaginatedResult<TopProductRow>> {
+    return this.auth.hasPermission$('report:read').pipe(
+      take(1),
+      switchMap((canRead) => {
+        if (!canRead) return of({ items: [] as TopProductRow[], total: 0 });
+        const p = periodOf(this.filtersSubject.value);
+        return this.api.salesByProductPage(p.from, p.to, page).pipe(
+          map((r) => ({
+            total: r.total,
+            items: r.items.map(
+              (row): TopProductRow => ({
+                productId: row.productId,
+                sku: row.sku,
+                name: row.name,
+                quantity: row.netQuantity,
+                total: row.netRevenue,
+                profit: row.profit
+              })
+            )
+          }))
+        );
+      })
+    );
   }
 
   setTab(tab: ReportsTab): void {

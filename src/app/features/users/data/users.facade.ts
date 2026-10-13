@@ -1,9 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, combineLatest, finalize, map, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/role.model';
 import { User } from '../../../core/models/user.model';
+import { PageRequest } from '../../../core/services/page-params';
+import { PaginatedResult } from '../../../core/services/products-api.service';
 import { CreateUserRequest, UpdateUserRequest, UsersApiService } from '../../../core/services/users-api.service';
 import { UserDrawerState, UsersVm } from './users-vm.model';
 
@@ -16,7 +18,7 @@ export class UsersFacade {
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
-  private readonly refreshSubject = new BehaviorSubject<void>(undefined);
+  private readonly refreshSubject = new Subject<void>();
 
   private readonly drawerSubject = new BehaviorSubject<UserDrawerState>({
     opened: false,
@@ -29,37 +31,24 @@ export class UsersFacade {
   // Interface seulement : le backend exige user:manage sur chaque appel /api/users.
   private readonly canManage$ = this.auth.hasPermission$('user:manage');
 
-  private readonly items$ = this.refreshSubject.pipe(
-    tap(() => {
-      this.isLoadingSubject.next(true);
-      this.errorSubject.next(null);
-    }),
-    switchMap(() =>
-      this.api.list().pipe(
-        map((r) => r.items),
-        finalize(() => this.isLoadingSubject.next(false)),
-        // Une erreur (403, réseau…) ne doit pas couper le flux : l'écran reste utilisable.
-        catchError((e: unknown) => {
-          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
-          return of([] as User[]);
-        })
-      )
-    ),
-    // Un seul GET /users pour tous les abonnés de l'écran (pipes async, table).
-    shareReplay({ bufferSize: 1, refCount: true })
-  );
+  /** Rechargements demandés après création, modification ou suppression (liste paginée de l'écran). */
+  readonly refresh$ = this.refreshSubject.asObservable();
 
-  readonly vm$ = combineLatest([this.isLoadingSubject, this.errorSubject, this.canManage$, this.items$]).pipe(
-    map(([isLoading, errorMessage, canManage, items]): UsersVm => ({
+  readonly vm$ = combineLatest([this.isLoadingSubject, this.errorSubject, this.canManage$]).pipe(
+    map(([isLoading, errorMessage, canManage]): UsersVm => ({
       isLoading,
       errorMessage,
-      canManage,
-      items
+      canManage
     }))
   );
 
   refresh(): void {
-    this.refreshSubject.next(undefined);
+    this.refreshSubject.next();
+  }
+
+  /** Page de la liste : recherche, filtres, tri et pagination traités par le backend. */
+  search(page: PageRequest, filters: { role: Role | null; active: boolean | null }): Observable<PaginatedResult<User>> {
+    return this.api.findPage(page, filters);
   }
 
   openCreate(): void {

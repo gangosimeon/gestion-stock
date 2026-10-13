@@ -4,7 +4,8 @@ import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { SupplierPaymentMethod } from '../models/supplier-payment.model';
-import { PurchaseOrder, SupplierInvoice } from '../models/purchase-order.model';
+import { PurchaseOrder, PurchaseOrderDocumentStatus, SupplierInvoice } from '../models/purchase-order.model';
+import { PageRequest, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -46,11 +47,24 @@ export interface PayPurchaseOrderRequest {
   note?: string;
 }
 
+/** Critères de la liste des commandes (GET /api/purchases/orders). */
+export interface PurchaseOrderSearchFilters {
+  status?: PurchaseOrderDocumentStatus | null;
+  supplierId?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class PurchasesApiService {
   private readonly http = inject(HttpClient);
+
+  /** Page de commandes : recherche (n°, fournisseur), statut, fournisseur et tri côté serveur. */
+  findOrdersPage(page: PageRequest, filters: PurchaseOrderSearchFilters = {}): Observable<PaginatedResult<PurchaseOrder>> {
+    return this.http
+      .get<PaginatedResult<PurchaseOrder>>(`${environment.apiUrl}/purchases/orders`, { params: pageParams(page, { ...filters }) })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
 
   listOrders(): Observable<PaginatedResult<PurchaseOrder>> {
     return this.http

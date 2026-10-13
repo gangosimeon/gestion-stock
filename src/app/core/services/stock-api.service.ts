@@ -3,7 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { StockMovement } from '../models/stock-movement.model';
+import { StockMovement, StockMovementType } from '../models/stock-movement.model';
+import { PageRequest, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -19,6 +20,8 @@ export interface StockMovementsQuery {
   from?: string; // ISO (instant inclus)
   to?: string; // ISO (instant inclus)
   productId?: string;
+  /** Types détaillés (plusieurs possibles). */
+  type?: StockMovementType[];
 }
 
 /**
@@ -47,6 +50,16 @@ export class StockApiService {
           ...(query.productId ? { productId: query.productId } : null)
         }
       })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /**
+   * Page de mouvements : recherche (produit, motif, pièce source, utilisateur), période, produit,
+   * types et tri côté serveur.
+   */
+  findMovementsPage(page: PageRequest, query: StockMovementsQuery = {}): Observable<PaginatedResult<StockMovement>> {
+    return this.http
+      .get<PaginatedResult<StockMovement>>(`${environment.apiUrl}/stock/movements`, { params: pageParams(page, { ...query }) })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

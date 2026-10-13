@@ -1,6 +1,6 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -8,17 +8,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
+import { StockMovementType } from '../../../core/models/stock-movement.model';
+import { ServerTable } from '../../../shared/table/server-table';
 import { StockMovementRow, stockReasonLabels, stockTypeLabels } from '../data/stock-vm.model';
 import { StockFacade } from '../data/stock.facade';
 import { StockMovementDrawerComponent } from '../ui/stock-movement-drawer.component';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
 import { MatSelectModule } from '@angular/material/select';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
@@ -28,7 +29,6 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
   imports: [
     SelectSearchComponent,
     MatSelectModule,
-    TableSearchComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,
@@ -53,55 +53,32 @@ export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(StockFacade);
   private readonly destroy$ = new Subject<void>();
 
-  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
-  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
-  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
   readonly displayedColumns = ['date', 'product', 'type', 'qty', 'balance', 'user', 'reason'] as const;
-  readonly dataSource = new MatTableDataSource<StockMovementRow>([]);
-  readonly search = new FormControl<string>('', { nonNullable: true });
 
-  readonly from = new FormControl<Date | null>(null);
-  readonly to = new FormControl<Date | null>(null);
-  readonly productId = new FormControl<string | null>(null);
+  readonly typeOptions = Object.entries(stockTypeLabels).map(([value, label]) => ({ value: value as StockMovementType, label }));
+
+  /** Recherche, période, produit, types, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({
+      from: new FormControl<Date | null>(null),
+      to: new FormControl<Date | null>(null),
+      productId: new FormControl<string | null>(null),
+      types: new FormControl<StockMovementType[]>([], { nonNullable: true })
+    }),
+    sortFields: { date: 'createdAt', qty: 'quantity' },
+    reload$: this.facade.refresh$
+  });
 
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
 
-  vmSnapshot: { products: any[] } = { products: [] };
-
   constructor() {
-    this.dataSource.filterPredicate = (row: StockMovementRow, filter: string) => (`${row.sku ?? ''} ${row.productName ?? ''} ${row.uiType ?? ''} ${row.createdByUsername ?? ''} ${this.reasonLabel(row)} ${row.sourceReference ?? ''}`).toLowerCase().includes(filter);
-    this.search.valueChanges.pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe((v) => {
-      this.dataSource.filter = v.trim().toLowerCase();
-      this.dataSource.paginator?.firstPage();
-    });
     this.facade.refresh();
-
-    this.from.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setFilters({ from: v }));
-    this.to.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setFilters({ to: v }));
-    this.productId.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((v) => this.facade.setFilters({ productId: v }));
   }
 
   ngAfterViewInit(): void {
-
-    this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
-      this.vmSnapshot.products = vm.products;
-      this.dataSource.data = vm.movements;
-
-      this.from.setValue(vm.filters.from, { emitEvent: false });
-      this.to.setValue(vm.filters.to, { emitEvent: false });
-      this.productId.setValue(vm.filters.productId, { emitEvent: false });
-    });
-
     this.drawer$.pipe(takeUntil(this.destroy$)).subscribe((d) => {
       if (d.opened) void this.drawer.open();
       else void this.drawer.close();

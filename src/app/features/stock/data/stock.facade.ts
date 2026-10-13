@@ -1,10 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, finalize, map, of, shareReplay, skip, switchMap, tap } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { StockMovement } from '../../../core/models/stock-movement.model';
 import { AuthService } from '../../../core/services/auth.service';
-import { ProductsApiService } from '../../../core/services/products-api.service';
+import { PageRequest } from '../../../core/services/page-params';
+import { PaginatedResult, ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateStockMovementRequest, StockApiService, StockMovementsQuery } from '../../../core/services/stock-api.service';
 import { StockDrawerState, StockFilters, StockMovementRow, StockVm } from './stock-vm.model';
 
@@ -30,15 +31,12 @@ export class StockFacade {
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
   private readonly drawerSubject = new BehaviorSubject<StockDrawerState>({ opened: false });
 
-  private readonly filtersSubject = new BehaviorSubject<StockFilters>({
-    from: null,
-    to: null,
-    productId: null
-  });
-
   private readonly refreshSubject = new BehaviorSubject<void>(undefined);
 
   readonly drawer$ = this.drawerSubject.asObservable();
+
+  /** Rechargements demandés après un mouvement manuel (liste paginée de l'écran). */
+  readonly refresh$ = this.refreshSubject.pipe(skip(1));
 
   // Catalogue du backend (identifiants réels), comme les mouvements.
   private readonly products$ = this.refreshSubject.pipe(
@@ -51,46 +49,17 @@ export class StockFacade {
     shareReplay(SHARED)
   );
 
-  private readonly movements$ = combineLatest([this.refreshSubject, this.filtersSubject]).pipe(
-    tap(() => {
-      this.isLoadingSubject.next(true);
-      this.errorSubject.next(null);
-    }),
-    switchMap(([, filters]) => {
-      const query: StockMovementsQuery = {
-        from: filters.from ? filters.from.toISOString() : undefined,
-        to: filters.to ? endOfDay(filters.to).toISOString() : undefined,
-        productId: filters.productId ?? undefined
-      };
-
-      return this.stockApi.listMovements(query).pipe(
-        map((r) => r.items),
-        // Une erreur ne doit pas couper le flux : l'écran reste utilisable.
-        catchError((e: unknown) => {
-          this.errorSubject.next(e instanceof Error ? e.message : 'Erreur de chargement');
-          return of([] as StockMovement[]);
-        }),
-        finalize(() => this.isLoadingSubject.next(false))
-      );
-    }),
-    shareReplay(SHARED)
-  );
-
   readonly vm$: Observable<StockVm> = combineLatest([
     this.isLoadingSubject,
     this.errorSubject,
     this.products$,
-    this.movements$,
-    this.filtersSubject,
     // Interface seulement : le backend exige stock:adjust pour un mouvement manuel.
     this.auth.hasPermission$('stock:adjust')
   ]).pipe(
-    map(([isLoading, errorMessage, products, movements, filters, canAdjust]): StockVm => ({
+    map(([isLoading, errorMessage, products, canAdjust]): StockVm => ({
       isLoading,
       errorMessage,
       products,
-      movements: movements.map((m) => this.toRow(m)),
-      filters,
       canAdjust
     })),
     shareReplay(SHARED)
@@ -100,8 +69,17 @@ export class StockFacade {
     this.refreshSubject.next(undefined);
   }
 
-  setFilters(patch: Partial<StockFilters>): void {
-    this.filtersSubject.next({ ...this.filtersSubject.value, ...patch });
+  /** Page de l'historique : recherche, période (« Au » inclus), produit, types, tri et pagination côté serveur. */
+  search(page: PageRequest, filters: StockFilters): Observable<PaginatedResult<StockMovementRow>> {
+    const query: StockMovementsQuery = {
+      from: filters.from ? filters.from.toISOString() : undefined,
+      to: filters.to ? endOfDay(filters.to).toISOString() : undefined,
+      productId: filters.productId ?? undefined,
+      type: filters.types?.length ? filters.types : undefined
+    };
+    return this.stockApi
+      .findMovementsPage(page, query)
+      .pipe(map((r) => ({ items: r.items.map((m) => this.toRow(m)), total: r.total })));
   }
 
   openDrawer(): void {

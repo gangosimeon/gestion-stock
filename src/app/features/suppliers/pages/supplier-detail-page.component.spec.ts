@@ -51,7 +51,13 @@ describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () =
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: SUPPLIER_ID })) } }
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ id: SUPPLIER_ID })),
+            snapshot: { paramMap: convertToParamMap({ id: SUPPLIER_ID }) }
+          }
+        }
       ]
     });
     // Le composant importe MatDialogModule : on remplace son MatDialog partout.
@@ -64,10 +70,15 @@ describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () =
 
   function flushAll(): void {
     http.expectOne(`${API}/suppliers/${SUPPLIER_ID}`).flush({ id: SUPPLIER_ID, name: 'Essilor', deliveryLeadTimeDays: 5 });
+    http.expectOne(`${API}/suppliers/${SUPPLIER_ID}/account`).flush(ACCOUNT);
+  }
+
+  function flushTables(): void {
     const history = http.expectOne((r) => r.url === `${API}/suppliers/${SUPPLIER_ID}/purchases`);
     expect(history.request.params.get('allWarehouses')).toBe('true');
+    expect(history.request.params.get('page')).toBe('0');
     history.flush({ items: [], total: 0 });
-    http.expectOne(`${API}/suppliers/${SUPPLIER_ID}/payments`).flush({
+    http.expectOne((r) => r.url === `${API}/suppliers/${SUPPLIER_ID}/payments`).flush({
       items: [
         {
           id: 'p1',
@@ -84,7 +95,6 @@ describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () =
       ],
       total: 1
     });
-    http.expectOne(`${API}/suppliers/${SUPPLIER_ID}/account`).flush(ACCOUNT);
   }
 
   it('totaux lus dans le compte calculé par le backend, plus aucun calcul front', async () => {
@@ -95,7 +105,12 @@ describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () =
 
     expect(loaded.account).toEqual(ACCOUNT);
     expect(loaded.canPay).toBe(true);
-    expect(page.ordersOf(loaded.payments[0])).toBe('CMD-2026-000001, CMD-2026-000002');
+
+    const history = page.historyTable.state$.subscribe();
+    const payments = firstValueFrom(page.paymentsTable.state$.pipe(skipWhile((s) => s.loading)));
+    flushTables();
+    expect(page.ordersOf((await payments).rows[0])).toBe('CMD-2026-000001, CMD-2026-000002');
+    history.unsubscribe();
     expect(page.methodLabel('BANK_TRANSFER')).toBe('Virement');
   });
 

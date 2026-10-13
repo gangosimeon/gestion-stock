@@ -1,14 +1,17 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { BehaviorSubject, Observable, catchError, combineLatest, forkJoin, map, of, shareReplay, startWith, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, map, merge, of, shareReplay, skip, startWith, switchMap, take } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
 import { CustomerPayment } from '../../../core/models/customer-payment.model';
@@ -16,18 +19,15 @@ import { PaymentMethod, Sale } from '../../../core/models/sale.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { CreateCustomerPaymentRequest, CustomersApiService } from '../../../core/services/customers-api.service';
 import { PayCustomerDialogComponent, PayCustomerDialogResult } from '../ui/pay-customer-dialog.component';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { ListTable } from '../../../shared/table/list-table';
-import { TableSearchComponent } from '../../../shared/table/table-search.component';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
+import { ServerTable } from '../../../shared/table/server-table';
 
 type DetailVm = {
   isLoading: boolean;
   errorMessage: string | null;
   /** Porte la dette (`balance`) et le crédit disponible, calculés par le backend. */
   customer: Customer | null;
-  sales: Sale[];
-  payments: CustomerPayment[];
   /** Permission sale:read : historique des ventes visible. */
   canReadSales: boolean;
   /** Permission customer:pay (interface seulement ; le backend la revérifie). */
@@ -36,8 +36,6 @@ type DetailVm = {
 
 const EMPTY: Omit<DetailVm, 'isLoading' | 'errorMessage'> = {
   customer: null,
-  sales: [],
-  payments: [],
   canReadSales: false,
   canPay: false
 };
@@ -54,7 +52,9 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   imports: [
     MatPaginatorModule,
     MatSortModule,
-    TableSearchComponent,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
     CommonModule,
     AsyncPipe,
     DecimalPipe,
@@ -72,28 +72,6 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientDetailPageComponent {
-  readonly salesTable = new ListTable<Sale>(
-    (s) => `${s.number ?? ''} ${s.status === 'CANCELLED' ? 'annulée' : ''}`,
-    (s, col) => (col === 'date' ? s.createdAt : col === 'paid' ? s.paidAmount : col === 'due' ? (this.dueAmount(s) ?? 0) : undefined)
-  );
-
-  readonly paymentsTable = new ListTable<CustomerPayment>(
-    (p) => `${p.reference ?? ''} ${p.note ?? ''} ${this.methodLabel(p.paymentMethod)}`,
-    (p, col) => (col === 'date' ? (p.createdAt ?? p.paymentDateIso) : col === 'method' ? this.methodLabel(p.paymentMethod) : undefined)
-  );
-  @ViewChild('salesTablePaginator') set salesTablePaginator(p: MatPaginator | undefined) {
-    this.salesTable.attachPaginator(p);
-  }
-  @ViewChild('salesTableSort') set salesTableSort(s: MatSort | undefined) {
-    this.salesTable.attachSort(s);
-  }
-  @ViewChild('paymentsTablePaginator') set paymentsTablePaginator(p: MatPaginator | undefined) {
-    this.paymentsTable.attachPaginator(p);
-  }
-  @ViewChild('paymentsTableSort') set paymentsTableSort(s: MatSort | undefined) {
-    this.paymentsTable.attachSort(s);
-  }
-
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(CustomersApiService);
   private readonly auth = inject(AuthService);
@@ -101,6 +79,28 @@ export class ClientDetailPageComponent {
   private readonly snackbar = inject(MatSnackBar);
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  /** Rechargement des historiques : après un règlement, ou en passant à un autre client. */
+  private readonly reloadTables$ = merge(this.refresh$.pipe(skip(1)), this.route.paramMap.pipe(skip(1)));
+
+  private get customerId(): string {
+    return this.route.snapshot.paramMap.get('id') ?? '';
+  }
+
+  /** Ventes du client : recherche, tri et pagination traités par le backend (sale:read requis). */
+  readonly salesTable = new ServerTable<Sale>(
+    (query) =>
+      this.auth.hasPermission$('sale:read').pipe(
+        take(1),
+        switchMap((canRead) => (canRead ? this.api.salesHistoryPage(this.customerId, query) : of({ items: [] as Sale[], total: 0 })))
+      ),
+    { sortFields: { date: 'createdAt', number: 'number', total: 'total' }, reload$: this.reloadTables$ }
+  );
+
+  /** Règlements du client : recherche, tri et pagination traités par le backend. */
+  readonly paymentsTable = new ServerTable<CustomerPayment>((query) => this.api.paymentsPage(this.customerId, query), {
+    sortFields: { date: 'createdAt', amount: 'amount' },
+    reload$: this.reloadTables$
+  });
 
   readonly saleColumns = ['date', 'number', 'total', 'paid', 'due'] as const;
   readonly paymentColumns = ['date', 'reference', 'amount', 'method', 'note'] as const;
@@ -115,19 +115,13 @@ export class ClientDetailPageComponent {
       if (!id) {
         return of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: 'ID client manquant' });
       }
-      return forkJoin({
-        customer: this.api.getById(id),
-        // Sans sale:read, le backend refuse l'historique des ventes : on ne le demande pas.
-        sales: canReadSales ? this.api.salesHistory(id).pipe(map((r) => r.items)) : of([] as Sale[]),
-        payments: this.api.payments(id).pipe(map((r) => r.items))
-      }).pipe(
+      // Historiques paginés à part (tableaux serveur) ; sans sale:read, les ventes ne sont pas demandées.
+      return this.api.getById(id).pipe(
         map(
-          (r): DetailVm => ({
+          (customer): DetailVm => ({
             isLoading: false,
             errorMessage: null,
-            customer: r.customer,
-            sales: r.sales,
-            payments: r.payments,
+            customer,
             canReadSales,
             canPay
           })

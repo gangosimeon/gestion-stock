@@ -3,7 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { InventorySession } from '../models/inventory.model';
+import { InventorySession, InventoryStatus } from '../models/inventory.model';
+import { PageRequest, dayEndIso, dayStartIso, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -31,6 +32,17 @@ export interface CreateInventorySessionRequest {
 })
 export class InventoryApiService {
   private readonly http = inject(HttpClient);
+
+  /** Page de l'historique : recherche (n°), statut, période de création (jours inclus) et tri côté serveur. */
+  listSessionsPage(
+    page: PageRequest,
+    filters: { status?: InventoryStatus | null; from?: string | null; to?: string | null } = {}
+  ): Observable<PaginatedResult<InventorySession>> {
+    const params = pageParams(page, { status: filters.status, from: dayStartIso(filters.from), to: dayEndIso(filters.to) });
+    return this.http
+      .get<PaginatedResult<InventorySession>>(`${environment.apiUrl}/inventory/sessions`, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
 
   listSessions(): Observable<PaginatedResult<InventorySession>> {
     return this.http

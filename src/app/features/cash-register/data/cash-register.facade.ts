@@ -7,7 +7,8 @@ import {
   CreateCashOperationRequest,
   OpenCashRegisterRequest
 } from '../../../core/services/cash-register-api.service';
-import { CashOperation, CashRegisterSession } from '../../../core/models/cash-register.model';
+import { CashOperation, CashRegisterSession, CashRegisterSessionStatus } from '../../../core/models/cash-register.model';
+import { PageRequest } from '../../../core/services/page-params';
 import { PaginatedResult } from '../../../core/services/products-api.service';
 
 export interface CashRegisterVm {
@@ -85,6 +86,14 @@ export class CashRegisterFacade {
         error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
       })
     );
+  }
+
+  /** Page de l'historique : recherche, statut, période, tri et pagination traités par le backend. */
+  sessionsPage(
+    page: PageRequest,
+    filters: { status: CashRegisterSessionStatus | null; from: string | null; to: string | null }
+  ): Observable<PaginatedResult<CashRegisterSession>> {
+    return this.api.sessionsPage(page, filters);
   }
 
   sessions(): Observable<PaginatedResult<CashRegisterSession>> {

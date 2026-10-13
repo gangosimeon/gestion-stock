@@ -12,27 +12,59 @@
     </header>
 
     @if (vm$ | async; as vm) {
-      @if (vm.isLoading) {
+    @if (table.state$ | async; as s) {
+      @if (vm.isLoading || s.loading) {
         <mat-progress-bar mode="indeterminate" />
       }
 
       <div class="content">
-        <div class="toolbar filter-panel filter-bar">
-          <mat-form-field appearance="outline" class="search filter-bar__wide">
+        <div class="toolbar filter-panel filter-bar" [formGroup]="table.filters">
+          <mat-form-field appearance="outline" class="search filter-bar__wide" subscriptSizing="dynamic">
             <mat-label>Rechercher</mat-label>
-            <input matInput [formControl]="search" placeholder="Nom, téléphone, email" />
-            <button mat-icon-button matSuffix type="button" (click)="search.setValue('')" aria-label="Vider">
-              <mat-icon>close</mat-icon>
-            </button>
+            <input matInput [formControl]="table.search" placeholder="Code, nom, téléphone, email" />
+            @if (table.search.value) {
+              <button mat-icon-button matSuffix type="button" (click)="table.search.setValue('')" aria-label="Vider">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
           </mat-form-field>
 
-          @if (vm.errorMessage) {
-            <div class="error">{{ vm.errorMessage }}</div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="status">
+              @for (o of statusOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Type</mat-label>
+            <mat-select formControlName="type">
+              <mat-option [value]="null">Tous</mat-option>
+              @for (o of typeOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Tarif</mat-label>
+            <mat-select formControlName="priceCategory">
+              <mat-option [value]="null">Tous</mat-option>
+              @for (o of priceCategoryOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          @if (vm.errorMessage || s.error) {
+            <div class="error">{{ vm.errorMessage ?? s.error }}</div>
           }
         </div>
 
         <div class="data-table">
-          <table mat-table [dataSource]="dataSource" matSort>
+          <table mat-table [dataSource]="s.rows" matSort (matSortChange)="table.onSort($event)">
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Client</th>
               <td mat-cell *matCellDef="let c">
@@ -41,12 +73,12 @@
             </ng-container>
 
             <ng-container matColumnDef="phone">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Téléphone</th>
+              <th mat-header-cell *matHeaderCellDef>Téléphone</th>
               <td mat-cell *matCellDef="let c">{{ c.phone ?? '—' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="email">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Email</th>
+              <th mat-header-cell *matHeaderCellDef>Email</th>
               <td mat-cell *matCellDef="let c">{{ c.email ?? '—' }}</td>
             </ng-container>
 
@@ -56,7 +88,7 @@
             </ng-container>
 
             <ng-container matColumnDef="balance">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Dette</th>
+              <th mat-header-cell *matHeaderCellDef class="right">Dette</th>
               <td mat-cell *matCellDef="let c" class="right">{{ c.balance != null ? (c.balance | number: '1.0-0') : '—' }}</td>
             </ng-container>
 
@@ -80,13 +112,21 @@
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
 
-          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+          @if (!s.loading && s.rows.length === 0) {
             <div class="data-table-empty">Aucun résultat.</div>
           }
 
-          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
+          <mat-paginator
+            [length]="s.total"
+            [pageIndex]="table.pageIndex"
+            [pageSize]="table.pageSize"
+            [pageSizeOptions]="table.pageSizeOptions"
+            (page)="table.onPage($event)"
+            showFirstLastButtons
+          />
         </div>
       </div>
+    }
     }
   </mat-drawer-content>
 

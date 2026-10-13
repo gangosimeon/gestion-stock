@@ -12,29 +12,40 @@
     </header>
 
     @if (vm$ | async; as vm) {
-      @if (vm.isLoading) {
+    @if (table.state$ | async; as s) {
+      @if (vm.isLoading || s.loading) {
         <mat-progress-bar mode="indeterminate" />
       }
 
       <div class="content">
-        <div class="filters filter-panel filter-bar">
+        <div class="filters filter-panel filter-bar" [formGroup]="table.filters">
+          <mat-form-field appearance="outline" class="search filter-bar__wide" subscriptSizing="dynamic">
+            <mat-label>Rechercher</mat-label>
+            <input matInput [formControl]="table.search" placeholder="Produit, motif, pièce, utilisateur" />
+            @if (table.search.value) {
+              <button mat-icon-button matSuffix type="button" (click)="table.search.setValue('')" aria-label="Vider">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+
           <mat-form-field appearance="outline">
             <mat-label>Du</mat-label>
-            <input matInput [matDatepicker]="dpFrom" [formControl]="from" (click)="dpFrom.open()" />
+            <input matInput [matDatepicker]="dpFrom" formControlName="from" (click)="dpFrom.open()" />
             <mat-datepicker-toggle matSuffix [for]="dpFrom"></mat-datepicker-toggle>
             <mat-datepicker #dpFrom></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Au</mat-label>
-            <input matInput [matDatepicker]="dpTo" [formControl]="to" (click)="dpTo.open()" />
+            <input matInput [matDatepicker]="dpTo" formControlName="to" (click)="dpTo.open()" />
             <mat-datepicker-toggle matSuffix [for]="dpTo"></mat-datepicker-toggle>
             <mat-datepicker #dpTo></mat-datepicker>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="product filter-bar__wide">
+          <mat-form-field appearance="outline" class="product" subscriptSizing="dynamic">
             <mat-label>Produit</mat-label>
-            <mat-select [formControl]="productId">
+            <mat-select formControlName="productId">
               <app-select-search />
               <mat-option [value]="null">Tous</mat-option>
               @for (p of vm.products; track p.id) {
@@ -43,22 +54,30 @@
             </mat-select>
           </mat-form-field>
 
-          <app-table-search [control]="search" placeholder="Produit, type, utilisateur, motif" />
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Origine</mat-label>
+            <mat-select formControlName="types" multiple>
+              <app-select-search />
+              @for (o of typeOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-          @if (vm.errorMessage) {
-            <div class="error">{{ vm.errorMessage }}</div>
+          @if (vm.errorMessage || s.error) {
+            <div class="error">{{ vm.errorMessage ?? s.error }}</div>
           }
         </div>
 
         <div class="data-table">
-          <table mat-table [dataSource]="dataSource" matSort>
+          <table mat-table [dataSource]="s.rows" matSort (matSortChange)="table.onSort($event)">
             <ng-container matColumnDef="date">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
               <td mat-cell *matCellDef="let m">{{ m.createdAt | date: 'short' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="product">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Produit</th>
+              <th mat-header-cell *matHeaderCellDef>Produit</th>
               <td mat-cell *matCellDef="let m">
                 <div class="productCell">
                   <div class="name">{{ m.productName ?? m.productId }}</div>
@@ -68,7 +87,7 @@
             </ng-container>
 
             <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+              <th mat-header-cell *matHeaderCellDef>Type</th>
               <td mat-cell *matCellDef="let m">
                 <mat-chip [color]="chipColor(m)" selected>{{ typeLabel(m) }}</mat-chip>
               </td>
@@ -101,13 +120,21 @@
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
 
-          @if (!vm.isLoading && dataSource.filteredData.length === 0) {
+          @if (!s.loading && s.rows.length === 0) {
             <div class="data-table-empty">Aucun résultat.</div>
           }
 
-          <mat-paginator [pageSizeOptions]="[5, 10, 25]" [pageSize]="10" showFirstLastButtons />
+          <mat-paginator
+            [length]="s.total"
+            [pageIndex]="table.pageIndex"
+            [pageSize]="table.pageSize"
+            [pageSizeOptions]="table.pageSizeOptions"
+            (page)="table.onPage($event)"
+            showFirstLastButtons
+          />
         </div>
       </div>
+    }
     }
   </mat-drawer-content>
 

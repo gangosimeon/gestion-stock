@@ -1,20 +1,23 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, ViewChild, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { Subject, debounceTime, distinctUntilChanged, take, takeUntil } from 'rxjs';
+import { Subject, take, takeUntil } from 'rxjs';
 
-import { PurchaseOrder } from '../../../core/models/purchase-order.model';
+import { PurchaseOrder, PurchaseOrderDocumentStatus } from '../../../core/models/purchase-order.model';
+import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { ServerTable } from '../../../shared/table/server-table';
 import { PurchasesFacade } from '../data/purchases.facade';
 import { purchaseDocumentStatusLabels, purchaseStatusLabels, PurchasesVm } from '../data/purchases-vm.model';
 import { ConfirmReceiveDialogComponent } from '../ui/confirm-receive-dialog.component';
@@ -46,6 +49,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSnackBarModule,
     MatDialogModule,
     MatSidenavModule,
+    MatSelectModule,
+    SelectSearchComponent,
     PurchaseDrawerComponent,
     // PaySupplierDialogComponent
   ],
@@ -60,20 +65,27 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  // Pagination et tri vivent dans le bloc @if (vm$ | async) : ils n'existent qu'après la première
-  // réponse du backend. On les rattache au tableau à leur apparition (ngAfterViewInit est trop tôt).
-  @ViewChild(MatPaginator) set paginator(p: MatPaginator | undefined) {
-    if (p && this.dataSource.paginator !== p) this.dataSource.paginator = p;
-  }
-  @ViewChild(MatSort) set sort(s: MatSort | undefined) {
-    if (s && this.dataSource.sort !== s) this.dataSource.sort = s;
-  }
   @ViewChild('drawer') drawer!: MatSidenav;
 
-  readonly search = new FormControl<string>('', { nonNullable: true });
-
   readonly displayedColumns = ['number', 'supplier', 'status', 'total', 'remaining', 'createdAt', 'actions'] as const;
-  readonly dataSource = new MatTableDataSource<PurchaseOrder>([]);
+
+  readonly statusOptions = Object.entries(purchaseDocumentStatusLabels).map(([value, label]) => ({
+    value: value as PurchaseOrderDocumentStatus,
+    label
+  }));
+
+  /** Recherche, filtres, tri et pagination traités par le backend. */
+  readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
+    filters: new FormGroup({
+      status: new FormControl<PurchaseOrderDocumentStatus | null>(null),
+      supplierId: new FormControl<string | null>(null)
+    }),
+    sortFields: { number: 'number', supplier: 'supplierName', status: 'status', total: 'totalAmount', createdAt: 'createdAt' },
+    reload$: this.facade.refresh$
+  });
+
+  /** Commande ouverte dans le panneau (ligne de la page affichée). */
+  private selected: PurchaseOrder[] = [];
 
   readonly vm$ = this.facade.vm$;
   readonly drawer$ = this.facade.drawer$;
@@ -81,10 +93,8 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
   vmSnapshot: PurchasesVm = {
     isLoading: false,
     errorMessage: null,
-    orders: [],
     suppliers: [],
     products: [],
-    filter: '',
     canCreate: false,
     canReceive: false,
     canPay: false
@@ -108,25 +118,11 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     this.facade.refresh();
-
-    this.search.valueChanges
-      .pipe(debounceTime(200), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe((v) => {
-        this.dataSource.filter = v.trim().toLowerCase();
-        if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
-      });
   }
 
   ngAfterViewInit(): void {
-
-    this.dataSource.filterPredicate = (o: PurchaseOrder, filter: string) => {
-      const v = `${o.number ?? ''} ${o.supplierName} ${this.statusLabelOf(o)} ${o.totalAmount}`.toLowerCase();
-      return v.includes(filter);
-    };
-
     this.vm$.pipe(takeUntil(this.destroy$)).subscribe((vm) => {
       this.vmSnapshot = vm;
-      this.dataSource.data = vm.orders;
     });
 
     this.drawer$.pipe(takeUntil(this.destroy$)).subscribe((d) => {
@@ -134,7 +130,7 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
         this.drawerCtx = {
           mode: d.mode,
           orderId: d.orderId,
-          orders: this.vmSnapshot.orders,
+          orders: this.selected,
           suppliers: this.vmSnapshot.suppliers,
           products: this.vmSnapshot.products,
           canReceive: this.vmSnapshot.canReceive,
@@ -157,6 +153,7 @@ export class PurchasesShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   openDetail(o: PurchaseOrder): void {
+    this.selected = [o];
     this.facade.openDetail(o.id);
   }
 
