@@ -4,81 +4,88 @@
   }
 
   <div class="page">
-    <mat-card class="card">
-      <mat-card-header>
-        <mat-card-title>Dépenses</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <form class="filters" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Du</mat-label>
-            <input matInput type="date" formControlName="dateFrom" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Au</mat-label>
-            <input matInput type="date" formControlName="dateTo" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Catégorie</mat-label>
-            <mat-select formControlName="category">
-              <app-select-search />
-              <mat-option value="">Toutes</mat-option>
-              @for (c of categories; track c) {
-                <mat-option [value]="c">{{ categoryLabels[c] }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Statut</mat-label>
-            <mat-select formControlName="status">
-              <app-select-search />
-              <mat-option value="">Tous</mat-option>
-              @for (s of statuses; track s) {
-                <mat-option [value]="s">{{ statusLabels[s] }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Recherche</mat-label>
-            <input matInput formControlName="search" placeholder="Libellé, référence, note..." />
-          </mat-form-field>
-          <div class="filter-actions">
-            <button mat-flat-button color="primary" type="submit"><mat-icon>filter_list</mat-icon> Filtrer</button>
-            <button mat-stroked-button type="button" (click)="resetFilters()">Mois en cours</button>
-          </div>
-        </form>
+    <div class="page-header">
+      <h1 class="page-header__title">Dépenses</h1>
+    </div>
 
-        <!-- Totaux calculés par le backend : dépenses payées uniquement. -->
-        <div class="kpis">
-          <div class="kpi">
-            <div class="label">Total payé</div>
-            <div class="value">{{ (vm.summary?.total ?? 0) | number: '1.0-0' }}</div>
-            <div class="hint">{{ vm.summary?.count ?? 0 }} dépense(s)</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Dont espèces (caisse)</div>
-            <div class="value">{{ (vm.summary?.cashTotal ?? 0) | number: '1.0-0' }}</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Annulées</div>
-            <div class="value">{{ vm.summary?.cancelledCount ?? 0 }}</div>
-            <div class="hint">hors totaux</div>
-          </div>
-        </div>
+    <form class="filters filter-panel filter-bar" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Du</mat-label>
+        <input matInput appDatePicker #dateFromPicker="datePicker" type="date" formControlName="dateFrom" />
+        <button mat-icon-button matSuffix type="button" (click)="dateFromPicker.open()" aria-label="Choisir dans le calendrier">
+          <mat-icon>calendar_month</mat-icon>
+        </button>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Au</mat-label>
+        <input matInput appDatePicker #dateToPicker="datePicker" type="date" formControlName="dateTo" />
+        <button mat-icon-button matSuffix type="button" (click)="dateToPicker.open()" aria-label="Choisir dans le calendrier">
+          <mat-icon>calendar_month</mat-icon>
+        </button>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Catégorie</mat-label>
+        <mat-select formControlName="category">
+          <app-select-search />
+          <mat-option value="">Toutes</mat-option>
+          @for (c of categories; track c) {
+            <mat-option [value]="c">{{ categoryLabels[c] }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Statut</mat-label>
+        <mat-select formControlName="status">
+          <app-select-search />
+          <mat-option value="">Tous</mat-option>
+          @for (s of statuses; track s) {
+            <mat-option [value]="s">{{ statusLabels[s] }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-bar__wide">
+        <mat-label>Recherche</mat-label>
+        <input matInput formControlName="search" placeholder="Libellé, référence, note..." />
+      </mat-form-field>
+      <div class="filter-actions filter-bar__actions">
+        <button mat-flat-button color="primary" type="submit"><mat-icon>filter_list</mat-icon> Filtrer</button>
+        <button mat-stroked-button type="button" (click)="resetFilters()">Mois en cours</button>
+      </div>
+    </form>
 
-        @if (vm.summary?.byCategory?.length) {
-          <div class="by-category">
-            @for (c of vm.summary!.byCategory; track c.category) {
-              <span class="badge badge--neutral">{{ categoryLabels[c.category] }} : {{ c.total | number: '1.0-0' }}</span>
-            }
-          </div>
+    <!-- Totaux calculés par le backend : dépenses payées uniquement. -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__icon kpi-card__icon--blue"><mat-icon>payments</mat-icon></div>
+        <div class="kpi-card__label">Total payé</div>
+        <div class="kpi-card__value">{{ (vm.summary?.total ?? 0) | number: '1.0-0' }}</div>
+        <div class="kpi-card__hint">{{ vm.summary?.count ?? 0 }} dépense(s)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__icon kpi-card__icon--green"><mat-icon>account_balance_wallet</mat-icon></div>
+        <div class="kpi-card__label">Dont espèces (caisse)</div>
+        <div class="kpi-card__value">{{ (vm.summary?.cashTotal ?? 0) | number: '1.0-0' }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__icon kpi-card__icon--red"><mat-icon>block</mat-icon></div>
+        <div class="kpi-card__label">Annulées</div>
+        <div class="kpi-card__value">{{ vm.summary?.cancelledCount ?? 0 }}</div>
+        <div class="kpi-card__hint">hors totaux</div>
+      </div>
+    </div>
+
+
+    @if (vm.summary?.byCategory?.length) {
+      <div class="by-category">
+        @for (c of vm.summary!.byCategory; track c.category) {
+          <span class="badge badge--neutral">{{ categoryLabels[c.category] }} : {{ c.total | number: '1.0-0' }}</span>
         }
+      </div>
+    }
 
-        @if (vm.errorMessage) {
-          <div class="error">{{ vm.errorMessage }}</div>
-        }
-      </mat-card-content>
-    </mat-card>
+    @if (vm.errorMessage) {
+      <div class="error">{{ vm.errorMessage }}</div>
+    }
 
     @if (vm.canCreate) {
       <mat-card class="card">
@@ -89,7 +96,10 @@
           <form class="form" [formGroup]="form" (ngSubmit)="submit()">
             <mat-form-field appearance="outline">
               <mat-label>Date</mat-label>
-              <input matInput type="date" formControlName="expenseDateIso" [max]="maxDate" />
+              <input matInput appDatePicker #expenseDateIsoPicker="datePicker" type="date" formControlName="expenseDateIso" [max]="maxDate" />
+              <button mat-icon-button matSuffix type="button" (click)="expenseDateIsoPicker.open()" aria-label="Choisir dans le calendrier">
+                <mat-icon>calendar_month</mat-icon>
+              </button>
             </mat-form-field>
 
             <mat-form-field appearance="outline">

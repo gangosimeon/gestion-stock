@@ -24,21 +24,14 @@
   flex: 1;
 }
 
+// Liste plein écran : même disposition sur toutes les listes (filtres, puis tableau, écart de 16 px).
 .content {
   flex: 1;
   padding: 16px;
-  overflow-y: auto;
-}
-
-.filters {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.search {
-  max-width: 520px;
+  align-content: start;
+  gap: 16px;
+  overflow-y: auto;
 }
 
 .error {

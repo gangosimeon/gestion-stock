@@ -18,16 +18,15 @@
   flex: 1;
 }
 
+// Liste plein écran : même disposition sur toutes les listes (filtres, puis tableau, écart de 16 px).
 .content {
   flex: 1;
-  padding: 16px 24px;
+  padding: 16px;
   display: grid;
-  gap: var(--spacing-5);
   align-content: start;
+  gap: 16px;
   overflow-y: auto;
   animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
-
-  @media (max-width: 960px) { padding: 12px 16px; }
 }
 
 @keyframes fadeIn {
@@ -36,27 +35,6 @@
 }
 
 // ─── FILTRES ─────────────────────────────────────────────────────
-
-.filters-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-4) var(--spacing-5);
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--spacing-3);
-  align-items: end;
-}
-
-.filters-actions {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
-  padding-top: 4px;
-}
 
 // ─── ERREUR ──────────────────────────────────────────────────────
 
@@ -105,12 +83,6 @@
 }
 
 // ─── RESPONSIVE ──────────────────────────────────────────────────
-
-@media (max-width: 768px) {
-  .filters-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 .sub {
   font-size: 12px;

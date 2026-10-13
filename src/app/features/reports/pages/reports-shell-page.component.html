@@ -23,11 +23,11 @@
       <mat-progress-bar mode="indeterminate" />
     }
 
-    <div class="filters">
+    <div class="filters filter-panel filter-bar">
       @if (vm.filters.tab === 'DAILY') {
         <mat-form-field appearance="outline">
           <mat-label>Date</mat-label>
-          <input matInput [matDatepicker]="dp" [formControl]="dateCtrl" />
+          <input matInput [matDatepicker]="dp" [formControl]="dateCtrl" (click)="dp.open()" />
           <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
           <mat-datepicker #dp></mat-datepicker>
         </mat-form-field>
@@ -35,8 +35,11 @@
 
       @if (vm.filters.tab === 'MONTHLY') {
         <mat-form-field appearance="outline">
-          <mat-label>Mois (YYYY-MM)</mat-label>
-          <input matInput [formControl]="monthCtrl" placeholder="2026-04" />
+          <mat-label>Mois</mat-label>
+          <input matInput type="month" [formControl]="monthCtrl" appDatePicker #monthPicker="datePicker" />
+          <button mat-icon-button matSuffix type="button" (click)="monthPicker.open()" aria-label="Choisir dans le calendrier">
+            <mat-icon>calendar_month</mat-icon>
+          </button>
         </mat-form-field>
       }
 
@@ -57,27 +60,22 @@
       }
     </div>
 
-    <div class="kpis">
-      <mat-card class="kpi">
-        <mat-card-content>
-          <div class="kpi__label">Total ventes</div>
-          <div class="kpi__value">{{ vm.kpis.totalSales | number: '1.0-0' }}</div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="kpi">
-        <mat-card-content>
-          <div class="kpi__label">Bénéfice</div>
-          <div class="kpi__value">{{ vm.kpis.profit | number: '1.0-0' }}</div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="kpi">
-        <mat-card-content>
-          <div class="kpi__label">Transactions</div>
-          <div class="kpi__value">{{ vm.kpis.transactionsCount | number: '1.0-0' }}</div>
-        </mat-card-content>
-      </mat-card>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__icon kpi-card__icon--blue"><mat-icon>point_of_sale</mat-icon></div>
+        <div class="kpi-card__label">Total ventes</div>
+        <div class="kpi-card__value">{{ vm.kpis.totalSales | number: '1.0-0' }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__icon kpi-card__icon--green"><mat-icon>trending_up</mat-icon></div>
+        <div class="kpi-card__label">Bénéfice</div>
+        <div class="kpi-card__value">{{ vm.kpis.profit | number: '1.0-0' }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__icon kpi-card__icon--purple"><mat-icon>receipt_long</mat-icon></div>
+        <div class="kpi-card__label">Transactions</div>
+        <div class="kpi-card__value">{{ vm.kpis.transactionsCount | number: '1.0-0' }}</div>
+      </div>
     </div>
 
     <div class="grid">

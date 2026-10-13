@@ -37,29 +37,29 @@
         </mat-card-content>
       </mat-card>
     } @else {
-      <mat-card class="card">
-        <mat-card-header>
-          <mat-card-title>Caisse ouverte</mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="kpis">
-          <div class="kpi">
-            <div class="label">Ouverte le</div>
-            <div class="value">{{ vm.current.openedAt | date: 'dd/MM/yyyy HH:mm' }}</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Fond</div>
-            <div class="value">{{ vm.current.openingBalance | number: '1.0-0' }}</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Ventes cash</div>
-            <div class="value">{{ vm.current.cashSalesTotal | number: '1.0-0' }}</div>
-          </div>
-          <div class="kpi">
-            <div class="label">Attendu</div>
-            <div class="value">{{ vm.current.expectedCash | number: '1.0-0' }}</div>
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <h2 class="section-title">Caisse ouverte</h2>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-card__icon kpi-card__icon--blue"><mat-icon>schedule</mat-icon></div>
+          <div class="kpi-card__label">Ouverte le</div>
+          <div class="kpi-card__value">{{ vm.current.openedAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__icon kpi-card__icon--purple"><mat-icon>savings</mat-icon></div>
+          <div class="kpi-card__label">Fond</div>
+          <div class="kpi-card__value">{{ vm.current.openingBalance | number: '1.0-0' }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__icon kpi-card__icon--green"><mat-icon>point_of_sale</mat-icon></div>
+          <div class="kpi-card__label">Ventes cash</div>
+          <div class="kpi-card__value">{{ vm.current.cashSalesTotal | number: '1.0-0' }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__icon kpi-card__icon--blue"><mat-icon>account_balance_wallet</mat-icon></div>
+          <div class="kpi-card__label">Attendu</div>
+          <div class="kpi-card__value">{{ vm.current.expectedCash | number: '1.0-0' }}</div>
+        </div>
+      </div>
     }
   </div>
 }

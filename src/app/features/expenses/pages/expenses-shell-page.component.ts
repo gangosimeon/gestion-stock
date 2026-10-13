@@ -29,6 +29,7 @@ import { CreateExpenseRequest } from '../../../core/services/expenses-api.servic
 import { ExpensesFacade, currentMonthFilter } from '../data/expenses.facade';
 import { CancelExpenseDialogComponent, CancelExpenseDialogData } from '../ui/cancel-expense-dialog.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
 
 function today(): string {
   const d = new Date();
@@ -40,6 +41,7 @@ function today(): string {
   selector: 'app-expenses-shell-page',
   standalone: true,
   imports: [
+    DatePickerDirective,
     SelectSearchComponent,
     CommonModule,
     AsyncPipe,

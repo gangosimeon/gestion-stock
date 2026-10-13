@@ -10,29 +10,6 @@
   border-radius: 12px;
 }
 
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.kpi {
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  max-width: 320px;
-}
-
-.kpi .label {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.kpi .value {
-  font-size: 18px;
-  font-weight: 900;
-}
-
 .error {
   margin-top: 8px;
   color: var(--color-danger);
@@ -70,20 +47,6 @@
   }
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.filter-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.kpi .hint,
 .sub {
   font-size: 12px;
   opacity: 0.65;
@@ -110,8 +73,3 @@ tr.cancelled td {
   opacity: 0.7;
 }
 
-@media (max-width: 1100px) {
-  .filters {
-    grid-template-columns: 1fr 1fr;
-  }
-}

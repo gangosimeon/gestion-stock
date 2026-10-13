@@ -17,22 +17,22 @@
       }
 
       <div class="content">
-        <div class="filters">
+        <div class="filters filter-panel filter-bar">
           <mat-form-field appearance="outline">
             <mat-label>Du</mat-label>
-            <input matInput [matDatepicker]="dpFrom" [formControl]="from" />
+            <input matInput [matDatepicker]="dpFrom" [formControl]="from" (click)="dpFrom.open()" />
             <mat-datepicker-toggle matSuffix [for]="dpFrom"></mat-datepicker-toggle>
             <mat-datepicker #dpFrom></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Au</mat-label>
-            <input matInput [matDatepicker]="dpTo" [formControl]="to" />
+            <input matInput [matDatepicker]="dpTo" [formControl]="to" (click)="dpTo.open()" />
             <mat-datepicker-toggle matSuffix [for]="dpTo"></mat-datepicker-toggle>
             <mat-datepicker #dpTo></mat-datepicker>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="product">
+          <mat-form-field appearance="outline" class="product filter-bar__wide">
             <mat-label>Produit</mat-label>
             <mat-select [formControl]="productId">
               <app-select-search />

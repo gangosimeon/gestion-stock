@@ -54,6 +54,8 @@ export class UserDrawerComponent {
   @Output() readonly saved = new EventEmitter<void>();
 
   isSubmitting = false;
+  /** Mot de passe affiché en clair (bouton « œil ») ; masqué à chaque ouverture du panneau. */
+  showPassword = false;
 
   readonly roleOptions: Role[] = ['ADMIN', 'CAISSIER', 'GESTIONNAIRE'];
 
@@ -69,6 +71,7 @@ export class UserDrawerComponent {
   });
 
   ngOnChanges(): void {
+    this.showPassword = false;
     const u = this.ctx.user;
     if (this.ctx.mode === 'EDIT' && u) {
       this.form.patchValue(

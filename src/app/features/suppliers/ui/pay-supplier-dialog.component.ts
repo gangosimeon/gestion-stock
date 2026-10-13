@@ -8,6 +8,8 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { SupplierPaymentMethod } from '../../../core/models/supplier-payment.model';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
+import { MatIconModule } from '@angular/material/icon';
 
 export type PaySupplierDialogData = {
   title: string;
@@ -27,6 +29,8 @@ export type PaySupplierDialogResult = {
   selector: 'app-pay-supplier-dialog',
   standalone: true,
   imports: [
+    MatIconModule,
+    DatePickerDirective,
     SelectSearchComponent,MatDialogModule, MatButtonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   templateUrl: './pay-supplier-dialog.component.html'
 })

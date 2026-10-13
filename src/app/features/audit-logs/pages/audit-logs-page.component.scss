@@ -15,27 +15,6 @@
 
 // ─── FILTRES ─────────────────────────────────────────────────────
 
-.filters-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-4) var(--spacing-5);
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--spacing-3);
-  align-items: end;
-}
-
-.filters-actions {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
-  padding-top: 4px;
-}
-
 // ─── ERREUR ──────────────────────────────────────────────────────
 
 .error-banner {
@@ -98,10 +77,4 @@
 }
 
 // ─── RESPONSIVE ──────────────────────────────────────────────────
-
-@media (max-width: 768px) {
-  .filters-grid {
-    grid-template-columns: 1fr;
-  }
-}
 

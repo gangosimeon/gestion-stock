@@ -26,9 +26,9 @@
       }
 
       <!-- FILTRES -->
-      <div class="filters-card">
-        <form [formGroup]="filtersForm" class="filters-grid" (ngSubmit)="applyFilters()">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <div class="filters-card filter-panel">
+        <form [formGroup]="filtersForm" class="filters-grid filter-bar" (ngSubmit)="applyFilters()">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-bar__wide">
             <mat-label>Recherche</mat-label>
             <input matInput formControlName="search" placeholder="Nom ou téléphone...">
             <mat-icon matSuffix>search</mat-icon>
@@ -47,15 +47,21 @@
 
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Du</mat-label>
-            <input matInput type="date" formControlName="dateFrom">
+            <input matInput appDatePicker #dateFromPicker="datePicker" type="date" formControlName="dateFrom">
+            <button mat-icon-button matSuffix type="button" (click)="dateFromPicker.open()" aria-label="Choisir dans le calendrier">
+              <mat-icon>calendar_month</mat-icon>
+            </button>
           </mat-form-field>
 
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Au</mat-label>
-            <input matInput type="date" formControlName="dateTo">
+            <input matInput appDatePicker #dateToPicker="datePicker" type="date" formControlName="dateTo">
+            <button mat-icon-button matSuffix type="button" (click)="dateToPicker.open()" aria-label="Choisir dans le calendrier">
+              <mat-icon>calendar_month</mat-icon>
+            </button>
           </mat-form-field>
 
-          <div class="filters-actions">
+          <div class="filters-actions filter-bar__actions">
             <button mat-flat-button color="primary" type="submit">
               <mat-icon>filter_list</mat-icon> Filtrer
             </button>

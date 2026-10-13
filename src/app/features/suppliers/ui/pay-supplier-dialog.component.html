@@ -24,7 +24,10 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Date paiement</mat-label>
-      <input matInput type="date" formControlName="paymentDateIso" [max]="today" />
+      <input matInput appDatePicker #paymentDateIsoPicker="datePicker" type="date" formControlName="paymentDateIso" [max]="today" />
+      <button mat-icon-button matSuffix type="button" (click)="paymentDateIsoPicker.open()" aria-label="Choisir dans le calendrier">
+        <mat-icon>calendar_month</mat-icon>
+      </button>
     </mat-form-field>
 
     <mat-form-field appearance="outline">

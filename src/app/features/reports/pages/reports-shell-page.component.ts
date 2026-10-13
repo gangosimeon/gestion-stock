@@ -23,11 +23,13 @@ import { TopProductRow } from '../data/reports-vm.model';
 import { ListTable } from '../../../shared/table/list-table';
 import { TableSearchComponent } from '../../../shared/table/table-search.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
 
 @Component({
   selector: 'app-reports-shell-page',
   standalone: true,
   imports: [
+    DatePickerDirective,
     SelectSearchComponent,
     MatPaginatorModule,
     MatSortModule,

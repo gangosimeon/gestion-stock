@@ -32,11 +32,13 @@ import {
 import { AuditLogsApiService } from '../../../core/services/audit-logs-api.service';
 import { AuditLogDetailsDialogComponent } from '../ui/audit-log-details-dialog.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
 
 @Component({
   selector: 'app-audit-logs-page',
   standalone: true,
   imports: [
+    DatePickerDirective,
     SelectSearchComponent,
     CommonModule,
     DatePipe,

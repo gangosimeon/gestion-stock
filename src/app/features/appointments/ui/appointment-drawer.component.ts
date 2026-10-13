@@ -13,6 +13,7 @@ import { Appointment, AppointmentRequest } from '../../../core/models/appointmen
 import { Customer } from '../../../core/models/customer.model';
 import { AppointmentsApiService } from '../../../core/services/appointments-api.service';
 import { CustomersApiService } from '../../../core/services/customers-api.service';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
 
 export type AppointmentDrawerContext = {
   mode: 'create' | 'edit';
@@ -30,6 +31,7 @@ function localInput(value: string | undefined): string {
   selector: 'app-appointment-drawer',
   standalone: true,
   imports: [
+    DatePickerDirective,
     CommonModule,
     ReactiveFormsModule,
     MatAutocompleteModule,

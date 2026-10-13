@@ -324,6 +324,22 @@ a {
     border-bottom: 1px solid var(--color-border-light);
     padding: 0 16px;
   }
+
+  // Colonnes numériques (classe « right ») : le titre de l'en-tête triable s'aligne sur les chiffres,
+  // la flèche de tri reste à sa droite et se loge dans la marge intérieure de la cellule
+  // (flèche 12 px + espacement 4 px = marge de 16 px).
+  .mat-mdc-header-cell.right {
+    text-align: right;
+
+    .mat-sort-header-container {
+      justify-content: flex-end;
+      margin-right: -16px;
+    }
+
+    .mat-sort-header-arrow {
+      margin: 0 0 0 4px;
+    }
+  }
 }
 
 // Champs : fond blanc, bordure grise, focus bleu (couleur primaire du thème, donc sans forçage).
@@ -547,11 +563,86 @@ a {
   animation: fadeIn var(--duration-slow) var(--ease-out) both;
 }
 
+// ─── Champs de date (directive appDatePicker) ───────────────────────────────
+// Clic dans le champ = calendrier ; le bouton calendrier remplace la petite icône native.
+.date-picker-input {
+  cursor: pointer;
+
+  &::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+}
+
+// ─── Filtres (modèle commun) ─────────────────────────────────────────────
+// filter-panel : carte blanche autour des filtres (omise quand ils sont déjà dans une carte).
+// filter-bar   : rangée de champs à largeur régulière, sans espace réservé sous les champs (même
+//                hauteur, alignement net), boutons poussés à droite, retour à la ligne si besoin.
+.filter-panel,
+.data-table-toolbar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  padding: 16px;
+}
+
+.filter-bar,
 .data-table-toolbar {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  align-items: center;
+  gap: 12px;
+
+  .mat-mdc-form-field {
+    flex: 1 1 180px;
+    min-width: 160px;
+    max-width: 260px;
+    width: auto;
+  }
+
+  .mat-mdc-form-field.filter-bar__wide,
+  .mat-mdc-form-field.data-table-search {
+    flex: 2 1 260px;
+    max-width: 420px;
+  }
+
+  .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  // Message d'erreur sur sa propre ligne.
+  .error {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .filter-bar,
+  .data-table-toolbar {
+    .mat-mdc-form-field,
+    .mat-mdc-form-field.filter-bar__wide,
+    .mat-mdc-form-field.data-table-search {
+      flex-basis: 100%;
+      max-width: none;
+    }
+
+    &__actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+}
+
+// Recherche au-dessus d'un tableau : carte de filtres (règles ci-dessus), espacée du tableau.
+.data-table-toolbar {
   margin-bottom: 12px;
 }
 
@@ -566,6 +657,8 @@ a {
   color: var(--color-text-secondary);
 }
 
+// ─── Cartes de statistiques (modèle commun à toutes les pages) ──────────────
+// Icône à gauche ; libellé, valeur et précision éventuelle à droite.
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
@@ -577,11 +670,14 @@ a {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-5);
+  padding: 20px;
   box-shadow: var(--shadow-xs);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: center;
+  align-content: start;
   transition: box-shadow var(--duration-normal) var(--ease-in-out),
               transform var(--duration-normal) var(--ease-out);
   animation: fadeIn var(--duration-slow) var(--ease-out) both;
@@ -591,15 +687,26 @@ a {
     transform: translateY(-1px);
   }
 
+  > :not(.kpi-card__icon) {
+    grid-column: 2;
+  }
+
   &__icon {
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-lg);
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    align-self: start;
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
-    margin-bottom: 4px;
+
+    mat-icon {
+      font-size: 26px;
+      width: 26px;
+      height: 26px;
+    }
 
     &--blue    { background: var(--color-primary-soft); color: var(--color-primary); }
     &--green   { background: var(--color-success-soft); color: var(--color-success); }
@@ -610,23 +717,26 @@ a {
   }
 
   &__label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--color-text-secondary);
-    letter-spacing: 0.02em;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
   }
 
   &__value {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--color-text);
-    letter-spacing: -0.03em;
-    line-height: 1.1;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 2px 0;
+    overflow-wrap: anywhere;
+
+    &--strong { color: var(--color-primary); }
   }
 
   &__hint {
     font-size: 12px;
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
   }
 
   &__trend {
@@ -639,6 +749,14 @@ a {
     &--up { color: var(--color-success); }
     &--down { color: var(--color-danger); }
   }
+}
+
+// Titre d'une section de page (au-dessus d'une grille de cartes).
+.section-title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 // ═══════════════════════════════════════════════════════════════════

@@ -142,7 +142,10 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Date</mat-label>
-              <input matInput type="date" formControlName="invoiceDateIso" [max]="today" />
+              <input matInput appDatePicker #invoiceDateIsoPicker="datePicker" type="date" formControlName="invoiceDateIso" [max]="today" />
+              <button mat-icon-button matSuffix type="button" (click)="invoiceDateIsoPicker.open()" aria-label="Choisir dans le calendrier">
+                <mat-icon>calendar_month</mat-icon>
+              </button>
             </mat-form-field>
 
             <button mat-flat-button color="primary" type="button" (click)="createInvoice()" [disabled]="isInvoicing">

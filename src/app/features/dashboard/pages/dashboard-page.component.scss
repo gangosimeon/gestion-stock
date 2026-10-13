@@ -23,58 +23,6 @@
   min-width: 0;
 }
 
-// Cartes statistiques : icône à gauche, libellé et valeur à droite (mêmes éléments, disposition seule).
-.kpi-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-}
-
-.kpi-card {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  column-gap: 14px;
-  row-gap: 2px;
-  align-items: center;
-  align-content: start;
-  padding: 20px;
-
-  > :not(.kpi-card__icon) {
-    grid-column: 2;
-  }
-}
-
-.kpi-card__icon {
-  grid-column: 1;
-  grid-row: 1 / span 4;
-  align-self: start;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  margin: 0;
-
-  mat-icon {
-    font-size: 26px;
-    width: 26px;
-    height: 26px;
-  }
-}
-
-.kpi-card__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  letter-spacing: 0;
-}
-
-.kpi-card__value {
-  font-size: 26px;
-  margin: 2px 0;
-}
-
-.kpi-card__hint {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
 .chart-card {
   padding: 6px 4px 8px;
   min-width: 0;

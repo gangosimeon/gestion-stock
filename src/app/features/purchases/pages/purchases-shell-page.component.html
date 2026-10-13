@@ -17,8 +17,8 @@
       }
 
       <div class="content">
-        <div class="toolbar">
-          <mat-form-field appearance="outline" class="search">
+        <div class="toolbar filter-panel filter-bar">
+          <mat-form-field appearance="outline" class="search filter-bar__wide">
             <mat-label>Rechercher</mat-label>
             <input matInput [formControl]="search" placeholder="Fournisseur, statut, montant" />
             <button mat-icon-button matSuffix type="button" (click)="search.setValue('')" aria-label="Vider">

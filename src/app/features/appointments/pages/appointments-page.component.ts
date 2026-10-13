@@ -27,6 +27,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { AppointmentDrawerComponent, AppointmentDrawerContext } from '../ui/appointment-drawer.component';
 import { CancelAppointmentDialogComponent, CancelAppointmentDialogData } from '../ui/cancel-appointment-dialog.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
 
 function isoDate(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -37,6 +38,7 @@ function isoDate(d: Date): string {
   selector: 'app-appointments-page',
   standalone: true,
   imports: [
+    DatePickerDirective,
     SelectSearchComponent,
     CommonModule,
     DatePipe,

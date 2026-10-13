@@ -56,7 +56,10 @@
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>Date et heure</mat-label>
       <mat-icon matPrefix>schedule</mat-icon>
-      <input matInput type="datetime-local" formControlName="dateTime" [min]="minDateTime" />
+      <input matInput appDatePicker #dateTimePicker="datePicker" type="datetime-local" formControlName="dateTime" [min]="minDateTime" />
+      <button mat-icon-button matSuffix type="button" (click)="dateTimePicker.open()" aria-label="Choisir dans le calendrier">
+        <mat-icon>calendar_month</mat-icon>
+      </button>
       <mat-hint>Heure locale du dépôt ; un seul rendez-vous par créneau</mat-hint>
       <mat-error>La date et l'heure sont requises</mat-error>
     </mat-form-field>

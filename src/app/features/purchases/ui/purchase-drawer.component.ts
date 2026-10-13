@@ -19,6 +19,7 @@ import { CreatePurchaseOrderRequest } from '../../../core/services/purchases-api
 import { PurchasesFacade } from '../data/purchases.facade';
 import { PurchaseDrawerMode } from '../data/purchases-vm.model';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
 
 export interface PurchaseDrawerContext {
   mode: PurchaseDrawerMode;
@@ -47,6 +48,7 @@ type LineForm = {
   selector: 'app-purchase-drawer',
   standalone: true,
   imports: [
+    DatePickerDirective,
     SelectSearchComponent,
     CommonModule,
     ReactiveFormsModule,
