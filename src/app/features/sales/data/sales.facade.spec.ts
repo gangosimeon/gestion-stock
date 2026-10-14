@@ -11,7 +11,7 @@ import { Product } from '../../../core/models/product.model';
 import { Sale } from '../../../core/models/sale.model';
 import { CashRegisterFacade } from '../../cash-register/data/cash-register.facade';
 import { SalesFacade } from './sales.facade';
-import { SalesVm } from './sales-vm.model';
+import { SalesVm, matchingCustomers } from './sales-vm.model';
 
 const API = environment.apiUrl;
 
@@ -125,6 +125,72 @@ describe('SalesFacade (point de vente sur Spring Boot)', () => {
       { status: 422, statusText: 'Unprocessable Content' }
     );
     expect(((await result) as Error).message).toBe('Plafond de crédit du client dépassé.');
+  });
+
+  it('client absent de la base : nom et téléphone envoyés avec la vente, puis client sélectionné', async () => {
+    const screen = facade.vm$.subscribe();
+    load();
+    facade.addProductToCart(FRAME.id);
+    facade.setCustomer(CUSTOMER_ID);
+    facade.startNewCustomer();
+    facade.setNewCustomer({ name: '  Koffi Yao ', phone: ' +225 07 01 02 03 ' });
+
+    const sold = firstValueFrom(facade.createSale());
+    const post = http.expectOne(`${API}/sales`);
+    expect(post.request.body.customerId).toBeUndefined();
+    expect(post.request.body.newCustomer).toEqual({ name: 'Koffi Yao', phone: '+225 07 01 02 03' });
+    post.flush({ id: 's2', number: 'VTE-2026-000002', customerId: 'new-c', total: 35000, items: [] },
+      { status: 201, statusText: 'Created' });
+    http.expectOne(`${API}/products`).flush({ items: [FRAME], total: 1 });
+    http.expectOne(`${API}/customers`).flush({
+      items: [{ id: 'new-c', name: 'Koffi Yao', phone: '+225 07 01 02 03', creditLimit: 0 }],
+      total: 1
+    });
+    await sold;
+
+    const after = await nextVm((v) => v.form.customerId === 'new-c');
+    expect(after.form.newCustomer).toBeNull();
+    expect(after.customers.map((c) => c.name)).toContain('Koffi Yao');
+    screen.unsubscribe();
+  });
+
+  it('sans téléphone, le champ phone n’est pas envoyé ; choisir un client existant annule la saisie', async () => {
+    load();
+    facade.addProductToCart(FRAME.id);
+    facade.startNewCustomer();
+    facade.setNewCustomer({ name: 'Awa', phone: '' });
+    facade.setCustomer(CUSTOMER_ID);
+    const chosen = await nextVm((v) => v.form.customerId === CUSTOMER_ID);
+    expect(chosen.form.newCustomer).toBeNull();
+
+    facade.startNewCustomer();
+    facade.setNewCustomer({ name: 'Awa', phone: '  ' });
+    const result = firstValueFrom(facade.createSale()).catch((e: unknown) => e);
+    const post = http.expectOne(`${API}/sales`);
+    expect(post.request.body.newCustomer).toEqual({ name: 'Awa', phone: undefined });
+    expect(post.request.body.customerId).toBeUndefined();
+    post.flush({ status: 403, code: 'CUSTOMER_CREATE_FORBIDDEN', message: 'Vous n’avez pas le droit.' },
+      { status: 403, statusText: 'Forbidden' });
+    expect(((await result) as Error).message).toBe('Vous n’avez pas le droit.');
+  });
+});
+
+describe('matchingCustomers (client déjà enregistré ?)', () => {
+  const customers = [
+    { id: '1', name: 'Adjoua Diomandé', phone: '+225 05 77 88 12', creditLimit: 0 },
+    { id: '2', name: 'Aminata Traoré', phone: '+225 05 10 20 30', creditLimit: 0 },
+    { id: '3', name: 'Koffi Yao', phone: null, creditLimit: 0 }
+  ];
+
+  it('par téléphone (chiffres seuls) ou par nom (sans accents ni casse)', () => {
+    expect(matchingCustomers(customers, { name: '', phone: '05 77 88' }).map((c) => c.id)).toEqual(['1']);
+    expect(matchingCustomers(customers, { name: 'traore', phone: '' }).map((c) => c.id)).toEqual(['2']);
+    expect(matchingCustomers(customers, { name: 'KOFFI', phone: '' }).map((c) => c.id)).toEqual(['3']);
+  });
+
+  it('rien tant que la saisie est trop courte', () => {
+    expect(matchingCustomers(customers, { name: 'a', phone: '05' })).toEqual([]);
+    expect(matchingCustomers(customers, null)).toEqual([]);
   });
 });
 

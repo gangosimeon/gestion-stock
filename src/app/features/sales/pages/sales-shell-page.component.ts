@@ -1,6 +1,6 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -20,7 +20,7 @@ import { Subject, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod } from '../../../core/models/sale.model';
 import { SalesFacade } from '../data/sales.facade';
-import { CartRow, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
+import { CartRow, matchingCustomers, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
@@ -67,6 +67,17 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   readonly customerId = new FormControl<string | null>(null);
   readonly paidAmount = new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0)] });
 
+  /** Client absent de la base : mêmes règles que le serveur (nom obligatoire, téléphone libre). */
+  readonly newCustomerForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(200)] }),
+    phone: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(30), Validators.pattern(/^[0-9+() .-]*$/)]
+    })
+  });
+
+  readonly matchingCustomers = matchingCustomers;
+
   readonly vm$ = this.facade.vm$;
 
   readonly paymentLabels = paymentMethodLabels;
@@ -95,6 +106,9 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
     this.customerId.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setCustomer(v));
     this.paidAmount.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setPaidAmount(v));
+    this.newCustomerForm.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.facade.setNewCustomer(this.newCustomerForm.getRawValue()));
   }
 
   ngAfterViewInit(): void {
@@ -162,6 +176,20 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     return Math.max(0, total - paid);
   }
 
+  startNewCustomer(): void {
+    this.newCustomerForm.reset();
+    this.facade.startNewCustomer();
+  }
+
+  cancelNewCustomer(): void {
+    this.facade.cancelNewCustomer();
+  }
+
+  /** Le client saisi existe déjà : on le sélectionne au lieu de le recréer. */
+  chooseExisting(customerId: string): void {
+    this.facade.setCustomer(customerId);
+  }
+
   onPartialChange(partial: boolean): void {
     this.facade.setPartialPayment(partial);
   }
@@ -175,8 +203,17 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
     // Aide à la saisie : le backend refuse aussi un reste dû sans client.
     const customerId = this.vmSnapshot.form.customerId as string | null;
+    const newCustomer = this.vmSnapshot.form.newCustomer;
 
-    if (this.vmSnapshot.form.partialPayment && !customerId) {
+    if (newCustomer && this.newCustomerForm.invalid) {
+      this.newCustomerForm.markAllAsTouched();
+      this.snackbar.open('Saisis le nom du client (et un téléphone valide) ou choisis « Comptoir ».', 'OK', {
+        duration: 3500
+      });
+      return;
+    }
+
+    if (this.vmSnapshot.form.partialPayment && !customerId && !newCustomer) {
       this.snackbar.open('Sélectionne un client pour enregistrer une vente à crédit.', 'OK', { duration: 3500 });
       return;
     }

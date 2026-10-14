@@ -7,7 +7,7 @@ import { PaymentMethod, Sale, SaleType } from '../../../core/models/sale.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateSaleRequest, SalesApiService } from '../../../core/services/sales-api.service';
-import { CartRow, SalesFormState, SalesTotals, SalesVm, toSaleItems } from './sales-vm.model';
+import { CartRow, NewCustomerDraft, SalesFormState, SalesTotals, SalesVm, toSaleItems } from './sales-vm.model';
 
 /**
  * Point de vente. Le panier n'est qu'un aperçu : le backend fixe les prix (tarif du produit),
@@ -32,6 +32,7 @@ export class SalesFacade {
   private readonly formSubject = new BehaviorSubject<SalesFormState>({
     type: 'RETAIL',
     customerId: null,
+    newCustomer: null,
     paymentMethod: 'CASH',
     paidAmount: 0,
     partialPayment: false
@@ -48,9 +49,10 @@ export class SalesFacade {
     this.formSubject,
     this.lastSaleSubject,
     // Interface seulement : le backend exige sale:create.
-    this.auth.hasPermission$('sale:create')
+    this.auth.hasPermission$('sale:create'),
+    this.auth.hasPermission$('customer:create')
   ]).pipe(
-    map(([isLoading, errorMessage, products, customers, cart, form, lastSale, canSell]): SalesVm => ({
+    map(([isLoading, errorMessage, products, customers, cart, form, lastSale, canSell, canCreateCustomer]): SalesVm => ({
       isLoading,
       errorMessage,
       products,
@@ -59,7 +61,8 @@ export class SalesFacade {
       form,
       totals: this.computeTotals(cart),
       lastSale,
-      canSell
+      canSell,
+      canCreateCustomer
     })),
     shareReplay({ bufferSize: 1, refCount: true })
   );
@@ -95,9 +98,26 @@ export class SalesFacade {
     this.cartSubject.next(cart);
   }
 
+  /** Client existant (ou comptoir) : abandonne une éventuelle saisie de nouveau client. */
   setCustomer(customerId: string | null): void {
     const s = this.formSubject.value;
-    this.formSubject.next({ ...s, customerId });
+    this.formSubject.next({ ...s, customerId, newCustomer: null });
+  }
+
+  /** Saisie d'un client absent de la base : il sera créé avec la vente, côté serveur. */
+  startNewCustomer(): void {
+    const s = this.formSubject.value;
+    this.formSubject.next({ ...s, customerId: null, newCustomer: { name: '', phone: '' } });
+  }
+
+  setNewCustomer(draft: NewCustomerDraft): void {
+    const s = this.formSubject.value;
+    if (s.newCustomer) this.formSubject.next({ ...s, newCustomer: draft });
+  }
+
+  cancelNewCustomer(): void {
+    const s = this.formSubject.value;
+    this.formSubject.next({ ...s, newCustomer: null });
   }
 
   setPaymentMethod(paymentMethod: PaymentMethod): void {
@@ -175,7 +195,10 @@ export class SalesFacade {
 
     const payload: CreateSaleRequest = {
       type: form.type,
-      customerId: form.customerId ?? undefined,
+      customerId: form.newCustomer ? undefined : (form.customerId ?? undefined),
+      newCustomer: form.newCustomer
+        ? { name: form.newCustomer.name.trim(), phone: form.newCustomer.phone.trim() || undefined }
+        : undefined,
       paymentMethod: form.paymentMethod,
       paidAmount: form.partialPayment ? form.paidAmount : undefined,
       items: toSaleItems(cart)
@@ -187,8 +210,15 @@ export class SalesFacade {
         next: (sale) => {
           this.lastSaleSubject.next(sale);
           this.cartSubject.next([]);
-          this.formSubject.next({ ...this.formSubject.value, paidAmount: 0, partialPayment: false });
-          // Stocks à jour après les sorties de la vente.
+          // Client créé (ou retrouvé) par le serveur : il devient le client sélectionné.
+          this.formSubject.next({
+            ...this.formSubject.value,
+            customerId: sale.customerId ?? null,
+            newCustomer: null,
+            paidAmount: 0,
+            partialPayment: false
+          });
+          // Stocks et liste des clients à jour après la vente.
           this.refresh();
         },
         error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')

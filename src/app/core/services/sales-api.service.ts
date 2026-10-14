@@ -33,6 +33,8 @@ export interface CreateSaleItem {
 export interface CreateSaleRequest {
   type: SaleType;
   customerId?: string;
+  /** Client absent de la base : créé (ou retrouvé par nom + téléphone) avec la vente, côté serveur. */
+  newCustomer?: { name: string; phone?: string };
   paymentMethod: PaymentMethod;
   paidAmount?: number;
   note?: string;

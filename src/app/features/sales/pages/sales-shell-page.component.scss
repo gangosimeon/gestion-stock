@@ -36,6 +36,41 @@
   grid-column: 1 / -1;
 }
 
+// Client : liste des clients existants, ou saisie d'un nouveau client (nom + téléphone).
+.customer {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.customer__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+
+  .mat-mdc-form-field {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  .customer__add {
+    margin-top: 10px;
+  }
+}
+
+.customer__matches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.customer__hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
 .type {
   display: grid;
   gap: 6px;

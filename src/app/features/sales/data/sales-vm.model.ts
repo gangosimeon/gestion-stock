@@ -15,9 +15,17 @@ export interface CartRow {
   lineTotal: number;
 }
 
+/** Client saisi à la caisse (pas encore dans la base). */
+export interface NewCustomerDraft {
+  name: string;
+  phone: string;
+}
+
 export interface SalesFormState {
   type: SaleType;
   customerId: string | null;
+  /** Saisie d'un nouveau client (exclusif de customerId) ; null : client existant ou comptoir. */
+  newCustomer: NewCustomerDraft | null;
   paymentMethod: PaymentMethod;
   /** Paiement partiel : montant payé maintenant (le reste est porté au compte du client). */
   paidAmount: number;
@@ -41,6 +49,8 @@ export interface SalesVm {
   lastSale: Sale | null;
   /** Permission sale:create (interface seulement). */
   canSell: boolean;
+  /** Permission customer:create : ajout d'un client depuis la caisse. */
+  canCreateCustomer: boolean;
 }
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -57,4 +67,28 @@ export const saleTypeLabels: Record<SaleType, string> = {
 /** Lignes envoyées au backend : produit et quantité seulement, jamais de prix ni de coût. */
 export function toSaleItems(cart: CartRow[]): CreateSaleItem[] {
   return cart.map((r) => ({ productId: r.productId, quantity: r.quantity }));
+}
+
+/** Texte comparable : minuscules, sans accents ni espaces superflus. */
+function normalize(text: string | null | undefined): string {
+  return (text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+/**
+ * Clients existants qui ressemblent à la saisie (au plus 5) : même téléphone (au moins 4 chiffres
+ * communs) ou nom qui contient le texte saisi (au moins 2 lettres). Permet de choisir le client
+ * déjà enregistré au lieu de le recréer.
+ */
+export function matchingCustomers(customers: readonly Customer[], draft: NewCustomerDraft | null): Customer[] {
+  if (!draft) return [];
+  const digits = draft.phone.replace(/\D/g, '');
+  const name = normalize(draft.name);
+  if (digits.length < 4 && name.length < 2) return [];
+  return customers
+    .filter((c) => {
+      const phoneMatch = digits.length >= 4 && (c.phone ?? '').replace(/\D/g, '').includes(digits);
+      const nameMatch = name.length >= 2 && normalize(c.name).includes(name);
+      return phoneMatch || nameMatch;
+    })
+    .slice(0, 5);
 }

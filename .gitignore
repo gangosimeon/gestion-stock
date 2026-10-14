@@ -46,3 +46,6 @@ Thumbs.db
 # Secrets locaux (jamais versionnés)
 .env
 .env.*
+
+# Fichiers locaux hors application (publicité, captures, compétences d'agent) : jamais versionnés
+/_local/
