@@ -3,10 +3,12 @@
     <header class="page-header page-header--bar">
       <h1 class="page-header__title">Produits</h1>
       <div class="page-header__spacer"></div>
-      <a mat-button routerLink="/categories">
-        <mat-icon>category</mat-icon>
-        Catégories
-      </a>
+      @if (canViewCategories) {
+        <a mat-stroked-button routerLink="/categories">
+          <mat-icon>category</mat-icon>
+          Catégories
+        </a>
+      }
       @if ((vm$ | async)?.canCreate) {
         <button mat-flat-button color="primary" type="button" (click)="openCreate()">
           <mat-icon>add</mat-icon>

@@ -15,6 +15,7 @@ import { take } from 'rxjs';
 
 import { CashOperation, CashRegisterSession, CashRegisterSessionStatus } from '../../../core/models/cash-register.model';
 import { PaginatedResult } from '../../../core/services/products-api.service';
+import { AuthService } from '../../../auth/services/auth.service';
 import { CashRegisterFacade } from '../data/cash-register.facade';
 import { CashSessionDetailsDialogComponent } from '../ui/cash-session-details-dialog.component';
 
@@ -55,6 +56,9 @@ export class CashHistoryPageComponent {
   private readonly facade = inject(CashRegisterFacade);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
+
+  /** Liens Ouverture / Fermeture : écrans réservés à cash:operate (cash:read ne voit que l'historique). */
+  readonly canOperate = inject(AuthService).hasPermission('cash:operate');
 
   readonly displayedColumns = ['openedAt', 'number', 'status', 'expected', 'counted', 'diff', 'actions'] as const;
 

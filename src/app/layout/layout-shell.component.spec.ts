@@ -10,10 +10,12 @@ import { provideRouter } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
+import { permissionGuard } from '../auth/guards/permission.guard';
 import { AuthService } from '../auth/services/auth.service';
 import { WarehouseContextService } from '../core/services/warehouse-context.service';
 
 import { LayoutShellComponent } from './layout-shell.component';
+import { LAYOUT_ROUTES } from './layout.routes';
 
 /** Cible de navigation des liens du menu (routes réelles hors du périmètre du test). */
 @Component({ standalone: true, template: '' })
@@ -78,15 +80,26 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
   });
 
   it('le menu ne montre que les entrées autorisées (mêmes permissions que les routes)', () => {
-    const { fixture, navLabels } = setup(true, ['sale:create', 'appointment:read']);
+    const { fixture, navLabels } = setup(true, ['sale:read', 'sale:create', 'appointment:read', 'cash:operate']);
     (fixture.debugElement.query(By.css('.shell-header__toggle')).nativeElement as HTMLButtonElement).click();
     fixture.detectChanges();
-    const labels = navLabels();
-    expect(labels).toContain('RDV');
-    expect(labels).toContain('Produits');
-    expect(labels).not.toContain('Utilisateurs');
-    expect(labels).not.toContain('Audit');
-    expect(labels).not.toContain('Rapports');
+    expect(navLabels()).toEqual(['Dashboard', 'Ventes', 'Caisse', 'RDV']);
+  });
+
+  it('sans permission : seul le tableau de bord est proposé (plus de « Accès refusé » au clic)', () => {
+    const { navLabels } = setup(false, []);
+    expect(navLabels()).toEqual(['Dashboard']);
+  });
+
+  it('chaque entrée du menu exige exactement les permissions de sa route', () => {
+    const { component } = setup(false, []);
+    const shell = LAYOUT_ROUTES[0].children ?? [];
+    for (const item of component.navItems) {
+      const route = shell.find((r) => `/${r.path}` === item.route);
+      expect(route, item.route).toBeDefined();
+      expect(route?.data?.['permissions'] ?? [], item.route).toEqual(item.permissions);
+      if (item.permissions.length > 0) expect(route?.canMatch, item.route).toContain(permissionGuard);
+    }
   });
 
   it('grand écran : barre fixe ouverte ; le hamburger la replie en icônes (comportement inchangé)', () => {

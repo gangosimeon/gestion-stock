@@ -22,6 +22,7 @@ import { Supplier } from '../../../core/models/supplier.model';
 import { ActiveStatusFilter } from '../../../core/services/products-api.service';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 import { ServerTable } from '../../../shared/table/server-table';
+import { AuthService } from '../../../auth/services/auth.service';
 import { ProductsFacade } from '../data/products.facade';
 import { ConfirmDeleteDialogComponent } from '../ui/confirm-delete-dialog.component';
 import { ProductDrawerComponent } from '../ui/product-drawer.component';
@@ -58,6 +59,9 @@ export class ProductsShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(ProductsFacade);
   private readonly snackbar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+
+  /** Raccourci vers les catégories : seulement si l'écran est accessible (même règle que le menu). */
+  readonly canViewCategories = inject(AuthService).hasPermission('category:read');
 
   private readonly destroy$ = new Subject<void>();
 

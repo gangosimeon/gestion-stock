@@ -7,7 +7,10 @@
     <div class="page-header">
       <h1 class="page-header__title">Inventaire</h1>
       <div class="page-header__spacer"></div>
-      <a mat-button [routerLink]="['/inventory/history']">Historique</a>
+      <a mat-stroked-button [routerLink]="['/inventory/history']">
+        <mat-icon>history</mat-icon>
+        Historique
+      </a>
       <button mat-flat-button color="primary" type="button" (click)="submit(vm.products)" [disabled]="isSubmitting || !vm.canCreate">
         Enregistrer
       </button>

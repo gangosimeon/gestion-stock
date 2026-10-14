@@ -19,13 +19,14 @@ import { WarehouseContextService } from '../core/services/warehouse-context.serv
 import { WarehousesApiService } from '../core/services/warehouses-api.service';
 import { Warehouse } from '../core/models/warehouse.model';
 import { SelectSearchComponent } from '../shared/select/select-search.component';
+import { AppSection, ROUTE_PERMISSIONS } from './route-permissions';
 
 export interface NavItem {
   label: string;
   icon: string;
   route: string;
-  /** Permission backend requise pour afficher l'entrée (même règle que la route). */
-  permission?: string;
+  /** Permissions backend (au moins une) : les mêmes que la route, cf. ROUTE_PERMISSIONS. */
+  permissions: readonly string[];
 }
 
 @Component({
@@ -88,28 +89,38 @@ export class LayoutShellComponent {
   );
   readonly warehouseId$ = this.warehouseCtx.warehouseId$;
 
-  readonly navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { label: 'Produits', icon: 'inventory_2', route: '/products' },
-    { label: 'Catégories', icon: 'category', route: '/categories', permission: 'category:read' },
-    { label: 'Stock', icon: 'warehouse', route: '/stock' },
-    { label: 'Ventes', icon: 'point_of_sale', route: '/sales' },
-    { label: 'Clients', icon: 'people', route: '/clients' },
-    { label: 'Achats', icon: 'shopping_cart', route: '/purchases' },
-    { label: 'Fournisseurs', icon: 'local_shipping', route: '/suppliers' },
-    { label: 'Caisse', icon: 'payments', route: '/cash-register' },
-    { label: 'Dépenses', icon: 'receipt_long', route: '/expenses', permission: 'expense:read' },
-    { label: 'Inventaire', icon: 'fact_check', route: '/inventory', permission: 'inventory:read' },
-    { label: 'Dépôts', icon: 'store', route: '/warehouses' },
-    { label: 'Rapports', icon: 'bar_chart', route: '/reports', permission: 'report:read' },
-    { label: 'RDV', icon: 'event', route: '/appointments', permission: 'appointment:read' },
-    { label: 'Audit', icon: 'history', route: '/audit-logs', permission: 'audit:read' },
-    { label: 'Utilisateurs', icon: 'admin_panel_settings', route: '/users', permission: 'user:manage' }
-  ];
+  readonly navItems: NavItem[] = (
+    [
+      { label: 'Dashboard', icon: 'dashboard', section: 'dashboard' },
+      { label: 'Produits', icon: 'inventory_2', section: 'products' },
+      { label: 'Catégories', icon: 'category', section: 'categories' },
+      { label: 'Stock', icon: 'warehouse', section: 'stock' },
+      { label: 'Ventes', icon: 'point_of_sale', section: 'sales' },
+      { label: 'Clients', icon: 'people', section: 'clients' },
+      { label: 'Achats', icon: 'shopping_cart', section: 'purchases' },
+      { label: 'Fournisseurs', icon: 'local_shipping', section: 'suppliers' },
+      { label: 'Caisse', icon: 'payments', section: 'cash-register' },
+      { label: 'Dépenses', icon: 'receipt_long', section: 'expenses' },
+      { label: 'Inventaire', icon: 'fact_check', section: 'inventory' },
+      { label: 'Dépôts', icon: 'store', section: 'warehouses' },
+      { label: 'Rapports', icon: 'bar_chart', section: 'reports' },
+      { label: 'RDV', icon: 'event', section: 'appointments' },
+      { label: 'Audit', icon: 'history', section: 'audit-logs' },
+      { label: 'Utilisateurs', icon: 'admin_panel_settings', section: 'users' }
+    ] satisfies { label: string; icon: string; section: AppSection }[]
+  ).map(({ label, icon, section }) => ({
+    label,
+    icon,
+    route: `/${section}`,
+    permissions: ROUTE_PERMISSIONS[section]
+  }));
 
   readonly visibleNavItems$ = this.currentUser$.pipe(
     map((user) =>
-      this.navItems.filter((item) => !item.permission || (user?.permissions?.includes(item.permission) ?? false))
+      this.navItems.filter(
+        (item) =>
+          item.permissions.length === 0 || item.permissions.some((p) => user?.permissions?.includes(p) ?? false)
+      )
     )
   );
 

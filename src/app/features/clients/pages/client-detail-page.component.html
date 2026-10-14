@@ -5,7 +5,10 @@
 
   <div class="page">
     <div class="page-header">
-      <a mat-button [routerLink]="['/clients']">Retour</a>
+      <a mat-stroked-button [routerLink]="['/clients']">
+        <mat-icon>arrow_back</mat-icon>
+        Retour
+      </a>
       <h1 class="page-header__title">Fiche client</h1>
       <div class="page-header__spacer"></div>
       @if (vm.canPay) {

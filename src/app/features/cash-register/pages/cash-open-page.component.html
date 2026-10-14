@@ -7,8 +7,8 @@
     <div class="page-header">
       <h1 class="page-header__title">Ouverture de caisse</h1>
       <div class="page-header__spacer"></div>
-      <a mat-button [routerLink]="['/cash-register/history']">Historique</a>
-      <a mat-stroked-button [routerLink]="['/cash-register/close']" [disabled]="!vm.current">Fermeture</a>
+      <a mat-stroked-button [routerLink]="['/cash-register/history']"><mat-icon>history</mat-icon>Historique</a>
+      <a mat-stroked-button [routerLink]="['/cash-register/close']" [disabled]="!vm.current"><mat-icon>lock</mat-icon>Fermeture</a>
     </div>
 
     @if (vm.errorMessage) {
