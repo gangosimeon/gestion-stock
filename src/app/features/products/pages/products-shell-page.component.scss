@@ -46,11 +46,6 @@
 }
 
 @media (max-width: 600px) {
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .container {
     min-height: auto;
   }

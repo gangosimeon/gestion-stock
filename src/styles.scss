@@ -586,24 +586,28 @@ a {
   padding: 16px;
 }
 
+// Mobile d'abord : un champ par ligne, en pleine largeur, boutons sur leur propre ligne ; à partir
+// de 600 px, rangée de champs à largeur régulière. Toujours `flex-direction: row` : en colonne, la
+// base flex des champs deviendrait leur HAUTEUR (champs étirés). Ne pas la surcharger par page.
 .filter-bar,
 .data-table-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  // Élément de grille ou de flex (.content) : peut rétrécir sous la largeur de ses champs au
+  // lieu de déborder de l'écran.
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 
-  .mat-mdc-form-field {
-    flex: 1 1 180px;
-    min-width: 160px;
-    max-width: 260px;
-    width: auto;
-  }
-
+  .mat-mdc-form-field,
   .mat-mdc-form-field.filter-bar__wide,
   .mat-mdc-form-field.data-table-search {
-    flex: 2 1 260px;
-    max-width: 420px;
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+    width: auto;
   }
 
   .mat-mdc-form-field-subscript-wrapper {
@@ -615,7 +619,12 @@ a {
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    margin-left: auto;
+    width: 100%;
+
+    // Cibles tactiles larges : les boutons se partagent la ligne.
+    > .mat-mdc-button-base {
+      flex: 1 1 auto;
+    }
   }
 
   // Message d'erreur sur sa propre ligne.
@@ -624,21 +633,43 @@ a {
   }
 }
 
-@media (max-width: 600px) {
+.filter-panel,
+.data-table-toolbar {
+  @media (max-width: 599.98px) {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 600px) {
   .filter-bar,
   .data-table-toolbar {
-    .mat-mdc-form-field,
+    .mat-mdc-form-field {
+      flex: 1 1 180px;
+      min-width: 160px;
+      max-width: 260px;
+    }
+
     .mat-mdc-form-field.filter-bar__wide,
     .mat-mdc-form-field.data-table-search {
-      flex-basis: 100%;
-      max-width: none;
+      flex: 2 1 260px;
+      max-width: 420px;
     }
 
     &__actions {
-      width: 100%;
-      justify-content: flex-end;
+      width: auto;
+      margin-left: auto;
+
+      > .mat-mdc-button-base {
+        flex: 0 0 auto;
+      }
     }
   }
+}
+
+// Listes (.content en grille) : un enfant peut rétrécir à la largeur de l'écran au lieu de
+// déborder (par défaut, un élément de grille ne descend pas sous la largeur de son contenu).
+.content > * {
+  min-width: 0;
 }
 
 // Recherche au-dessus d'un tableau : carte de filtres (règles ci-dessus), espacée du tableau.
