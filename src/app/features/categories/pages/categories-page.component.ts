@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Category } from '../../../core/models/category.model';
 import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { CategoriesFacade } from '../data/categories.facade';
 import { CategoryDrawerComponent, CategoryDrawerContext } from '../ui/category-drawer.component';
@@ -24,6 +25,7 @@ import { CategoryDrawerComponent, CategoryDrawerContext } from '../ui/category-d
   selector: 'app-categories-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     AsyncPipe,
     DatePipe,
     ReactiveFormsModule,

@@ -21,6 +21,7 @@ import { Product } from '../../../core/models/product.model';
 import { Supplier } from '../../../core/models/supplier.model';
 import { ActiveStatusFilter } from '../../../core/services/products-api.service';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { AuthService } from '../../../auth/services/auth.service';
 import { ProductsFacade } from '../data/products.facade';
@@ -32,6 +33,7 @@ import { RouterLink } from '@angular/router';
   selector: 'app-products-shell-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     RouterLink,
     CommonModule,
     AsyncPipe,

@@ -22,6 +22,7 @@ import { CashSessionDetailsDialogComponent } from '../ui/cash-session-details-di
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
 import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -29,6 +30,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   selector: 'app-cash-history-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     MatTooltipModule,
     MatPaginatorModule,
     MatSortModule,

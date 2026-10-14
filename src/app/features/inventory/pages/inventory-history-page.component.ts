@@ -17,6 +17,7 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule } from '@angular/material/sort';
 import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
   selector: 'app-inventory-history-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     MatIconModule,
     MatTooltipModule,
     MatPaginatorModule,

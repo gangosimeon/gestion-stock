@@ -17,6 +17,7 @@ import { Observable, Subject, take, takeUntil } from 'rxjs';
 
 import { User } from '../../../core/models/user.model';
 import { Role } from '../../../core/models/role.model';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { UsersFacade } from '../data/users.facade';
 import { UsersVm, roleLabels } from '../data/users-vm.model';
@@ -28,6 +29,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
   selector: 'app-users-shell-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     CommonModule,
     ReactiveFormsModule,
     MatFormFieldModule,

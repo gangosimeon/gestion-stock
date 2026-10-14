@@ -19,6 +19,7 @@ import { Subject, take, takeUntil } from 'rxjs';
 import { Customer } from '../../../core/models/customer.model';
 import { CustomerSearchFilters } from '../../../core/services/customers-api.service';
 import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { ClientsFacade } from '../data/clients.facade';
 import { ConfirmDeleteClientDialogComponent } from '../ui/confirm-delete-client-dialog.component';
@@ -29,6 +30,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   selector: 'app-clients-shell-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     MatTooltipModule,
     CommonModule,
     AsyncPipe,

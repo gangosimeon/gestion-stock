@@ -94,4 +94,34 @@ describe('ServerTable (liste paginée côté serveur)', () => {
     expect(queries.at(-1)?.page).toBe(1);
     expect(states.at(-1)?.rows).toEqual(['x']);
   });
+
+  it('réinitialisation : recherche vidée et filtres remis à leur valeur de départ (pas à null)', () => {
+    const t = new ServerTable<string, FormGroup<{ status: FormControl<string | null>; types: FormControl<string[]> }>>(
+      (q) => {
+        queries.push(q as never);
+        return of({ items: [], total: 0 });
+      },
+      {
+        filters: new FormGroup({
+          status: new FormControl<string | null>('ACTIVE'),
+          types: new FormControl<string[]>([], { nonNullable: true })
+        })
+      }
+    );
+    sub = t.state$.subscribe((st) => states.push(st));
+    expect(t.isFiltered).toBe(false);
+
+    t.search.setValue('ray');
+    expect(t.isFiltered).toBe(true);
+    t.search.setValue('');
+    t.filters.setValue({ status: 'INACTIVE', types: ['SALE'] });
+    expect(t.isFiltered).toBe(true);
+
+    t.pageIndex = 3;
+    queries = [];
+    t.reset();
+    expect(t.isFiltered).toBe(false);
+    expect(t.filters.getRawValue()).toEqual({ status: 'ACTIVE', types: [] });
+    expect(queries).toEqual([{ q: '', filters: { status: 'ACTIVE', types: [] }, page: 0, size: 10, sort: [] }]);
+  });
 });

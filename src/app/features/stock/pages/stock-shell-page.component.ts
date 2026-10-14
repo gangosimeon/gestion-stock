@@ -16,6 +16,7 @@ import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { Subject, takeUntil } from 'rxjs';
 
 import { StockMovementType } from '../../../core/models/stock-movement.model';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { StockMovementRow, stockReasonLabels, stockTypeLabels } from '../data/stock-vm.model';
 import { StockFacade } from '../data/stock.facade';
@@ -27,6 +28,7 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
   selector: 'app-stock-shell-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     SelectSearchComponent,
     MatSelectModule,
     CommonModule,

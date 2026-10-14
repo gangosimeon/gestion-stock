@@ -18,6 +18,7 @@ import { Observable, Subject, take, takeUntil } from 'rxjs';
 
 import { Supplier } from '../../../core/models/supplier.model';
 import { ActiveStatusFilter } from '../../../core/services/products-api.service';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { SuppliersFacade } from '../data/suppliers.facade';
 import { ConfirmDeleteSupplierDialogComponent } from '../ui/confirm-delete-supplier-dialog.component';
@@ -27,6 +28,7 @@ import { SupplierDrawerComponent, SupplierDrawerContext } from '../ui/supplier-d
   selector: 'app-suppliers-shell-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     CommonModule,
     AsyncPipe,
     ReactiveFormsModule,

@@ -38,6 +38,8 @@
             </mat-select>
           </mat-form-field>
 
+          <app-filter-reset [table]="table" />
+
           @if (vm.errorMessage || s.error) {
             <div class="error">{{ vm.errorMessage ?? s.error }}</div>
           }

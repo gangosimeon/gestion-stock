@@ -71,14 +71,29 @@ export class ServerTable<T, G extends FormGroup = FormGroup> {
   private readonly sortFields: Record<string, string>;
   private readonly trigger$ = new Subject<void>();
   private last: ServerTableState<T> = { rows: [], total: 0, loading: true, error: null };
+  /** Valeurs des filtres à la création : cible de {@link reset} et référence de {@link isFiltered}. */
+  private readonly initialFilters: unknown;
 
   readonly state$: Observable<ServerTableState<T>>;
+
+  /**
+   * {@link isFiltered} sous forme de flux, pour l'affichage (bouton « Réinitialiser ») : émet à
+   * chaque saisie, changement de filtre ou réinitialisation. Compatible OnPush via `async`.
+   */
+  readonly filtered$: Observable<boolean>;
+  private readonly resetDone$ = new Subject<void>();
 
   constructor(
     fetch: (query: ServerQuery<ReturnType<G['getRawValue']>>) => Observable<PaginatedResult<T>>,
     options: ServerTableOptions<G> = {}
   ) {
     this.filters = options.filters ?? (new FormGroup({}) as unknown as G);
+    this.initialFilters = this.filters.getRawValue();
+    this.filtered$ = merge(this.search.valueChanges, this.filters.valueChanges, this.resetDone$).pipe(
+      startWith(null),
+      map(() => this.isFiltered),
+      distinctUntilChanged()
+    );
     this.sortFields = options.sortFields ?? {};
     this.pageSize = options.pageSize ?? 10;
 
@@ -139,10 +154,18 @@ export class ServerTable<T, G extends FormGroup = FormGroup> {
     this.trigger$.next();
   }
 
+  /** Recherche saisie ou filtre différent de sa valeur initiale : il y a quelque chose à réinitialiser. */
+  get isFiltered(): boolean {
+    return this.search.value.trim() !== '' || !sameValue(this.filters.getRawValue(), this.initialFilters);
+  }
+
   /** Remet recherche et filtres à leur valeur initiale (une seule requête). */
   reset(): void {
     this.search.setValue('', { emitEvent: false });
-    this.filters.reset(undefined, { emitEvent: false });
+    // Valeurs de départ explicites : un contrôle « nullable » reviendrait sinon à null, pas à
+    // sa valeur par défaut (ex. statut « Actifs »).
+    this.filters.reset(this.initialFilters as never, { emitEvent: false });
+    this.resetDone$.next();
     this.pageIndex = 0;
     this.trigger$.next();
   }
@@ -154,4 +177,9 @@ export class ServerTable<T, G extends FormGroup = FormGroup> {
       queueMicrotask(() => this.trigger$.next());
     }
   }
+}
+
+/** Égalité de valeurs de formulaire (dates comprises), sans dépendance externe. */
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }

@@ -18,12 +18,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule } from '@angular/material/sort';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 
 @Component({
   selector: 'app-warehouses-list-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     MatPaginatorModule,
     MatSortModule,
     MatIconModule,

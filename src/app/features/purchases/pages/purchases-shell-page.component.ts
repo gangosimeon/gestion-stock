@@ -17,6 +17,7 @@ import { Subject, take, takeUntil } from 'rxjs';
 
 import { PurchaseOrder, PurchaseOrderDocumentStatus } from '../../../core/models/purchase-order.model';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { PurchasesFacade } from '../data/purchases.facade';
 import { purchaseDocumentStatusLabels, purchaseStatusLabels, PurchasesVm } from '../data/purchases-vm.model';
@@ -33,6 +34,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   selector: 'app-purchases-shell-page',
   standalone: true,
   imports: [
+    FilterResetComponent,
     MatTooltipModule,
     CommonModule,
     AsyncPipe,
