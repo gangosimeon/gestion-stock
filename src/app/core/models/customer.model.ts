@@ -9,6 +9,8 @@ export interface Customer {
   type?: 'INDIVIDUAL' | 'COMPANY';
   address?: string | null;
   city?: string | null;
+  priceCategory?: 'RETAIL' | 'WHOLESALE';
+  paymentTermsDays?: number;
   active?: boolean;
   /** Dette du client, calculée par le backend (ventes à crédit − règlements − avoirs). */
   balance?: number;

@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -22,6 +22,7 @@ import { ActiveStatusFilter } from '../../../core/services/products-api.service'
 import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { ClientsFacade } from '../data/clients.facade';
+import { customersToRows, fetchAllCustomers } from '../data/customers-export';
 import { ConfirmDeleteClientDialogComponent } from '../ui/confirm-delete-client-dialog.component';
 import { ClientDrawerComponent, ClientDrawerContext } from '../ui/client-drawer.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -80,12 +81,21 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
     { value: 'WHOLESALE', label: 'Prix de gros' }
   ];
 
+  readonly debtOptions: { value: boolean; label: string }[] = [
+    { value: true, label: 'Avec dette impayée' },
+    { value: false, label: 'Sans dette' }
+  ];
+
+  /** Export Excel en cours (bouton désactivé, une seule génération à la fois). */
+  readonly exporting = signal(false);
+
   /** Recherche, filtres, tri et pagination traités par le backend. */
   readonly table = new ServerTable((query) => this.facade.search(query, query.filters), {
     filters: new FormGroup({
       status: new FormControl<ActiveStatusFilter>('ACTIVE', { nonNullable: true }),
       type: new FormControl<CustomerSearchFilters['type']>(null),
-      priceCategory: new FormControl<CustomerSearchFilters['priceCategory']>(null)
+      priceCategory: new FormControl<CustomerSearchFilters['priceCategory']>(null),
+      withDebt: new FormControl<boolean | null>(null)
     }),
     sortFields: { name: 'name', creditLimit: 'creditLimit' },
     reload$: this.facade.refresh$
@@ -117,6 +127,37 @@ export class ClientsShellPageComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Exporte en Excel tous les clients correspondant à la recherche, aux filtres (dont la dette)
+   * et au tri affichés, pas seulement la page à l'écran.
+   */
+  async exportExcel(): Promise<void> {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    try {
+      const filters = this.table.filters.getRawValue();
+      const customers = await fetchAllCustomers(
+        (page) => this.facade.search(page, filters),
+        this.table.search.value.trim(),
+        this.table.currentSort
+      );
+      if (customers.length === 0) {
+        this.snackbar.open('Aucun client à exporter avec ces filtres.', 'OK', { duration: 3000 });
+        return;
+      }
+      const XLSX = await import('xlsx');
+      const sheet = XLSX.utils.json_to_sheet(customersToRows(customers));
+      const book = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(book, sheet, 'Clients');
+      const suffix = filters.withDebt === true ? '_avec_dette' : '';
+      XLSX.writeFile(book, `clients${suffix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (e: unknown) {
+      this.snackbar.open(e instanceof Error ? e.message : "Échec de l'export.", 'OK', { duration: 4000 });
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   openCreate(): void {

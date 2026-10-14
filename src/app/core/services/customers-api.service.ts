@@ -28,6 +28,8 @@ export interface CustomerSearchFilters {
   status?: ActiveStatusFilter | null;
   type?: 'INDIVIDUAL' | 'COMPANY' | null;
   priceCategory?: 'RETAIL' | 'WHOLESALE' | null;
+  /** true : clients avec une dette impayée (solde dû > 0) ; false : sans dette ; null : tous. */
+  withDebt?: boolean | null;
 }
 
 export interface CreateCustomerRequest {

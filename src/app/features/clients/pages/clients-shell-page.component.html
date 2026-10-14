@@ -3,6 +3,10 @@
     <header class="page-header page-header--bar">
       <h1 class="page-header__title">Clients</h1>
       <div class="page-header__spacer"></div>
+      <button mat-stroked-button type="button" (click)="exportExcel()" [disabled]="exporting()">
+        <mat-icon>download</mat-icon>
+        {{ exporting() ? 'Export…' : 'Exporter Excel' }}
+      </button>
       @if ((vm$ | async)?.canCreate) {
       <button mat-flat-button color="primary" type="button" (click)="openCreate()">
         <mat-icon>add</mat-icon>
@@ -53,6 +57,16 @@
             <mat-select formControlName="priceCategory">
               <mat-option [value]="null">Tous</mat-option>
               @for (o of priceCategoryOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Dette</mat-label>
+            <mat-select formControlName="withDebt">
+              <mat-option [value]="null">Tous</mat-option>
+              @for (o of debtOptions; track o.value) {
                 <mat-option [value]="o.value">{{ o.label }}</mat-option>
               }
             </mat-select>
