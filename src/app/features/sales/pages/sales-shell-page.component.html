@@ -211,7 +211,7 @@
     }
   </mat-drawer-content>
 
-  <mat-drawer #invoiceDrawer position="end" mode="over">
+  <mat-drawer #invoiceDrawer position="end" mode="over" (closed)="onInvoiceClosed()">
     @if (vm$ | async; as vm) {
       @if (vm.lastSale) {
         @let sale = vm.lastSale;

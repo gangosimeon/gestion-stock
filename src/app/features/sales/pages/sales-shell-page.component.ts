@@ -101,6 +101,9 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   vmSnapshot: any = null;
 
+  /** Vente dont le ticket a déjà été ouvert : le panneau ne s'ouvre qu'une fois par vente. */
+  private shownSale: unknown = null;
+
   constructor() {
     this.facade.refresh();
 
@@ -119,7 +122,8 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
       this.customerId.setValue(vm.form.customerId, { emitEvent: false });
       this.paidAmount.setValue(vm.form.paidAmount, { emitEvent: false });
 
-      if (vm.lastSale) {
+      if (vm.lastSale && vm.lastSale !== this.shownSale) {
+        this.shownSale = vm.lastSale;
         void this.invoiceDrawer.open();
       }
     });
@@ -228,7 +232,12 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   }
 
   closeInvoice(): void {
-    if (!this.vmSnapshot?.lastSale) return;
     void this.invoiceDrawer.close();
+  }
+
+  /** Panneau fermé (bouton, clic à côté ou Échap) : le ticket est retiré de l'écran. */
+  onInvoiceClosed(): void {
+    this.shownSale = null;
+    this.facade.dismissLastSale();
   }
 }

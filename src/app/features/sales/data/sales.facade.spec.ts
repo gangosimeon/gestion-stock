@@ -106,6 +106,11 @@ describe('SalesFacade (point de vente sur Spring Boot)', () => {
     // La vente renvoyée fait foi, pas l'aperçu.
     expect(after.lastSale?.total).toBe(68000);
     expect(after.cart).toEqual([]);
+
+    // Ticket fermé : la vente encaissée ne revient plus à l'écran pour la vente suivante.
+    facade.dismissLastSale();
+    facade.addProductToCart(FRAME.id);
+    expect((await nextVm((v) => v.cart.length > 0)).lastSale).toBeNull();
     screen.unsubscribe();
   });
 
