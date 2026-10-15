@@ -72,6 +72,8 @@ export interface AuditLogFilter {
   userId?: string;
   status?: AuditStatus;
   search?: string;
+  /** Dépôt des entrées (doit être un de vos dépôts ; sinon refus du backend). */
+  warehouseId?: string;
 }
 
 /** Tri serveur : createdAt | action | module | username | status. */

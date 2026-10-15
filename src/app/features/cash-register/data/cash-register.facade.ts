@@ -10,6 +10,7 @@ import {
 import { CashOperation, CashRegisterSession, CashRegisterSessionStatus } from '../../../core/models/cash-register.model';
 import { PageRequest } from '../../../core/services/page-params';
 import { PaginatedResult } from '../../../core/services/products-api.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 export interface CashRegisterVm {
   isLoading: boolean;
@@ -44,6 +45,11 @@ export class CashRegisterFacade {
     map(([isLoading, errorMessage, current]): CashRegisterVm => ({ isLoading, errorMessage, current })),
     shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  constructor() {
+    // Autre dépôt : données rechargées (sans abonné, le prochain affichage les recharge de toute façon).
+    inject(WarehouseContextService).warehouseChanged$.subscribe(() => this.refresh());
+  }
 
   refresh(): void {
     this.refreshSubject.next(undefined);

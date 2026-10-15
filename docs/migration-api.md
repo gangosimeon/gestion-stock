@@ -11,7 +11,7 @@ Architecture conservée : **Feature → Facade → ApiService**. Seuls les ApiSe
 | URL de base | `http://localhost:3000/api` (interceptée) | `http://localhost:8080/api` | Pointer `environment.apiUrl` vers `:8080`. Les routes encore mockées sont désignées par une liste de préfixes. |
 | Listes | `{items, total}` | `PageResponse {items, total, page, size, totalPages}` | Compatible. Sans `page`/`size`, le backend renvoie jusqu'à 5 000 lignes et ajoute l'en-tête `X-Result-Truncated` au-delà. |
 | Erreurs | `{message}` | `ApiError {status, code, message, details[], traceId}` | `toApiError` lit déjà `error.message` : compatible. |
-| Dépôt courant | En-tête `X-Warehouse-Id: wh_1` | En-tête UUID. Une valeur invalide ou absente fait retomber sur le dépôt par défaut de l'utilisateur. | Ne bloque pas. Remplacer `wh_1` par l'UUID réel (`GET /warehouses/current`). |
+| Dépôt courant | En-tête `X-Warehouse-Id` simulé | En-tête UUID d'un dépôt choisi. **Absent** : dépôt par défaut de l'utilisateur, sinon premier dépôt attribué actif, sinon dépôt principal (seulement sans affectation ou avec `warehouse:all`). **Jamais de repli** sur une valeur fournie : 400 `INVALID_WAREHOUSE_ID` (pas un UUID), 400 `UNKNOWN_WAREHOUSE`, 403 `WAREHOUSE_INACTIVE`, 403 `WAREHOUSE_ACCESS_DENIED` ; aucun dépôt utilisable : 403 `NO_WAREHOUSE_AVAILABLE`. | ✅ Le front n'envoie qu'un UUID réel (aucun en-tête sans choix) et revalide le choix sur ces erreurs. |
 | Identifiants | `p_1`, `u_01`… | UUID | Aucun identifiant n'est écrit en dur dans les écrans (vérifié). |
 | Droits | Rôles (`hasAnyRole(['ADMIN'])`, `roleGuard`) | Permissions (`/auth/me` → `permissions[]`) | Ajouter `hasPermission()` et migrer `roleGuard` et `users.facade`. |
 | CORS | – | `allowed-origins: http://localhost:4200` (profil dev). En-têtes autorisés : `Authorization`, `X-Warehouse-Id`. | OK |
@@ -80,8 +80,10 @@ Servi par Spring Boot depuis l'étape 3 (`/api/users` retiré de `environment.mo
 ### 4. Warehouses (`warehouses-api.service.ts`) — ✅ migré (sélecteur de magasin et liste des dépôts)
 
 `/api/warehouses` entièrement sur Spring Boot depuis l'étape Stock (sélecteur, page Dépôts, Transfert).
-- Le magasin choisi est un dépôt réel (`current_warehouse` = `{id, name}` en localStorage). Choix invalide (autre utilisateur, dépôt non autorisé) : oublié, puis `GET /api/warehouses/current` (dépôt appliqué par le backend).
-- `X-Warehouse-Id` : UUID réel vers Spring Boot (aucun en-tête sans choix) ; vers le mock, dépôt simulé de même nom (`wh_1`, `wh_2`). Avant : `wh_*` envoyé partout, le backend appliquait toujours le magasin principal.
+- Le magasin choisi est un dépôt réel (`current_warehouse` = `{id, name}` en localStorage). Choix invalide (autre utilisateur, dépôt non autorisé, désactivé) : le backend le **refuse** (jamais remplacé), le front l'oublie et revalide avec `GET /api/warehouses/current`.
+- `X-Warehouse-Id` : uniquement un UUID réel (aucun en-tête sans choix). Un ancien identifiant simulé enregistré (`wh_1`…) n'est pas un UUID : il est effacé au démarrage et n'est jamais envoyé.
+- Changement de magasin : les écrans dépendant du dépôt se rechargent (`warehouseChanged$`) ; un panier non vide demande confirmation (refus : magasin et panier conservés). Une caisse ouverte dans un autre dépôt est signalée.
+- Écriture sur une pièce d'un autre dépôt que le magasin choisi : 409 `WAREHOUSE_MISMATCH` (repasser dans le dépôt de la pièce). Règles complètes : `docs/multi-depots.md` du backend.
 - Magasin oublié à la connexion et à la déconnexion, conservé au renouvellement de jeton.
 - Création réservée à `warehouse:manage` (formulaire masqué sinon) ; code généré par le backend.
 
@@ -90,7 +92,7 @@ Servi par Spring Boot depuis l'étape 3 (`/api/users` retiré de `environment.mo
 | `/warehouses` | `/api/warehouses` | GET | – | `PageResponse<Warehouse>` | ✅ | `warehouse:read` |
 | `/warehouses` | `/api/warehouses` | POST | `WarehouseRequest` | 201 `Warehouse` | ✅ | `warehouse:manage` |
 | `/warehouses/transfer` | `/api/warehouses/transfer` | POST | `{fromWarehouseId, toWarehouseId, productId, quantity, note}` | `{ok, transferId, out, in}` (sur-ensemble de `{ok}`) | ✅ | `stock:transfer` |
-| – | `/api/warehouses/current` | GET | – | `Warehouse` | ⚠️ À utiliser pour initialiser `WarehouseContextService`. | `warehouse:read` |
+| – | `/api/warehouses/current` | GET | – | `Warehouse` | ✅ Revalidation du magasin choisi (shell). | `warehouse:read` |
 
 ### 5. Stock (`stock-api.service.ts`, `stock.facade.ts`) — ✅ migré (écran Stock et Transfert)
 

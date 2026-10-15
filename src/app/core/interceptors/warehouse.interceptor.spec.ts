@@ -6,7 +6,6 @@ import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../auth/services/auth.service';
-import { mockWarehouseIdFor } from '../mocks/mock-routing';
 import { WarehouseContextService } from '../services/warehouse-context.service';
 import { warehouseInterceptor } from './warehouse.interceptor';
 
@@ -61,13 +60,6 @@ describe('Magasin courant (X-Warehouse-Id) pendant la migration', () => {
     expect(header(`${API}/inventory/sessions`)).toBe(SECONDAIRE.id);
   });
 
-  it('correspondance par nom insensible à la casse, repli sur le dépôt principal simulé', () => {
-    expect(mockWarehouseIdFor('MAGASIN PRINCIPAL')).toBe('wh_1');
-    expect(mockWarehouseIdFor('Dépôt secondaire')).toBe('wh_2');
-    expect(mockWarehouseIdFor('Nouveau dépôt')).toBe('wh_1');
-    expect(mockWarehouseIdFor(null)).toBe('wh_1');
-  });
-
   it('choix conservé (rechargement de page) puis oublié s’il n’est plus visible', () => {
     ctx.select(SECONDAIRE);
     expect(JSON.parse(localStorage.getItem('current_warehouse') ?? '{}').id).toBe(SECONDAIRE.id);
@@ -88,6 +80,59 @@ describe('Magasin courant (X-Warehouse-Id) pendant la migration', () => {
     http = TestBed.inject(HttpTestingController);
     expect(TestBed.inject(WarehouseContextService).warehouseId).toBeNull();
     expect(localStorage.getItem('warehouse_id')).toBeNull();
+  });
+
+  it('choix enregistré dont l’identifiant n’est pas un UUID : ignoré, effacé, aucun en-tête envoyé', () => {
+    localStorage.setItem('current_warehouse', JSON.stringify({ id: 'wh_1', name: 'Magasin principal' }));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(withInterceptors([warehouseInterceptor])), provideHttpClientTesting()]
+    });
+    httpClient = TestBed.inject(HttpClient);
+    http = TestBed.inject(HttpTestingController);
+    expect(TestBed.inject(WarehouseContextService).warehouseId).toBeNull();
+    expect(localStorage.getItem('current_warehouse')).toBeNull();
+    expect(header(`${API}/products`)).toBeNull();
+  });
+
+  it('dépôt désactivé dans la liste : le choix est oublié', () => {
+    ctx.select(SECONDAIRE);
+    expect(ctx.keepIfVisible([PRINCIPAL, { ...SECONDAIRE, active: false }])).toBe(false);
+    expect(ctx.warehouseId).toBeNull();
+  });
+
+  describe('refus du dépôt envoyé par le backend', () => {
+    function fail(code: string, status: number): void {
+      httpClient.get(`${API}/products`).subscribe({ error: () => undefined });
+      http.expectOne(`${API}/products`).flush({ code }, { status, statusText: 'Refus' });
+    }
+
+    it.each([
+      ['INVALID_WAREHOUSE_ID', 400],
+      ['UNKNOWN_WAREHOUSE', 400],
+      ['WAREHOUSE_INACTIVE', 403],
+      ['WAREHOUSE_ACCESS_DENIED', 403]
+    ])('%s : le choix enregistré est revalidé, jamais remplacé en silence', (code, status) => {
+      const revalidated = vi.fn();
+      ctx.revalidationRequested$.subscribe(revalidated);
+      ctx.select(SECONDAIRE);
+
+      fail(code, status);
+
+      expect(revalidated).toHaveBeenCalledTimes(1);
+      expect(ctx.warehouseId).toBe(SECONDAIRE.id);
+    });
+
+    it('autre erreur, ou requête sans dépôt choisi : aucune revalidation', () => {
+      const revalidated = vi.fn();
+      ctx.revalidationRequested$.subscribe(revalidated);
+
+      fail('WAREHOUSE_INACTIVE', 403);
+      ctx.select(SECONDAIRE);
+      fail('STOCK_INSUFFICIENT', 422);
+
+      expect(revalidated).not.toHaveBeenCalled();
+    });
   });
 
   it('déconnexion puis nouvelle connexion : le magasin du précédent utilisateur est oublié', async () => {

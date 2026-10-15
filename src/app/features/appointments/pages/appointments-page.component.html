@@ -19,10 +19,7 @@
     <div class="content">
       <!-- ERREUR -->
       @if (errorMessage) {
-        <div class="error-banner">
-          <mat-icon>warning</mat-icon>
-          {{ errorMessage }}
-        </div>
+        <div class="error" role="alert">{{ errorMessage }}</div>
       }
 
       <!-- FILTRES -->
@@ -61,6 +58,10 @@
             </button>
           </mat-form-field>
 
+          @if (canSeeAllWarehouses$ | async) {
+            <mat-checkbox formControlName="allWarehouses">Tous les dépôts</mat-checkbox>
+          }
+
           <div class="filters-actions filter-bar__actions">
             <button mat-flat-button color="primary" type="submit">
               <mat-icon>filter_list</mat-icon> Filtrer
@@ -78,6 +79,11 @@
           <ng-container matColumnDef="dateTime">
             <th mat-header-cell *matHeaderCellDef>Date & Heure</th>
             <td mat-cell *matCellDef="let a">{{ a.dateTime | date: 'dd/MM/yyyy HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="warehouse">
+            <th mat-header-cell *matHeaderCellDef>Dépôt</th>
+            <td mat-cell *matCellDef="let a">{{ (warehouseNames$ | async)?.get(a.warehouseId) ?? '—' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="customerName">
@@ -113,7 +119,7 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let a">
-              @if (a.status === 'SCHEDULED' && (canManage$ | async)) {
+              @if (a.status === 'SCHEDULED' && inCurrentWarehouse(a) && (canManage$ | async)) {
                 <button mat-icon-button matTooltip="Modifier" (click)="openEdit(a)">
                   <mat-icon>edit</mat-icon>
                 </button>

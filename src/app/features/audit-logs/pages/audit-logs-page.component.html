@@ -82,6 +82,19 @@
         </mat-select>
       </mat-form-field>
 
+      @if (warehouseOptions$ | async; as warehouses) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Dépôt</mat-label>
+          <mat-select formControlName="warehouseId">
+            <app-select-search />
+            <mat-option value="">Tous vos dépôts</mat-option>
+            @for (w of warehouses; track w.id) {
+              <mat-option [value]="w.id">{{ w.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Statut</mat-label>
         <mat-select formControlName="status">
@@ -112,10 +125,7 @@
 
   <!-- ERREUR -->
   @if (errorMessage) {
-    <div class="error-banner">
-      <mat-icon>warning</mat-icon>
-      {{ errorMessage }}
-    </div>
+    <div class="error" role="alert">{{ errorMessage }}</div>
   }
 
   <!-- TABLEAU -->

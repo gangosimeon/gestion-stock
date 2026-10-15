@@ -13,7 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, map, takeUntil } from 'rxjs';
 
 import {
   AuditAction,
@@ -30,6 +30,7 @@ import {
   auditStatusLabels
 } from '../../../core/models/audit-log.model';
 import { AuditLogsApiService } from '../../../core/services/audit-logs-api.service';
+import { WarehouseNamesService } from '../../../core/services/warehouse-names.service';
 import { AuditLogDetailsDialogComponent } from '../ui/audit-log-details-dialog.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
@@ -62,6 +63,10 @@ import { DatePickerDirective } from '../../../shared/date/date-picker.directive'
 })
 export class AuditLogsPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(AuditLogsApiService);
+  /** Dépôts proposés au filtre : ceux que l'utilisateur voit (le backend refuse les autres). */
+  readonly warehouseOptions$ = inject(WarehouseNamesService).names$.pipe(
+    map((names) => [...names].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)))
+  );
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -101,7 +106,8 @@ export class AuditLogsPageComponent implements OnInit, OnDestroy {
     actions: new FormControl<AuditAction[]>([]),
     modules: new FormControl<AuditModule[]>([]),
     status: new FormControl<AuditStatus | ''>(''),
-    search: new FormControl<string>('')
+    search: new FormControl<string>(''),
+    warehouseId: new FormControl<string>('')
   });
 
   ngOnInit(): void {
@@ -154,6 +160,7 @@ export class AuditLogsPageComponent implements OnInit, OnDestroy {
     if (f.modules?.length) filters.modules = f.modules;
     if (f.status) filters.status = f.status;
     if (f.search?.trim()) filters.search = f.search.trim();
+    if (f.warehouseId) filters.warehouseId = f.warehouseId;
     return filters;
   }
 
@@ -174,7 +181,7 @@ export class AuditLogsPageComponent implements OnInit, OnDestroy {
 
   // Réinitialiser les filtres
   resetFilters(): void {
-    this.filtersForm.reset({ actions: [], modules: [], status: '', search: '', dateFrom: '', dateTo: '' });
+    this.filtersForm.reset({ actions: [], modules: [], status: '', search: '', dateFrom: '', dateTo: '', warehouseId: '' });
     this.pageIndex = 0;
     this.loadData();
   }

@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, finalize, forkJoin, map, shareReplay, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription, combineLatest, finalize, forkJoin, map, shareReplay, tap } from 'rxjs';
 
 import { Expense, ExpenseFilter, ExpenseSummary } from '../../../core/models/expense.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { CreateExpenseRequest, ExpensesApiService } from '../../../core/services/expenses-api.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 export interface ExpensesVm {
   isLoading: boolean;
@@ -36,6 +37,9 @@ export function currentMonthFilter(today = new Date()): ExpenseFilter {
 export class ExpensesFacade {
   private readonly api = inject(ExpensesApiService);
   private readonly auth = inject(AuthService);
+  private readonly warehouseCtx = inject(WarehouseContextService);
+
+  private loading?: Subscription;
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -73,6 +77,16 @@ export class ExpensesFacade {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
+  constructor() {
+    // Autre dépôt : ses dépenses repartent de la première page, rien du précédent ne reste affiché.
+    this.warehouseCtx.warehouseChanged$.subscribe(() => {
+      this.loading?.unsubscribe();
+      this.isLoadingSubject.next(false);
+      this.pageSubject.next({ ...this.pageSubject.value, index: 0 });
+      this.resultSubject.next({ expenses: [], total: 0, summary: null });
+    });
+  }
+
   /** Liste et totaux du même filtre, chargés ensemble. */
   refresh(): void {
     const filter = this.filterSubject.value;
@@ -80,7 +94,9 @@ export class ExpensesFacade {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
-    forkJoin({ list: this.api.list(filter, page.index, page.size), summary: this.api.summary(filter) })
+    // Un chargement plus ancien (autre filtre, autre dépôt) est abandonné.
+    this.loading?.unsubscribe();
+    this.loading = forkJoin({ list: this.api.list(filter, page.index, page.size), summary: this.api.summary(filter) })
       .pipe(finalize(() => this.isLoadingSubject.next(false)))
       .subscribe({
         next: ({ list, summary }) => this.resultSubject.next({ expenses: list.items, total: list.total, summary }),

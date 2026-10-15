@@ -6,7 +6,7 @@
     </div>
 
     @if (vm.errorMessage) {
-      <div class="error">{{ vm.errorMessage }}</div>
+      <div class="error" role="alert">{{ vm.errorMessage }}</div>
     }
 
     @if (!vm.canRead) {
@@ -136,7 +136,7 @@
       @if (vm.errorMessage) {
         <mat-card class="chart-card">
           <mat-card-content>
-            <div class="error">{{ vm.errorMessage }}</div>
+            <div class="error" role="alert">{{ vm.errorMessage }}</div>
           </mat-card-content>
         </mat-card>
       }

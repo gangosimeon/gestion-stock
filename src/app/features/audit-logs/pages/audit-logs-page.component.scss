@@ -17,19 +17,6 @@
 
 // ─── ERREUR ──────────────────────────────────────────────────────
 
-.error-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-4);
-  background: var(--color-danger-soft);
-  border: 1px solid #FECACA;
-  border-radius: var(--radius-md);
-  color: #B91C1C;
-  font-size: 13px;
-  font-weight: 500;
-}
-
 // ─── TABLEAU ─────────────────────────────────────────────────────
 
 .clickable-row {

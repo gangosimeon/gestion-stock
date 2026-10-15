@@ -1,5 +1,6 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -8,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { catchError, combineLatest, finalize, map, of, startWith, take } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, startWith, switchMap, take } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { Warehouse } from '../../../core/models/warehouse.model';
@@ -51,32 +52,45 @@ export class WarehouseTransferPageComponent {
 
   isSubmitting = false;
 
-  // Dépôts et catalogue du backend : identifiants réels, comme le transfert.
-  readonly vm$ = combineLatest([this.warehousesApi.list(), this.productsApi.list()]).pipe(
-    map(([w, p]) => ({
-      warehouses: w.items,
-      products: p.items,
-      isLoading: false,
-      errorMessage: null as string | null
-    })),
-    catchError((e: unknown) =>
-      of({
-        warehouses: [] as Warehouse[],
-        products: [] as Product[],
-        isLoading: false,
-        errorMessage: e instanceof Error ? e.message : 'Erreur de chargement'
-      })
-    ),
-    startWith({ warehouses: [] as Warehouse[], products: [] as Product[], isLoading: true, errorMessage: null as string | null })
+  // Dépôts et catalogue du backend : identifiants réels, comme le transfert. Le catalogue porte le
+  // stock du dépôt courant : rechargé quand on change de dépôt.
+  readonly vm$ = this.warehouseCtx.warehouseChanged$.pipe(
+    startWith(null),
+    switchMap(() =>
+      combineLatest([this.warehousesApi.list(), this.productsApi.list()]).pipe(
+        map(([w, p]) => ({
+          warehouses: w.items,
+          products: p.items,
+          isLoading: false,
+          errorMessage: null as string | null
+        })),
+        catchError((e: unknown) =>
+          of({
+            warehouses: [] as Warehouse[],
+            products: [] as Product[],
+            isLoading: false,
+            errorMessage: e instanceof Error ? e.message : 'Erreur de chargement'
+          })
+        ),
+        startWith({ warehouses: [] as Warehouse[], products: [] as Product[], isLoading: true, errorMessage: null as string | null })
+      )
+    )
   );
 
   readonly form = this.fb.nonNullable.group({
-    // Par défaut : le magasin choisi dans l'en-tête.
-    fromWarehouseId: [this.warehouseCtx.warehouseId ?? '', [Validators.required]],
+    // Toujours le magasin courant (en-tête) : le backend refuse une autre source (WAREHOUSE_MISMATCH).
+    fromWarehouseId: [{ value: this.warehouseCtx.warehouseId ?? '', disabled: true }],
     toWarehouseId: ['', [Validators.required]],
     productId: ['', [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1)]]
   });
+
+  constructor() {
+    // Le transfert part du magasin courant : il suit le magasin choisi dans l'en-tête.
+    this.warehouseCtx.warehouseChanged$
+      .pipe(takeUntilDestroyed())
+      .subscribe((id) => this.form.patchValue({ fromWarehouseId: id, productId: '' }));
+  }
 
   submit(): void {
     if (this.form.invalid || this.isSubmitting) {
@@ -85,8 +99,13 @@ export class WarehouseTransferPageComponent {
     }
 
     const raw = this.form.getRawValue();
+    const fromWarehouseId = this.warehouseCtx.warehouseId ?? raw.fromWarehouseId;
 
-    if (raw.fromWarehouseId === raw.toWarehouseId) {
+    if (!fromWarehouseId) {
+      this.snackbar.open('Choisis d’abord le magasin courant dans l’en-tête', 'OK', { duration: 3000 });
+      return;
+    }
+    if (fromWarehouseId === raw.toWarehouseId) {
       this.snackbar.open('Choisis deux magasins différents', 'OK', { duration: 3000 });
       return;
     }
@@ -96,7 +115,7 @@ export class WarehouseTransferPageComponent {
 
     this.warehousesApi
       .transfer({
-        fromWarehouseId: raw.fromWarehouseId,
+        fromWarehouseId,
         toWarehouseId: raw.toWarehouseId,
         productId: raw.productId,
         quantity: raw.quantity
@@ -106,6 +125,7 @@ export class WarehouseTransferPageComponent {
         finalize(() => {
           this.isSubmitting = false;
           this.form.enable();
+          this.form.controls.fromWarehouseId.disable();
         })
       )
       .subscribe({

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, of } from 'rxjs';
+import { BehaviorSubject, Subscription, catchError, combineLatest, finalize, forkJoin, map, of } from 'rxjs';
 
 import {
   Dashboard,
@@ -15,6 +15,7 @@ import { CashRegisterApiService } from '../../../core/services/cash-register-api
 import { CashRegisterSession } from '../../../core/models/cash-register.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { AuthService as SessionService } from '../../../auth/services/auth.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 export type { DashboardKpis, SalesByDayPoint, StockEvolutionPoint, TopProductPoint };
 
@@ -54,6 +55,9 @@ export class DashboardFacade {
   private readonly cashApi = inject(CashRegisterApiService);
   private readonly auth = inject(AuthService);
   private readonly session = inject(SessionService);
+  private readonly warehouseCtx = inject(WarehouseContextService);
+
+  private loading?: Subscription;
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -81,7 +85,19 @@ export class DashboardFacade {
     )
   );
 
+  constructor() {
+    // Autre dépôt : les chiffres du précédent ne restent jamais affichés.
+    this.warehouseCtx.warehouseChanged$.subscribe(() => {
+      this.loading?.unsubscribe();
+      this.isLoadingSubject.next(false);
+      this.dashboardSubject.next(null);
+      this.sellerSubject.next(null);
+    });
+  }
+
   refresh(): void {
+    // Un chargement plus ancien (autre dépôt) est abandonné : sa réponse n'écrase pas la nouvelle.
+    this.loading?.unsubscribe();
     if (!this.session.hasPermission('report:read')) {
       // Vendeur : sa journée seulement (le tableau de bord du magasin lui serait refusé).
       if (this.session.hasPermission('sale:create')) this.refreshSeller();
@@ -90,7 +106,7 @@ export class DashboardFacade {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
-    this.api
+    this.loading = this.api
       .get()
       .pipe(finalize(() => this.isLoadingSubject.next(false)))
       .subscribe({
@@ -103,7 +119,7 @@ export class DashboardFacade {
   private refreshSeller(): void {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
-    forkJoin({
+    this.loading = forkJoin({
       myDay: this.api.myDay().pipe(
         catchError((e: unknown) => {
           this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');

@@ -59,7 +59,7 @@
           <mat-form-field appearance="outline" class="shell-header__warehouse" subscriptSizing="dynamic">
             <mat-label>Magasin</mat-label>
             <mat-icon matPrefix class="shell-header__warehouse-icon">storefront</mat-icon>
-            <mat-select [value]="wid" (valueChange)="setWarehouse($event, w)">
+            <mat-select #warehouseSelect [value]="wid" (valueChange)="setWarehouse($event, w, warehouseSelect)">
               <app-select-search />
               @for (it of w; track it.id) {
                 <mat-option [value]="it.id">{{ it.name }}</mat-option>
@@ -107,9 +107,37 @@
 
     </header>
 
+    @if (cashElsewhere$ | async; as cash) {
+      <div class="shell-banner" role="alert">
+        <mat-icon class="shell-banner__icon">point_of_sale</mat-icon>
+        <span class="shell-banner__text">
+          Votre caisse est ouverte dans « {{ cash.name }} » : elle ne peut pas servir dans ce magasin.
+          Revenez dans « {{ cash.name }} » pour encaisser, ou clôturez-la.
+        </span>
+        @if (warehouses$ | async; as w) {
+          @if (isVisible(cash.warehouseId, w)) {
+            <button mat-stroked-button type="button" (click)="setWarehouse(cash.warehouseId, w)">
+              Revenir à {{ cash.name }}
+            </button>
+          }
+        }
+      </div>
+    }
+
     <!-- PAGE CONTENT -->
     <main class="content">
-      <router-outlet />
+      @if (noWarehouse$ | async) {
+        <div class="shell-empty-state" role="alert">
+          <mat-icon class="shell-empty-state__icon">store_mall_directory</mat-icon>
+          <h2>Aucun magasin ne vous est attribué</h2>
+          <p>
+            Votre compte n'est rattaché à aucun magasin actif : vous ne pouvez consulter ni enregistrer
+            d'opération. Demandez à un administrateur de vous attribuer un magasin, puis reconnectez-vous.
+          </p>
+        </div>
+      } @else {
+        <router-outlet />
+      }
     </main>
   </mat-sidenav-content>
 </mat-sidenav-container>

@@ -10,7 +10,7 @@
       </mat-card-header>
       <mat-card-content>
         @if (vm.errorMessage) {
-          <div class="error">{{ vm.errorMessage }}</div>
+          <div class="error" role="alert">{{ vm.errorMessage }}</div>
         }
         @if (!(canTransfer$ | async)) {
           <div class="hint">Permission stock:transfer requise pour transférer.</div>
@@ -24,6 +24,7 @@
                 <mat-option [value]="w.id">{{ w.name }}</mat-option>
               }
             </mat-select>
+            <mat-hint>Magasin courant : changez-le dans l'en-tête.</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline">

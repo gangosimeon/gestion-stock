@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { catchError, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, map, of, shareReplay, startWith, switchMap, tap } from 'rxjs';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, DestroyRef, inject, ViewChild, ViewEncapsulation } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -7,7 +7,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
+import { MatSelect, MatSelectModule } from '@angular/material/select';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -19,6 +19,7 @@ import { WarehouseContextService } from '../core/services/warehouse-context.serv
 import { WarehousesApiService } from '../core/services/warehouses-api.service';
 import { Warehouse } from '../core/models/warehouse.model';
 import { SelectSearchComponent } from '../shared/select/select-search.component';
+import { CashRegisterFacade } from '../features/cash-register/data/cash-register.facade';
 import { AppSection, ROUTE_PERMISSIONS } from './route-permissions';
 
 export interface NavItem {
@@ -57,6 +58,7 @@ export class LayoutShellComponent {
   private readonly auth = inject(AuthService);
   private readonly warehousesApi = inject(WarehousesApiService);
   private readonly warehouseCtx = inject(WarehouseContextService);
+  private readonly cashRegister = inject(CashRegisterFacade);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
@@ -71,23 +73,63 @@ export class LayoutShellComponent {
   readonly currentUser$ = this.auth.currentUser$;
 
   /**
-   * Dépôts réellement visibles par l'utilisateur (backend). Un choix enregistré qui n'en fait
-   * plus partie est oublié au profit du dépôt appliqué par le backend (/warehouses/current).
+   * Dépôts actifs réellement visibles par l'utilisateur (backend). Un choix enregistré qui n'en
+   * fait plus partie est oublié au profit du dépôt appliqué par le backend (/warehouses/current).
+   * Relu quand le backend refuse le dépôt envoyé (choix périmé : dépôt désactivé ou retiré).
    */
-  readonly warehouses$ = this.warehousesApi.list().pipe(
-    map((r) => r.items),
-    switchMap((items) => {
-      if (this.warehouseCtx.keepIfVisible(items)) return of(items);
-      return this.warehousesApi.current().pipe(
-        tap((w) => this.warehouseCtx.select(w)),
-        map(() => items),
-        catchError(() => of(items))
-      );
-    }),
-    catchError(() => of([] as Warehouse[])),
+  readonly warehouses$ = this.warehouseCtx.revalidationRequested$.pipe(
+    startWith(undefined),
+    switchMap(() => this.warehousesApi.list().pipe(
+      map((r) => r.items.filter((w) => w.active !== false)),
+      switchMap((items) => {
+        if (this.warehouseCtx.keepIfVisible(items)) {
+          this.noWarehouseSubject.next(false);
+          return of(items);
+        }
+        return this.warehousesApi.current().pipe(
+          tap((w) => {
+            this.noWarehouseSubject.next(false);
+            this.warehouseCtx.select(w);
+          }),
+          map(() => items),
+          // Liste reçue mais vide et aucun dépôt par défaut (NO_WAREHOUSE_AVAILABLE) : rien à afficher.
+          catchError(() => {
+            if (items.length === 0) this.noWarehouseSubject.next(true);
+            return of(items);
+          })
+        );
+      }),
+      catchError(() => of([] as Warehouse[]))
+    )),
     shareReplay({ bufferSize: 1, refCount: true })
   );
   readonly warehouseId$ = this.warehouseCtx.warehouseId$;
+
+  private readonly noWarehouseSubject = new BehaviorSubject<boolean>(false);
+  /** Aucun dépôt actif affecté : les écrans métier sont remplacés par une explication. */
+  readonly noWarehouse$ = this.noWarehouseSubject.asObservable();
+
+  /**
+   * Caisse ouverte dans un autre dépôt que le dépôt courant : elle n'y est pas utilisable
+   * (encaissements refusés par le backend). `null` sinon, ou sans la permission cash:operate.
+   */
+  readonly cashElsewhere$: Observable<{ warehouseId: string; name: string } | null> = this.coreAuth
+    .hasPermission$('cash:operate')
+    .pipe(
+      switchMap((canOperate) =>
+        canOperate
+          ? combineLatest([this.cashRegister.current$, this.warehouseId$, this.warehouses$])
+          : of([null, '', []] as const)
+      ),
+      map(([session, wid, warehouses]) => {
+        const at = session?.status === 'OPEN' ? session.warehouseId : undefined;
+        if (!at) return null;
+        // Le backend situe la caisse par rapport au dépôt courant ; à défaut, comparaison locale.
+        const elsewhere = session?.inCurrentWarehouse != null ? !session.inCurrentWarehouse : !!wid && at !== wid;
+        if (!elsewhere) return null;
+        return { warehouseId: at, name: warehouses.find((w) => w.id === at)?.name ?? 'un autre magasin' };
+      })
+    );
 
   readonly navItems: NavItem[] = (
     [
@@ -158,9 +200,18 @@ export class LayoutShellComponent {
     }
   }
 
-  setWarehouse(id: string, warehouses: readonly Warehouse[]): void {
+  isVisible(warehouseId: string, warehouses: readonly Warehouse[]): boolean {
+    return warehouses.some((w) => w.id === warehouseId);
+  }
+
+  /**
+   * Choix d'un magasin dans l'en-tête. Un contrôle peut le refuser (panier en cours non abandonné) :
+   * le sélecteur revient alors sur le magasin courant, rien n'a changé.
+   */
+  async setWarehouse(id: string, warehouses: readonly Warehouse[], select?: MatSelect): Promise<void> {
     const warehouse = warehouses.find((w) => w.id === id);
-    if (warehouse) this.warehouseCtx.select(warehouse);
+    const changed = warehouse ? await this.warehouseCtx.requestSelect(warehouse) : false;
+    if (!changed && select) select.value = this.warehouseCtx.warehouseId;
   }
 
   /** Grand écran : replie / déplie la barre latérale ; petit écran : ouvre / ferme le menu superposé. */

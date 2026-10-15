@@ -61,9 +61,22 @@ describe('ClientDetailPageComponent (fiche client sur Spring Boot)', () => {
 
   afterEach(() => http.verify());
 
-  function flushAll(): void {
+  function flushAll(otherWarehousesBalance: number | null = null): void {
     http.expectOne(`${API}/customers/${ID}`).flush(CLIENT);
+    http
+      .expectOne(`${API}/customers/${ID}/account`)
+      .flush({ balance: 120000, availableCredit: 380000, otherWarehousesBalance });
   }
+
+  it('dette totale, et part des autres dépôts sans détail pour un utilisateur limité', async () => {
+    const page = setup(['customer:read']);
+    const vm = firstValueFrom(page.vm$.pipe(skipWhile((v) => v.isLoading)));
+    flushAll(45000);
+    const loaded = await vm;
+
+    expect(loaded.customer?.balance).toBe(120000);
+    expect(loaded.otherWarehousesBalance).toBe(45000);
+  });
 
   it('dette et crédit disponible du backend ; ventes paginées côté serveur, part à crédit fournie par le backend', async () => {
     const page = setup(['customer:read', 'sale:read', 'customer:pay']);

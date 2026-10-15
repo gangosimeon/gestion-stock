@@ -21,6 +21,7 @@ import { FilterResetComponent } from '../../../shared/table/filter-reset.compone
 import { ServerTable } from '../../../shared/table/server-table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 @Component({
   selector: 'app-inventory-history-page',
@@ -64,6 +65,8 @@ export class InventoryHistoryPageComponent {
 
   /** Recherche, statut, période, tri et pagination traités par le backend. */
   readonly table = new ServerTable((query) => this.api.listSessionsPage(query, query.filters), {
+    // Autre dépôt : la liste est rechargée (données du dépôt courant).
+    reload$: inject(WarehouseContextService).warehouseChanged$,
     filters: new FormGroup({
       status: new FormControl<InventoryStatus | null>(null),
       from: new FormControl<string | null>(null),

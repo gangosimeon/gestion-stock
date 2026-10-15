@@ -22,6 +22,8 @@ import { PaySupplierDialogComponent, PaySupplierDialogResult } from '../ui/pay-s
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
 import { ServerTable } from '../../../shared/table/server-table';
+import { WarehouseNamesService } from '../../../core/services/warehouse-names.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 type DetailVm = {
   isLoading: boolean;
@@ -100,7 +102,11 @@ export class SupplierDetailPageComponent {
             : of({ items: [] as SupplierPurchaseHistory[], total: 0 })
         )
       ),
-    { sortFields: { date: 'purchaseDateIso', total: 'totalAmount' }, reload$: this.reloadTables$ }
+    {
+      sortFields: { date: 'purchaseDateIso', total: 'totalAmount' },
+      // Achats du dépôt courant : rechargés aussi quand on change de dépôt.
+      reload$: merge(this.reloadTables$, inject(WarehouseContextService).warehouseChanged$)
+    }
   );
 
   /** Paiements du fournisseur : recherche, tri et pagination traités par le backend. */
@@ -115,6 +121,11 @@ export class SupplierDetailPageComponent {
   );
 
   readonly displayedColumns = ['date', 'reference', 'order', 'items', 'total'] as const;
+  /** Avec warehouse:all, l'historique couvre tous les dépôts : la colonne « Dépôt » les distingue. */
+  readonly historyColumns$ = this.auth
+    .hasPermission$('warehouse:all')
+    .pipe(map((all): readonly string[] => (all ? ['date', 'warehouse', ...this.displayedColumns.slice(1)] : this.displayedColumns)));
+  readonly warehouseNames$ = inject(WarehouseNamesService).names$;
   readonly paymentColumns = ['date', 'number', 'amount', 'method', 'order', 'note'] as const;
 
   readonly vm$: Observable<DetailVm> = combineLatest([
@@ -168,7 +179,8 @@ export class SupplierDetailPageComponent {
       .open(PaySupplierDialogComponent, {
         data: {
           title: `Payer ${vm.supplier?.name ?? ''}`,
-          maxAmount: vm.account?.remainingToPay
+          // Un paiement global ne règle que les commandes du dépôt courant.
+          maxAmount: vm.account?.currentWarehouseRemainingToPay ?? vm.account?.remainingToPay
         }
       })
       .afterClosed()

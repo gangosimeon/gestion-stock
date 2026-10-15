@@ -100,10 +100,7 @@
 
         <!-- Erreur inline -->
         @if (errorMessage) {
-          <div class="form__error" role="alert">
-            <mat-icon>error_outline</mat-icon>
-            <span>{{ errorMessage }}</span>
-          </div>
+          <div class="error" role="alert">{{ errorMessage }}</div>
         }
 
         <!-- Bouton soumettre -->

@@ -29,17 +29,24 @@ export interface CreateUserRequest {
    * existe mais ne peut pas se connecter.
    */
   password?: string;
+  /** Dépôts autorisés ; absent : aucun (l'utilisateur travaille alors dans le dépôt principal). */
+  warehouseIds?: string[];
+  /** Dépôt par défaut, parmi les dépôts autorisés (le backend l'y ajoute de toute façon). */
+  defaultWarehouseId?: string;
 }
 
 /**
  * PUT /api/users/{id} : identifiant, nom et rôles remplacés ; téléphone absent = inchangé.
- * Le statut et le mot de passe ont leurs routes dédiées.
+ * Dépôts : `warehouseIds` remplace la liste (absent = inchangée) ; `defaultWarehouseId` absent =
+ * inchangé. Le statut et le mot de passe ont leurs routes dédiées.
  */
 export interface UpdateUserRequest {
   username: string;
   fullName: string;
   phone?: string;
   roles: Role[];
+  warehouseIds?: string[];
+  defaultWarehouseId?: string;
 }
 
 @Injectable({

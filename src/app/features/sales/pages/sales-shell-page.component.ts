@@ -21,6 +21,7 @@ import { Subject, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod } from '../../../core/models/sale.model';
 import { AuthService } from '../../../auth/services/auth.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { SalesFacade } from '../data/sales.facade';
 import { CartRow, matchingCustomers, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
@@ -57,6 +58,7 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
 export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(SalesFacade);
   private readonly snackbar = inject(MatSnackBar);
+  private readonly warehouseCtx = inject(WarehouseContextService);
   private readonly destroy$ = new Subject<void>();
 
   /** Lien vers l'historique des ventes (sale:read). */
@@ -112,6 +114,11 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     this.facade.refresh();
+    // Autre magasin : catalogue et stock rechargés (le panier a été vidé par la facade).
+    this.warehouseCtx.warehouseChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.selectedProductId.setValue(null);
+      this.facade.refresh();
+    });
 
     this.customerId.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setCustomer(v));
     this.paidAmount.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setPaidAmount(v));

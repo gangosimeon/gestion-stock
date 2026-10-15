@@ -12,18 +12,17 @@
     </div>
 
     @if (vm.errorMessage) {
-      <div class="error">{{ vm.errorMessage }}</div>
+      <div class="error" role="alert">{{ vm.errorMessage }}</div>
     }
 
     @if (!vm.current) {
-      <mat-card class="card">
-        <mat-card-header>
-          <mat-card-title>Aucune caisse ouverte</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <a mat-flat-button color="primary" [routerLink]="['/cash-register/open']">Ouvrir une caisse</a>
-        </mat-card-content>
-      </mat-card>
+      <div class="error error--blocking" role="status">
+        <span>
+          <strong>Aucune caisse ouverte.</strong>
+          Ouvrez une caisse pour enregistrer des opérations ou la fermer.
+        </span>
+        <a mat-flat-button color="primary" [routerLink]="['/cash-register/open']">Ouvrir une caisse</a>
+      </div>
     } @else {
       <h2 class="section-title">Fermeture caisse</h2>
       <div class="kpi-grid">

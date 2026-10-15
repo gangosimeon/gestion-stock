@@ -8,6 +8,7 @@ import { PageRequest } from '../../../core/services/page-params';
 import { PaginatedResult, ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateStockMovementRequest, StockApiService, StockMovementsQuery } from '../../../core/services/stock-api.service';
 import { StockDrawerState, StockFilters, StockMovementRow, StockVm } from './stock-vm.model';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 /** Tous les abonnés de l'écran (pipes async, table) partagent un seul appel. */
 const SHARED = { bufferSize: 1, refCount: true } as const;
@@ -64,6 +65,11 @@ export class StockFacade {
     })),
     shareReplay(SHARED)
   );
+
+  constructor() {
+    // Autre dépôt : données rechargées (sans abonné, le prochain affichage les recharge de toute façon).
+    inject(WarehouseContextService).warehouseChanged$.subscribe(() => this.refresh());
+  }
 
   refresh(): void {
     this.refreshSubject.next(undefined);

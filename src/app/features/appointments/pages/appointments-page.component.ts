@@ -2,6 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,7 +15,7 @@ import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Observable, Subject, filter, switchMap, take, takeUntil } from 'rxjs';
+import { Observable, Subject, Subscription, filter, switchMap, take, takeUntil } from 'rxjs';
 
 import {
   Appointment,
@@ -28,6 +29,8 @@ import { AppointmentDrawerComponent, AppointmentDrawerContext } from '../ui/appo
 import { CancelAppointmentDialogComponent, CancelAppointmentDialogData } from '../ui/cancel-appointment-dialog.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 import { DatePickerDirective } from '../../../shared/date/date-picker.directive';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
+import { WarehouseNamesService } from '../../../core/services/warehouse-names.service';
 
 function isoDate(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -44,6 +47,7 @@ function isoDate(d: Date): string {
     DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
@@ -67,13 +71,18 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly warehouseCtx = inject(WarehouseContextService);
   private readonly destroy$ = new Subject<void>();
+  private loading?: Subscription;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild('drawer') drawer!: MatDrawer;
 
   /** Interface seulement : le backend contrôle appointment:manage à chaque appel. */
   readonly canManage$: Observable<boolean> = inject(AuthService).hasPermission$('appointment:manage');
+  /** Agenda de tous les dépôts : proposé avec warehouse:all (le backend refuse sinon). */
+  readonly canSeeAllWarehouses$: Observable<boolean> = inject(AuthService).hasPermission$('warehouse:all');
+  readonly warehouseNames$ = inject(WarehouseNamesService).names$;
 
   drawerCtx: AppointmentDrawerContext | null = null;
 
@@ -85,7 +94,9 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
   pageIndex = 0;
 
   dataSource = new MatTableDataSource<Appointment>([]);
-  readonly displayedColumns = ['dateTime', 'customerName', 'phone', 'status', 'note', 'actions'];
+  private readonly baseColumns = ['dateTime', 'customerName', 'phone', 'status', 'note', 'actions'];
+  /** Colonnes affichées : « Dépôt » en plus quand la liste couvre tous les dépôts. */
+  displayedColumns: string[] = this.baseColumns;
 
   readonly statusOptions = Object.keys(appointmentStatusLabels) as AppointmentStatus[];
   readonly statusLabels = appointmentStatusLabels;
@@ -95,11 +106,17 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
     search: new FormControl<string>(''),
     status: new FormControl<AppointmentStatus | ''>(''),
     dateFrom: new FormControl<string>(isoDate(new Date())),
-    dateTo: new FormControl<string>('')
+    dateTo: new FormControl<string>(''),
+    allWarehouses: new FormControl<boolean>(false)
   });
 
   ngOnInit(): void {
     this.loadData();
+    // Autre magasin : son agenda, à la première page.
+    this.warehouseCtx.warehouseChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.pageIndex = 0;
+      this.loadData();
+    });
   }
 
   loadData(): void {
@@ -114,8 +131,14 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
     // Valeurs AAAA-MM-JJ des champs date : jours locaux, envoyés tels quels.
     if (f.dateFrom) filters.dateFrom = f.dateFrom;
     if (f.dateTo) filters.dateTo = f.dateTo;
+    if (f.allWarehouses) filters.allWarehouses = true;
+    this.displayedColumns = f.allWarehouses
+      ? ['dateTime', 'warehouse', ...this.baseColumns.slice(1)]
+      : this.baseColumns;
 
-    this.api.list(filters, this.pageIndex, this.pageSize).pipe(takeUntil(this.destroy$)).subscribe({
+    // Un chargement plus ancien (autre filtre, autre dépôt) est abandonné : sa réponse n'écrase pas celle-ci.
+    this.loading?.unsubscribe();
+    this.loading = this.api.list(filters, this.pageIndex, this.pageSize).pipe(takeUntil(this.destroy$)).subscribe({
       next: (r) => {
         this.dataSource.data = r.items;
         this.total = r.total;
@@ -136,7 +159,7 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
   }
 
   resetFilters(): void {
-    this.filtersForm.reset({ search: '', status: '', dateFrom: isoDate(new Date()), dateTo: '' });
+    this.filtersForm.reset({ search: '', status: '', dateFrom: isoDate(new Date()), dateTo: '', allWarehouses: false });
     this.pageIndex = 0;
     this.loadData();
   }
@@ -170,6 +193,11 @@ export class AppointmentsPageComponent implements OnInit, OnDestroy {
     this.closeDrawer();
     this.snackbar.open(msg, 'OK', { duration: 3000, panelClass: 'snack-success' });
     this.loadData();
+  }
+
+  /** Modifier ou clore : seulement dans le dépôt courant (le backend refuse les autres). */
+  inCurrentWarehouse(a: Appointment): boolean {
+    return a.warehouseId === this.warehouseCtx.warehouseId;
   }
 
   /** Honoré ou absent : possible à partir du jour du rendez-vous (règle du backend). */

@@ -36,6 +36,17 @@ describe('AppointmentsApiService', () => {
     req.flush({ items: [], total: 0 });
   });
 
+  it('agenda de tous les dépôts : paramètre envoyé seulement s’il est demandé', () => {
+    api.list({ allWarehouses: true }).subscribe();
+    const all = http.expectOne((r) => r.url === URL);
+    expect(all.request.params.get('allWarehouses')).toBe('true');
+    all.flush({ items: [], total: 0 });
+    api.list({}).subscribe();
+    const current = http.expectOne((r) => r.url === URL);
+    expect(current.request.params.has('allWarehouses')).toBe(false);
+    current.flush({ items: [], total: 0 });
+  });
+
   it('clôture : honoré sans motif, annulation avec motif', () => {
     api.updateStatus('a1', 'COMPLETED').subscribe();
     api.updateStatus('a2', 'CANCELLED', 'Client en voyage').subscribe();

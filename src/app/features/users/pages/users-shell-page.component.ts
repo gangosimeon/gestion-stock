@@ -15,7 +15,10 @@ import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Observable, Subject, take, takeUntil } from 'rxjs';
 
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
 import { User } from '../../../core/models/user.model';
+import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
 import { Role } from '../../../core/models/role.model';
 import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
@@ -55,11 +58,15 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
   readonly facade = inject(UsersFacade);
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(MatSnackBar);
+  private readonly warehousesApi = inject(WarehousesApiService);
   private readonly destroy$ = new Subject<void>();
 
   @ViewChild('drawer') drawer!: MatSidenav;
 
-  readonly displayedColumns = ['username', 'fullName', 'roles', 'active', 'actions'] as const;
+  readonly displayedColumns = ['username', 'fullName', 'roles', 'warehouses', 'active', 'actions'] as const;
+
+  /** Noms des dépôts visibles, pour la colonne « Dépôts » (identifiants renvoyés par le backend). */
+  private warehouseNames = new Map<string, string>();
 
   readonly roleOptions = Object.entries(roleLabels).map(([value, label]) => ({ value: value as Role, label }));
   readonly activeOptions: { value: boolean; label: string }[] = [
@@ -83,6 +90,24 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
   vmSnapshot: UsersVm | null = null;
   /** Utilisateur ouvert dans le panneau (ligne de la page affichée). */
   editing: User[] = [];
+
+  constructor() {
+    this.warehousesApi
+      .list()
+      .pipe(takeUntilDestroyed())
+      .subscribe({ next: (r) => (this.warehouseNames = new Map(r.items.map((w) => [w.id, w.name]))), error: () => undefined });
+  }
+
+  /** Dépôts autorisés, le dépôt par défaut en premier ; « — » si aucun (dépôt principal). */
+  warehousesOf(u: User): string {
+    const ids = [...(u.warehouseIds ?? [])].sort((a, b) =>
+      a === u.defaultWarehouseId ? -1 : b === u.defaultWarehouseId ? 1 : 0
+    );
+    if (ids.length === 0) return '—';
+    return ids
+      .map((id) => (this.warehouseNames.get(id) ?? 'Dépôt inconnu') + (id === u.defaultWarehouseId ? ' (par défaut)' : ''))
+      .join(', ');
+  }
 
   ngAfterViewInit(): void {
 

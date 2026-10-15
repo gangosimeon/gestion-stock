@@ -6,6 +6,7 @@ import { InventorySession } from '../../../core/models/inventory.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PaginatedResult, ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateInventorySessionRequest, InventoryApiService } from '../../../core/services/inventory-api.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 export interface InventoryVm {
   isLoading: boolean;
@@ -69,6 +70,11 @@ export class InventoryFacade {
     })),
     shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  constructor() {
+    // Autre dépôt : données rechargées (sans abonné, le prochain affichage les recharge de toute façon).
+    inject(WarehouseContextService).warehouseChanged$.subscribe(() => this.refresh());
+  }
 
   refresh(): void {
     this.refreshSubject.next(undefined);

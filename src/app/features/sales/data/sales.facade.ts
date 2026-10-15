@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, finalize, forkJoin, map, shareReplay, tap } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { BehaviorSubject, Observable, Subscription, combineLatest, finalize, forkJoin, map, shareReplay, tap } from 'rxjs';
 
+import { confirmWith } from '../../../shared/dialog/confirm-dialog.component';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { Customer } from '../../../core/models/customer.model';
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod, Sale, SaleType } from '../../../core/models/sale.model';
@@ -21,6 +24,10 @@ export class SalesFacade {
   private readonly productsApi = inject(ProductsApiService);
   private readonly salesApi = inject(SalesApiService);
   private readonly auth = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
+  private readonly warehouseCtx = inject(WarehouseContextService);
+
+  private loading?: Subscription;
 
   private readonly isLoadingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
@@ -67,12 +74,20 @@ export class SalesFacade {
     shareReplay({ bufferSize: 1, refCount: true })
   );
 
+  constructor() {
+    // Le panier appartient au dépôt courant (stock, caisse) : le changer demande confirmation.
+    this.warehouseCtx.addSwitchCheck(() => this.confirmWarehouseSwitch());
+    this.warehouseCtx.warehouseChanged$.subscribe(() => this.resetForNewWarehouse());
+  }
+
   refresh(): void {
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
 
-    // Catalogue (stock du dépôt courant) et clients du backend.
-    forkJoin([this.productsApi.list(), this.salesApi.listCustomers()])
+    // Catalogue (stock du dépôt courant) et clients du backend. Un chargement plus ancien (autre
+    // dépôt) est abandonné : sa réponse ne remplace jamais celle du dépôt courant.
+    this.loading?.unsubscribe();
+    this.loading = forkJoin([this.productsApi.list(), this.salesApi.listCustomers()])
       .pipe(finalize(() => this.isLoadingSubject.next(false)))
       .subscribe({
         next: ([p, c]) => {
@@ -229,6 +244,27 @@ export class SalesFacade {
         error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
       })
     );
+  }
+
+  /** Panier vide : rien à perdre ; sinon l'utilisateur confirme qu'il abandonne le panier. */
+  private async confirmWarehouseSwitch(): Promise<boolean> {
+    if (this.cartSubject.value.length === 0) return true;
+    const confirmed = await confirmWith(this.dialog, {
+      title: 'Changer de magasin',
+      message:
+        'Le panier en cours sera vidé : ses prix et son stock sont ceux du magasin actuel. Changer de magasin quand même ?',
+      confirmLabel: 'Vider et changer'
+    });
+    if (confirmed) this.clearCart();
+    return confirmed;
+  }
+
+  /** Nouveau dépôt : rien du précédent ne subsiste (catalogue et stock, panier, dernier ticket). */
+  private resetForNewWarehouse(): void {
+    this.loading?.unsubscribe();
+    this.isLoadingSubject.next(false);
+    this.productsSubject.next([]);
+    this.clearCart();
   }
 
   /** Aperçu du panier (estimation) ; les montants qui font foi sont ceux de la vente renvoyée. */

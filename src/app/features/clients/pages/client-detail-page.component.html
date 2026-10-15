@@ -25,7 +25,7 @@
     </div>
 
     @if (vm.errorMessage) {
-      <div class="error">{{ vm.errorMessage }}</div>
+      <div class="error" role="alert">{{ vm.errorMessage }}</div>
     }
 
     @if (vm.customer; as c) {
@@ -51,9 +51,16 @@
           <mat-card-content class="info">
             <!-- Calculé par le backend : ventes à crédit, règlements, avoirs et annulations. -->
             <div>
-              <span class="label">Dette actuelle</span>
+              <span class="label">Dette totale (tous dépôts)</span>
               <span class="debt">{{ c.balance != null ? (c.balance | number: '1.0-0') : '—' }}</span>
             </div>
+            @if (vm.otherWarehousesBalance) {
+              <div class="other-warehouses">
+                <span class="label">Dont autres dépôts</span>
+                {{ vm.otherWarehousesBalance | number: '1.0-0' }}
+                <span class="hint">(détail non consultable depuis vos dépôts)</span>
+              </div>
+            }
             <div>
               <span class="label">Crédit disponible</span>
               {{ c.availableCredit != null ? (c.availableCredit | number: '1.0-0') : '—' }}
@@ -117,7 +124,7 @@
                 <tr mat-row *matRowDef="let row; columns: saleColumns"></tr>
               </table>
               @if (ss.error) {
-                <div class="error">{{ ss.error }}</div>
+                <div class="error" role="alert">{{ ss.error }}</div>
               }
               @if (!ss.loading && ss.rows.length === 0) {
                 <div class="data-table-empty">Aucune vente.</div>
@@ -183,7 +190,7 @@
                 <tr mat-row *matRowDef="let row; columns: paymentColumns"></tr>
               </table>
               @if (ps.error) {
-                <div class="error">{{ ps.error }}</div>
+                <div class="error" role="alert">{{ ps.error }}</div>
               }
               @if (!ps.loading && ps.rows.length === 0) {
                 <div class="data-table-empty">Aucun paiement.</div>

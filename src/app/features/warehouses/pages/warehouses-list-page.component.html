@@ -10,7 +10,7 @@
       </mat-card-header>
       <mat-card-content>
         @if (s.error) {
-          <div class="error">{{ s.error }}</div>
+          <div class="error" role="alert">{{ s.error }}</div>
         }
 
         @if (canManage$ | async) {
@@ -47,7 +47,7 @@
             </mat-select>
           </mat-form-field>
 
-          @if (canSeeAll$ | async) {
+          @if (canFilterStatus$ | async) {
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Statut</mat-label>
               <mat-select formControlName="status">
@@ -82,8 +82,37 @@
               <td mat-cell *matCellDef="let w">{{ w.main ? 'Oui' : '' }}</td>
             </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            <ng-container matColumnDef="active">
+              <th mat-header-cell *matHeaderCellDef>Statut</th>
+              <td mat-cell *matCellDef="let w">{{ w.active === false ? 'Désactivé' : 'Actif' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let w" class="actions">
+                <button mat-icon-button type="button" (click)="edit(w)" matTooltip="Modifier" aria-label="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                @if (!w.main) {
+                  <button mat-icon-button type="button" (click)="toggleActive(w)"
+                          [matTooltip]="w.active === false ? 'Réactiver' : 'Désactiver'"
+                          [attr.aria-label]="w.active === false ? 'Réactiver' : 'Désactiver'">
+                    <mat-icon>{{ w.active === false ? 'toggle_off' : 'toggle_on' }}</mat-icon>
+                  </button>
+                  @if (w.active !== false && (canSeeAll$ | async)) {
+                    <button mat-icon-button type="button" (click)="makeMain(w)" matTooltip="Désigner comme dépôt principal"
+                            aria-label="Désigner comme dépôt principal">
+                      <mat-icon>star_outline</mat-icon>
+                    </button>
+                  }
+                }
+              </td>
+            </ng-container>
+
+            @if (columns$ | async; as columns) {
+              <tr mat-header-row *matHeaderRowDef="columns"></tr>
+              <tr mat-row *matRowDef="let row; columns: columns"></tr>
+            }
           </table>
           @if (!s.loading && s.rows.length === 0) {
             <div class="data-table-empty">Aucun dépôt.</div>

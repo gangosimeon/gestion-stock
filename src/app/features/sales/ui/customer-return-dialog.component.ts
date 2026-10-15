@@ -122,7 +122,7 @@ export type CustomerReturnDialogData = {
         <span class="hint">(montant définitif calculé par le serveur)</span>
       </div>
       @if (error) {
-        <div class="error">{{ error }}</div>
+        <div class="error" role="alert">{{ error }}</div>
       }
     </div>
     <div mat-dialog-actions align="end">
@@ -195,7 +195,6 @@ export type CustomerReturnDialogData = {
         font-size: 14px;
       }
       .error {
-        color: var(--color-danger);
         margin-top: 8px;
       }
     `

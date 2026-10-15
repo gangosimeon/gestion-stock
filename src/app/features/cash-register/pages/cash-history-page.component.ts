@@ -25,6 +25,7 @@ import { DatePickerDirective } from '../../../shared/date/date-picker.directive'
 import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 @Component({
   selector: 'app-cash-history-page',
@@ -71,6 +72,8 @@ export class CashHistoryPageComponent {
 
   /** Recherche, statut, période d'ouverture, tri et pagination traités par le backend. */
   readonly table = new ServerTable((query) => this.facade.sessionsPage(query, query.filters), {
+    // Autre dépôt : la liste est rechargée (données du dépôt courant).
+    reload$: inject(WarehouseContextService).warehouseChanged$,
     filters: new FormGroup({
       status: new FormControl<CashRegisterSessionStatus | null>(null),
       from: new FormControl<string | null>(null),

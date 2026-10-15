@@ -53,6 +53,17 @@ describe('AuditLogsApiService', () => {
     req.flush(new Blob(['id;date']));
   });
 
+  it('filtre par dépôt transmis à la recherche et à l’export (le backend le limite à vos dépôts)', () => {
+    const warehouseId = '3f0c8e1a-0000-4000-8000-000000000002';
+    api.list({ warehouseId }).subscribe();
+    expect(http.expectOne((r) => r.url === URL).request.params.get('warehouseId')).toBe(warehouseId);
+    api.exportCsv({ warehouseId }).subscribe();
+    const req = http.expectOne((r) => r.url === `${URL}/export`);
+    expect(req.request.params.get('warehouseId')).toBe(warehouseId);
+    req.flush(new Blob(['id;date']));
+    http.match((r) => r.url === URL).forEach((r) => r.flush({ items: [], total: 0 }));
+  });
+
   it('libellés et valeurs du diff lisibles, codes inconnus affichés tels quels', () => {
     expect(auditLabel(auditActionLabels, 'CANCEL')).toBe('Annulation');
     expect(auditLabel(auditActionLabels, 'NEW_ACTION')).toBe('NEW_ACTION');

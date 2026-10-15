@@ -171,4 +171,84 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
     component.setWarehouse('w2', warehouses as never);
     expect(select).toHaveBeenLastCalledWith(warehouses[1]);
   });
+
+  it('sélecteur de magasin : dépôts désactivés masqués, choix périmé remplacé par le dépôt du backend', () => {
+    const { component } = setup(false, []);
+    const http = TestBed.inject(HttpTestingController);
+    const ctx = TestBed.inject(WarehouseContextService);
+    const principal = { id: '3f0c8e1a-0000-4000-8000-000000000001', name: 'Magasin principal', active: true };
+    const ferme = { id: '3f0c8e1a-0000-4000-8000-000000000002', name: 'Ancien magasin', active: false };
+    ctx.select(ferme);
+    const shown: string[][] = [];
+    component.warehouses$.subscribe((w) => shown.push(w.map((it) => it.id)));
+
+    http.expectOne(`${environment.apiUrl}/warehouses`).flush({ items: [principal, ferme], total: 2 });
+    http.expectOne(`${environment.apiUrl}/warehouses/current`).flush(principal);
+    expect(shown.at(-1)).toEqual([principal.id]);
+    expect(ctx.warehouseId).toBe(principal.id);
+
+    // Le backend refuse ensuite le dépôt envoyé : la liste est relue, le choix encore valide est gardé.
+    ctx.requestRevalidation();
+    http.expectOne(`${environment.apiUrl}/warehouses`).flush({ items: [principal], total: 1 });
+    http.expectNone(`${environment.apiUrl}/warehouses/current`);
+    expect(ctx.warehouseId).toBe(principal.id);
+  });
+
+  it('aucun magasin attribué : explication à la place des écrans métier', () => {
+    const { fixture } = setup(false, []);
+    const http = TestBed.inject(HttpTestingController);
+
+    http.expectOne(`${environment.apiUrl}/warehouses`).flush({ items: [], total: 0 });
+    http
+      .expectOne(`${environment.apiUrl}/warehouses/current`)
+      .flush({ code: 'NO_WAREHOUSE_AVAILABLE', message: 'Aucun dépôt actif ne vous est attribué.' }, { status: 403, statusText: 'Forbidden' });
+    fixture.detectChanges();
+
+    const empty = fixture.debugElement.query(By.css('.shell-empty-state'));
+    expect(empty).not.toBeNull();
+    expect((empty.nativeElement as HTMLElement).textContent).toContain('Aucun magasin ne vous est attribué');
+    expect(fixture.debugElement.query(By.css('router-outlet'))).toBeNull();
+  });
+
+  it('caisse ouverte dans un autre magasin : avertissement avec retour possible', () => {
+    const { fixture } = setup(false, ['cash:operate']);
+    const http = TestBed.inject(HttpTestingController);
+    const ctx = TestBed.inject(WarehouseContextService);
+    const plateau = { id: '3f0c8e1a-0000-4000-8000-000000000001', name: 'Magasin Plateau', active: true };
+    const cocody = { id: '3f0c8e1a-0000-4000-8000-000000000002', name: 'Magasin Cocody', active: true };
+    ctx.select(cocody);
+
+    http.expectOne(`${environment.apiUrl}/warehouses`).flush({ items: [plateau, cocody], total: 2 });
+    http
+      .expectOne(`${environment.apiUrl}/cash-register/current`)
+      .flush({ id: 's1', status: 'OPEN', warehouseId: plateau.id, inCurrentWarehouse: false });
+    fixture.detectChanges();
+
+    const banner = fixture.debugElement.query(By.css('.shell-banner'));
+    expect(banner).not.toBeNull();
+    expect((banner.nativeElement as HTMLElement).textContent).toContain('Magasin Plateau');
+
+    (banner.query(By.css('button')).nativeElement as HTMLButtonElement).click();
+    expect(ctx.warehouseId).toBe(plateau.id);
+    http
+      .expectOne(`${environment.apiUrl}/cash-register/current`)
+      .flush({ id: 's1', status: 'OPEN', warehouseId: plateau.id, inCurrentWarehouse: true });
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.shell-banner'))).toBeNull();
+  });
+
+  it('changement refusé (panier conservé) : le sélecteur revient sur le magasin courant', async () => {
+    const { component } = setup(false, []);
+    const ctx = TestBed.inject(WarehouseContextService);
+    const plateau = { id: '3f0c8e1a-0000-4000-8000-000000000001', name: 'Magasin Plateau' };
+    const cocody = { id: '3f0c8e1a-0000-4000-8000-000000000002', name: 'Magasin Cocody' };
+    ctx.select(plateau);
+    ctx.addSwitchCheck(() => false);
+    const select = { value: cocody.id };
+
+    await component.setWarehouse(cocody.id, [plateau, cocody], select as never);
+
+    expect(ctx.warehouseId).toBe(plateau.id);
+    expect(select.value).toBe(plateau.id);
+  });
 });

@@ -22,9 +22,9 @@
   opacity: 0.72;
 }
 
-.drawer__error {
-  padding: 16px;
-  color: var(--color-danger);
+// Bandeau d'erreur commun (styles.scss), décalé des bords du tiroir.
+.drawer__alert {
+  margin: 16px 16px 0;
 }
 
 .drawer__content {

@@ -221,27 +221,6 @@
   &:hover { color: var(--color-primary-hover); text-decoration: underline; }
 }
 
-.form__error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  background: var(--color-danger-soft);
-  border: 1px solid #FECACA;
-  border-radius: 10px;
-  color: var(--color-danger);
-  font-size: 13px;
-  font-weight: 500;
-  animation: shake 350ms cubic-bezier(.36,.07,.19,.97) both;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-}
-
 @keyframes shake {
   10%, 90%  { transform: translateX(-2px); }
   20%, 80%  { transform: translateX(4px); }

@@ -1,7 +1,6 @@
 import { HttpRequest } from '@angular/common/http';
 
 import { environment } from '../../../environments/environment';
-import { MOCK_WAREHOUSES } from './mock-db';
 
 /**
  * Aiguillage de la migration progressive : une requête n'est servie par le backend simulé
@@ -27,13 +26,4 @@ export function isServedByMock(req: HttpRequest<unknown>): boolean {
     environment.useMocks &&
     isMockedUrl(req.url, environment.mockedPrefixes)
   );
-}
-
-/**
- * Dépôt simulé correspondant à un dépôt réel (même nom, sans tenir compte de la casse), pour
- * que les écrans encore simulés suivent le magasin choisi. Repli : dépôt principal simulé.
- */
-export function mockWarehouseIdFor(warehouseName: string | null | undefined): string {
-  const name = (warehouseName ?? '').trim().toLocaleLowerCase('fr');
-  return MOCK_WAREHOUSES.find((w) => w.name.toLocaleLowerCase('fr') === name)?.id ?? MOCK_WAREHOUSES[0].id;
 }

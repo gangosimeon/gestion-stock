@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject, takeUntil } from 'rxjs';
 
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { DashboardFacade, DashboardVm } from '../data/dashboard.facade';
 
 type ChartName = 'salesByDay' | 'topProducts' | 'stockEvolution' | 'mySales';
@@ -18,6 +19,7 @@ type ChartName = 'salesByDay' | 'topProducts' | 'stockEvolution' | 'mySales';
 })
 export class DashboardPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(DashboardFacade);
+  private readonly warehouseCtx = inject(WarehouseContextService);
   private readonly destroy$ = new Subject<void>();
 
   // Canevas présents selon la vue (magasin ou vendeur) : chacun peut être absent.
@@ -36,6 +38,8 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
     Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
     Chart.defaults.color = CHART.text;
     this.facade.refresh();
+    // Autre magasin : chiffres rechargés (la facade a déjà effacé ceux du précédent).
+    this.warehouseCtx.warehouseChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => this.facade.refresh());
   }
 
   ngAfterViewInit(): void {

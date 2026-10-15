@@ -9,4 +9,6 @@ export interface SupplierPurchaseHistory {
   totalAmount: number;
   purchaseOrderId?: string;
   purchaseOrderNumber?: string;
+  /** Dépôt de la réception. */
+  warehouseId?: string;
 }

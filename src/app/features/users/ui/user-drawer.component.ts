@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,11 +11,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { finalize, take } from 'rxjs';
+import { catchError, finalize, map, of, shareReplay, take, tap } from 'rxjs';
 
 import { Role } from '../../../core/models/role.model';
 import { User } from '../../../core/models/user.model';
+import { Warehouse } from '../../../core/models/warehouse.model';
 import { CreateUserRequest, UpdateUserRequest } from '../../../core/services/users-api.service';
+import { WarehousesApiService } from '../../../core/services/warehouses-api.service';
 import { UsersFacade } from '../data/users.facade';
 import { roleLabels, UserDrawerMode } from '../data/users-vm.model';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
@@ -22,6 +25,21 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
 export interface UserDrawerContext {
   mode: UserDrawerMode;
   user: User | null;
+}
+
+/**
+ * Dépôts de l'utilisateur : dès qu'un dépôt est autorisé, un dépôt par défaut est choisi parmi
+ * eux. Le backend ne sait pas retirer un dépôt par défaut (il le garde et le réautorise) : tout
+ * retirer à un utilisateur qui en a un est donc refusé ici plutôt que réécrit en silence.
+ */
+function warehouseAssignment(hadDefault: () => boolean) {
+  return (group: AbstractControl): ValidationErrors | null => {
+    const ids = (group.get('warehouseIds')?.value ?? []) as string[];
+    const def = (group.get('defaultWarehouseId')?.value ?? '') as string;
+    if (ids.length === 0) return hadDefault() ? { keepOneWarehouse: true } : null;
+    if (!def) return { defaultRequired: true };
+    return ids.includes(def) ? null : { defaultOutsideWarehouses: true };
+  };
 }
 
 @Component({
@@ -48,6 +66,18 @@ export class UserDrawerComponent {
   private readonly fb = inject(FormBuilder);
   private readonly facade = inject(UsersFacade);
   private readonly snackbar = inject(MatSnackBar);
+  private readonly warehousesApi = inject(WarehousesApiService);
+
+  /** Identifiants des dépôts actifs proposés (un dépôt désactivé ne peut pas être affecté). */
+  private activeWarehouseIds: ReadonlySet<string> | null = null;
+
+  /** Dépôts actifs visibles par l'administrateur (le backend refuse d'affecter un dépôt qu'il ne voit pas). */
+  readonly warehouses$ = this.warehousesApi.list().pipe(
+    map((r) => r.items.filter((w) => w.active !== false)),
+    tap((items) => (this.activeWarehouseIds = new Set(items.map((w) => w.id)))),
+    catchError(() => of([] as Warehouse[])),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
 
   @Input({ required: true }) ctx!: UserDrawerContext;
   @Output() readonly close = new EventEmitter<void>();
@@ -67,8 +97,19 @@ export class UserDrawerComponent {
     isActive: [true],
     // Création : mot de passe provisoire ; modification : nouveau mot de passe facultatif.
     // Politique complète (lettre, chiffre, ≠ identifiant) vérifiée par le backend.
-    password: ['', [Validators.minLength(8)]]
-  });
+    password: ['', [Validators.minLength(8)]],
+    warehouseIds: [[] as string[]],
+    defaultWarehouseId: ['']
+  }, { validators: warehouseAssignment(() => !!this.ctx?.user?.defaultWarehouseId && this.ctx.mode === 'EDIT') });
+
+  constructor() {
+    // Dépôt par défaut retiré de la liste : il n'est plus choisi (le formulaire en redemande un).
+    this.form.controls.warehouseIds.valueChanges.pipe(takeUntilDestroyed()).subscribe((ids) => {
+      const def = this.form.controls.defaultWarehouseId.value;
+      if (def && !ids.includes(def)) this.form.controls.defaultWarehouseId.setValue('');
+      else if (!def && ids.length === 1) this.form.controls.defaultWarehouseId.setValue(ids[0]);
+    });
+  }
 
   ngOnChanges(): void {
     this.showPassword = false;
@@ -81,7 +122,9 @@ export class UserDrawerComponent {
           phone: u.phone ?? '',
           roles: u.roles,
           isActive: u.isActive,
-          password: ''
+          password: '',
+          warehouseIds: u.warehouseIds ?? [],
+          defaultWarehouseId: u.defaultWarehouseId ?? ''
         },
         { emitEvent: false }
       );
@@ -93,11 +136,14 @@ export class UserDrawerComponent {
           phone: '',
           roles: [],
           isActive: true,
-          password: ''
+          password: '',
+          warehouseIds: [],
+          defaultWarehouseId: ''
         },
         { emitEvent: false }
       );
     }
+    this.form.updateValueAndValidity({ emitEvent: false });
   }
 
   submit(): void {
@@ -107,6 +153,10 @@ export class UserDrawerComponent {
     }
 
     const raw = this.form.getRawValue();
+    // Seuls les dépôts actifs proposés sont envoyés (un dépôt désactivé serait refusé).
+    const active = this.activeWarehouseIds;
+    const warehouseIds = active ? raw.warehouseIds.filter((id) => active.has(id)) : raw.warehouseIds;
+    const defaultWarehouseId = raw.defaultWarehouseId || undefined;
 
     this.isSubmitting = true;
     this.form.disable();
@@ -119,13 +169,17 @@ export class UserDrawerComponent {
             phone: raw.phone.trim() ? raw.phone.trim() : undefined,
             roles: raw.roles,
             isActive: raw.isActive,
-            password: raw.password || undefined
+            password: raw.password || undefined,
+            warehouseIds: warehouseIds.length ? warehouseIds : undefined,
+            defaultWarehouseId
           } satisfies CreateUserRequest) as any)
         : (this.facade.update(this.ctx.user?.id ?? '', {
             username: raw.username.trim(),
             fullName: raw.fullName.trim(),
             phone: raw.phone.trim() ? raw.phone.trim() : undefined,
-            roles: raw.roles
+            roles: raw.roles,
+            warehouseIds,
+            defaultWarehouseId
           } satisfies UpdateUserRequest, raw.password || undefined) as any);
 
     req$
@@ -151,6 +205,22 @@ export class UserDrawerComponent {
 
   roleLabel(r: Role): string {
     return roleLabels[r];
+  }
+
+  /** Dépôts cochés, dans l'ordre de la liste : choix possibles pour le dépôt par défaut. */
+  selectedWarehouses(all: readonly Warehouse[]): Warehouse[] {
+    const ids = this.form.controls.warehouseIds.value;
+    return all.filter((w) => ids.includes(w.id));
+  }
+
+  /** Erreur d'affectation des dépôts (validation du formulaire), affichée une fois touché. */
+  warehouseError(): string | null {
+    const e = this.form.errors;
+    if (!e || !(this.form.controls.warehouseIds.touched || this.form.controls.defaultWarehouseId.touched)) return null;
+    if (e['keepOneWarehouse']) return 'Gardez au moins un dépôt : le dépôt par défaut ne peut pas être retiré.';
+    if (e['defaultRequired']) return 'Choisissez le dépôt par défaut parmi les dépôts autorisés.';
+    if (e['defaultOutsideWarehouses']) return 'Le dépôt par défaut doit faire partie des dépôts autorisés.';
+    return null;
   }
 
   fieldError(path: keyof typeof this.form.controls): string | null {

@@ -26,6 +26,7 @@ function filterParams(filters: AuditLogFilter | undefined, params = new HttpPara
   if (filters?.userId) params = params.set('userId', filters.userId);
   if (filters?.status) params = params.set('status', filters.status);
   if (filters?.search) params = params.set('search', filters.search);
+  if (filters?.warehouseId) params = params.set('warehouseId', filters.warehouseId);
   return params;
 }
 

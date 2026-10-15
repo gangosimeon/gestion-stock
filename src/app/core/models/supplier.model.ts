@@ -27,4 +27,6 @@ export interface SupplierAccount {
   /** Acomptes : payé au-delà de la valeur reçue. */
   advanceAmount: number;
   ordersToPay: number;
+  /** Reste à payer dans le dépôt courant : plafond d'un paiement global fait depuis ce dépôt. */
+  currentWarehouseRemainingToPay?: number;
 }

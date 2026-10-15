@@ -15,7 +15,7 @@
   <mat-divider />
 
   @if (loadError) {
-    <div class="drawer__error">{{ loadError }}</div>
+    <div class="error drawer__alert" role="alert">{{ loadError }}</div>
   }
 
   <form class="drawer__content" [formGroup]="form" (ngSubmit)="submit()">

@@ -1,5 +1,6 @@
 import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +27,7 @@ import {
   expenseStatusLabels
 } from '../../../core/models/expense.model';
 import { CreateExpenseRequest } from '../../../core/services/expenses-api.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { ExpensesFacade, currentMonthFilter } from '../data/expenses.facade';
 import { CancelExpenseDialogComponent, CancelExpenseDialogData } from '../ui/cancel-expense-dialog.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
@@ -69,6 +71,7 @@ export class ExpensesShellPageComponent {
   private readonly facade = inject(ExpensesFacade);
   private readonly snackbar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly warehouseCtx = inject(WarehouseContextService);
 
   readonly vm$ = this.facade.vm$;
 
@@ -109,6 +112,8 @@ export class ExpensesShellPageComponent {
 
   constructor() {
     this.facade.refresh();
+    // Autre magasin : ses dépenses (la facade a effacé celles du précédent, retour en page 1).
+    this.warehouseCtx.warehouseChanged$.pipe(takeUntilDestroyed()).subscribe(() => this.facade.refresh());
   }
 
   applyFilters(): void {

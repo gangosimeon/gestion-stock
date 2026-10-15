@@ -38,6 +38,7 @@ function signedIn(permissions: string[]): void {
 describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () => {
   let http: HttpTestingController;
   let dialogResult: PaySupplierDialogResult | undefined;
+  let dialogData: { maxAmount?: number } | undefined;
 
   function setup(permissions: string[]): SupplierDetailPageComponent {
     localStorage.clear();
@@ -61,7 +62,14 @@ describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () =
       ]
     });
     // Le composant importe MatDialogModule : on remplace son MatDialog partout.
-    TestBed.overrideProvider(MatDialog, { useValue: { open: () => ({ afterClosed: () => of(dialogResult) }) } });
+    TestBed.overrideProvider(MatDialog, {
+      useValue: {
+        open: (_component: unknown, config?: { data?: { maxAmount?: number } }) => {
+          dialogData = config?.data;
+          return { afterClosed: () => of(dialogResult) };
+        }
+      }
+    });
     http = TestBed.inject(HttpTestingController);
     return TestBed.createComponent(SupplierDetailPageComponent).componentInstance;
   }
@@ -112,6 +120,19 @@ describe('SupplierDetailPageComponent (fiche fournisseur sur Spring Boot)', () =
     expect(page.ordersOf((await payments).rows[0])).toBe('CMD-2026-000001, CMD-2026-000002');
     history.unsubscribe();
     expect(page.methodLabel('BANK_TRANSFER')).toBe('Virement');
+  });
+
+  it('paiement : montant proposé = reste dû dans le dépôt courant (seul réglable depuis ce dépôt)', async () => {
+    const page = setup(['supplier:read', 'purchase:read', 'purchase:pay', 'warehouse:all']);
+    const vm = firstValueFrom(page.vm$.pipe(skipWhile((v) => v.isLoading)));
+    http.expectOne(`${API}/suppliers/${SUPPLIER_ID}`).flush({ id: SUPPLIER_ID, name: 'Essilor', deliveryLeadTimeDays: 5 });
+    http.expectOne(`${API}/suppliers/${SUPPLIER_ID}/account`).flush({ ...ACCOUNT, currentWarehouseRemainingToPay: 20000 });
+    const loaded = await vm;
+
+    dialogResult = undefined;
+    page.paySupplier(loaded);
+
+    expect(dialogData?.maxAmount).toBe(20000);
   });
 
   it('sans purchase:read : seule la fiche est demandée, pas de bouton Payer', async () => {

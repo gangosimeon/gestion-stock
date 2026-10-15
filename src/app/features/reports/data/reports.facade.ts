@@ -16,6 +16,7 @@ import {
   isoDay,
   isoMonth
 } from './reports-vm.model';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 type ReportData = { totals: SalesPeriodReportRow[]; series: SalesPeriodReportRow[] };
 
@@ -125,6 +126,11 @@ export class ReportsFacade {
 
   /** Période ou onglet changé, ou actualisation : la liste paginée des produits est rechargée. */
   readonly topProductsReload$ = merge(this.refreshSubject.pipe(skip(1)), this.filtersSubject.pipe(skip(1)));
+
+  constructor() {
+    // Autre dépôt : données rechargées (sans abonné, le prochain affichage les recharge de toute façon).
+    inject(WarehouseContextService).warehouseChanged$.subscribe(() => this.refresh());
+  }
 
   refresh(): void {
     this.refreshSubject.next(undefined);

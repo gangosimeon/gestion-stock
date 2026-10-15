@@ -11,7 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { BehaviorSubject, Observable, catchError, combineLatest, map, merge, of, shareReplay, skip, startWith, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, forkJoin, map, merge, of, shareReplay, skip, startWith, switchMap, take } from 'rxjs';
 
 import { Customer } from '../../../core/models/customer.model';
 import { CustomerPayment } from '../../../core/models/customer-payment.model';
@@ -32,12 +32,15 @@ type DetailVm = {
   canReadSales: boolean;
   /** Permission customer:pay (interface seulement ; le backend la revérifie). */
   canPay: boolean;
+  /** Part de la dette née hors de vos dépôts (ligne « Autres dépôts », sans détail) ; null : tout est visible. */
+  otherWarehousesBalance: number | null;
 };
 
 const EMPTY: Omit<DetailVm, 'isLoading' | 'errorMessage'> = {
   customer: null,
   canReadSales: false,
-  canPay: false
+  canPay: false,
+  otherWarehousesBalance: null
 };
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -116,14 +119,17 @@ export class ClientDetailPageComponent {
         return of<DetailVm>({ ...EMPTY, isLoading: false, errorMessage: 'ID client manquant' });
       }
       // Historiques paginés à part (tableaux serveur) ; sans sale:read, les ventes ne sont pas demandées.
-      return this.api.getById(id).pipe(
+      // Situation de crédit : un échec n'empêche pas la fiche (la ligne « Autres dépôts » manque alors).
+      const account$ = this.api.account(id).pipe(catchError(() => of(null)));
+      return forkJoin({ customer: this.api.getById(id), account: account$ }).pipe(
         map(
-          (customer): DetailVm => ({
+          ({ customer, account }): DetailVm => ({
             isLoading: false,
             errorMessage: null,
             customer,
             canReadSales,
-            canPay
+            canPay,
+            otherWarehousesBalance: account?.otherWarehousesBalance ?? null
           })
         ),
         startWith<DetailVm>({ ...EMPTY, isLoading: true, errorMessage: null }),

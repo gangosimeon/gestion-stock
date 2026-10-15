@@ -77,6 +77,18 @@ export class CustomersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /**
+   * Situation de crédit (tous dépôts). `otherWarehousesBalance` : part de la dette née hors de vos
+   * dépôts, sans détail (absente si vous les voyez tous).
+   */
+  account(id: string): Observable<{ balance: number; availableCredit: number; otherWarehousesBalance?: number | null }> {
+    return this.http
+      .get<{ balance: number; availableCredit: number; otherWarehousesBalance?: number | null }>(
+        `${environment.apiUrl}/customers/${id}/account`
+      )
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
   getById(id: string): Observable<Customer> {
     return this.http
       .get<Customer>(`${environment.apiUrl}/customers/${id}`)

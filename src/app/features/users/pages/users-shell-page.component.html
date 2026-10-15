@@ -24,7 +24,7 @@
         }
 
         @if (vm.errorMessage || s.error) {
-          <div class="error">{{ vm.errorMessage ?? s.error }}</div>
+          <div class="error" role="alert">{{ vm.errorMessage ?? s.error }}</div>
         }
 
         <div class="data-table-toolbar" [formGroup]="table.filters">
@@ -76,6 +76,11 @@
             <ng-container matColumnDef="roles">
               <th mat-header-cell *matHeaderCellDef>Rôles</th>
               <td mat-cell *matCellDef="let u">{{ u.roles.join(', ') }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="warehouses">
+              <th mat-header-cell *matHeaderCellDef>Dépôts</th>
+              <td mat-cell *matCellDef="let u">{{ warehousesOf(u) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="active">

@@ -46,6 +46,15 @@ export interface CreateWarehouseRequest {
   phone?: string;
 }
 
+/** PUT /api/warehouses/{id} : code ou type absent = inchangé (warehouse:manage). */
+export interface UpdateWarehouseRequest {
+  name: string;
+  code?: string;
+  type?: WarehouseTypeFilter;
+  address?: string;
+  phone?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -88,6 +97,26 @@ export class WarehousesApiService {
   create(payload: CreateWarehouseRequest): Observable<Warehouse> {
     return this.http
       .post<Warehouse>(`${environment.apiUrl}/warehouses`, payload)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  update(id: string, payload: UpdateWarehouseRequest): Observable<Warehouse> {
+    return this.http
+      .put<Warehouse>(`${environment.apiUrl}/warehouses/${id}`, payload)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Activation ou désactivation ; le dépôt principal ne peut pas être désactivé (MAIN_WAREHOUSE_REQUIRED). */
+  setActive(id: string, active: boolean): Observable<Warehouse> {
+    return this.http
+      .patch<Warehouse>(`${environment.apiUrl}/warehouses/${id}/active`, { active })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Nouveau dépôt principal (actif ; réservé à warehouse:all). */
+  setMain(id: string): Observable<Warehouse> {
+    return this.http
+      .post<Warehouse>(`${environment.apiUrl}/warehouses/${id}/main`, {})
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 }

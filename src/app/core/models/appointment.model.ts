@@ -42,6 +42,8 @@ export interface AppointmentFilter {
   dateFrom?: string;
   dateTo?: string;
   customerId?: string;
+  /** Agenda de tous les dépôts (warehouse:all ; sinon refus du backend). */
+  allWarehouses?: boolean;
 }
 
 export const appointmentStatusLabels: Record<AppointmentStatus, string> = {

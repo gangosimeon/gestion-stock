@@ -16,6 +16,7 @@ import {
 } from '../../../core/services/products-api.service';
 import { SuppliersApiService } from '../../../core/services/suppliers-api.service';
 import { ProductDrawerMode, ProductDrawerState, ProductListVm } from './product-vm.model';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 
 /** Tous les abonnés de l'écran (pipes async, table) partagent un seul appel. */
 const SHARED = { bufferSize: 1, refCount: true } as const;
@@ -90,6 +91,11 @@ export class ProductsFacade {
     })),
     shareReplay(SHARED)
   );
+
+  constructor() {
+    // Autre dépôt : données rechargées (sans abonné, le prochain affichage les recharge de toute façon).
+    inject(WarehouseContextService).warehouseChanged$.subscribe(() => this.refresh());
+  }
 
   refresh(): void {
     this.refreshSubject.next(undefined);

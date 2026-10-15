@@ -57,6 +57,11 @@ export interface CashRegisterSession {
   // Champs du backend.
   number?: string;
   warehouseId?: string;
+  /**
+   * GET /cash-register/current seulement : caisse du dépôt courant (`false` : ouverte dans un autre
+   * dépôt, inutilisable d'ici — le backend refuse avec CASH_SESSION_OTHER_WAREHOUSE).
+   */
+  inCurrentWarehouse?: boolean | null;
   terminal?: string | null;
   /** Solde net par moyen de paiement (rapprochement mobile money, virements). */
   totalsByMethod?: Partial<Record<PaymentMethod, number>>;

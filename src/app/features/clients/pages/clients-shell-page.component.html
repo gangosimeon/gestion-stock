@@ -75,7 +75,7 @@
           <app-filter-reset [table]="table" />
 
           @if (vm.errorMessage || s.error) {
-            <div class="error">{{ vm.errorMessage ?? s.error }}</div>
+            <div class="error" role="alert">{{ vm.errorMessage ?? s.error }}</div>
           }
         </div>
 

@@ -31,6 +31,7 @@ export class AppointmentsApiService {
     if (filters?.dateFrom) params = params.set('dateFrom', filters.dateFrom);
     if (filters?.dateTo) params = params.set('dateTo', filters.dateTo);
     if (filters?.customerId) params = params.set('customerId', filters.customerId);
+    if (filters?.allWarehouses) params = params.set('allWarehouses', true);
     return this.http
       .get<PaginatedResult<Appointment>>(this.baseUrl, { params })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));

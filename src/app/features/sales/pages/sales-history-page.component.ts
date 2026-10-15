@@ -30,6 +30,8 @@ import { hasReturnableItems, returnableLines } from '../data/returns.model';
 import { CancelSaleDialogComponent, CancelSaleDialogData } from '../ui/cancel-sale-dialog.component';
 import { CustomerReturnDialogComponent, CustomerReturnDialogData } from '../ui/customer-return-dialog.component';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
+import { WarehouseNamesService } from '../../../core/services/warehouse-names.service';
 
 /**
  * Historique des ventes du dépôt courant (ou de tous les dépôts avec warehouse:all) :
@@ -82,6 +84,13 @@ export class SalesHistoryPageComponent {
   readonly canSeeAllWarehouses = this.auth.hasPermission('warehouse:all');
 
   readonly displayedColumns = ['createdAt', 'number', 'customer', 'total', 'paid', 'credit', 'status', 'actions'] as const;
+  /** Noms des dépôts, pour la colonne « Dépôt » de la vue tous dépôts. */
+  readonly warehouseNames$ = inject(WarehouseNamesService).names$;
+
+  /** Vue tous dépôts : la colonne « Dépôt » distingue les ventes de chaque dépôt. */
+  columnsFor(allWarehouses: boolean | null | undefined): readonly string[] {
+    return allWarehouses ? ['createdAt', 'number', 'warehouse', ...this.displayedColumns.slice(2)] : this.displayedColumns;
+  }
 
   readonly statusOptions: { value: SaleStatus; label: string }[] = [
     { value: 'COMPLETED', label: 'Terminée' },
@@ -99,6 +108,8 @@ export class SalesHistoryPageComponent {
 
   /** Recherche (n°, client), statut, paiement, période, tri et pagination traités par le backend. */
   readonly table = new ServerTable((query) => this.api.salesPage(query, query.filters), {
+    // Autre dépôt : la liste est rechargée (données du dépôt courant).
+    reload$: inject(WarehouseContextService).warehouseChanged$,
     filters: new FormGroup({
       status: new FormControl<SaleStatus | null>(null),
       paymentMethod: new FormControl<PaymentMethod | null>(null),

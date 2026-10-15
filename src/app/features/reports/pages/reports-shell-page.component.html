@@ -56,7 +56,7 @@
       }
 
       @if (vm.errorMessage) {
-        <div class="error">{{ vm.errorMessage }}</div>
+        <div class="error" role="alert">{{ vm.errorMessage }}</div>
       }
     </div>
 
@@ -149,7 +149,7 @@
               <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
             </table>
             @if (s.error) {
-              <div class="error">{{ s.error }}</div>
+              <div class="error" role="alert">{{ s.error }}</div>
             }
             @if (!s.loading && s.rows.length === 0) {
               <div class="data-table-empty">Aucune vente sur la période.</div>

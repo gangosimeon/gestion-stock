@@ -14,7 +14,7 @@
     </div>
 
     @if (s.error) {
-      <div class="error">{{ s.error }}</div>
+      <div class="error" role="alert">{{ s.error }}</div>
     }
 
     <div class="data-table-toolbar" [formGroup]="table.filters">
