@@ -57,17 +57,26 @@ describe('WarehousesListPageComponent (administration des dépôts)', () => {
 
   afterEach(() => http.verify());
 
-  it('modification : PUT du dépôt avec les valeurs saisies', () => {
+  it('modification : le panneau s’ouvre sur le dépôt ; une fois enregistré, liste et sélecteur rafraîchis', () => {
     const { page, revalidated } = setup();
-    dialogResult = { name: 'Cocody Angré', code: 'MAG-02', type: 'STORE' };
 
     page.edit(COCODY as never);
+    expect(page.drawerCtx?.warehouse).toEqual(COCODY);
 
-    const req = http.expectOne(`${API}/warehouses/${COCODY.id}`);
-    expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual(dialogResult);
-    req.flush({ ...COCODY, name: 'Cocody Angré' });
+    page.onSaved({ ...COCODY, name: 'Cocody Angré' } as never);
     expectRefreshed(revalidated);
+  });
+
+  it('détail : fenêtre en lecture seule ; « Modifier » y ouvre le panneau de modification', async () => {
+    const { page } = setup();
+
+    dialogResult = undefined;
+    await page.openDetails(COCODY as never);
+    expect(page.drawerCtx).toBeNull();
+
+    dialogResult = 'edit';
+    await page.openDetails(COCODY as never);
+    expect(page.drawerCtx?.warehouse).toEqual(COCODY);
   });
 
   it('désactivation confirmée, puis réactivation sans confirmation', async () => {
@@ -110,13 +119,13 @@ describe('WarehousesListPageComponent (administration des dépôts)', () => {
     expectRefreshed(revalidated);
   });
 
-  it('création : la liste et le sélecteur sont rafraîchis sans recharger la page', () => {
+  it('création : « Nouveau dépôt » ouvre le panneau ; une fois enregistré, liste et sélecteur rafraîchis', () => {
     const { page, revalidated } = setup();
-    page.form.setValue({ name: 'Magasin Yopougon' });
 
-    page.submit();
+    page.openCreate();
+    expect(page.drawerCtx).toEqual({ warehouse: null });
 
-    http.expectOne((r) => r.url === `${API}/warehouses` && r.method === 'POST').flush({ ...COCODY, id: 'n' });
+    page.onSaved({ ...COCODY, id: 'n', name: 'Entrepôt Yopougon', code: 'DEP-01' } as never);
     expectRefreshed(revalidated);
   });
 });

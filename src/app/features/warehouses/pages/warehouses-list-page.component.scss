@@ -1,21 +1,21 @@
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mat-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .page {
   padding: var(--page-padding);
 }
 
 .card {
   border-radius: 12px;
-}
-
-.form {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  align-items: start;
-  margin-bottom: 12px;
-}
-
-.span2 {
-  width: 100%;
 }
 
 .actions {

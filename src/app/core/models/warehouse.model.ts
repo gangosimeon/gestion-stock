@@ -9,4 +9,7 @@ export interface Warehouse {
   /** Dépôt principal : repli quand aucun dépôt n'est choisi. */
   main?: boolean;
   active?: boolean;
+  /** Horodatage du backend (ISO-8601). */
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -41,6 +41,8 @@ export interface TransferStockResponse {
 /** POST /api/warehouses : seul le nom est obligatoire (code généré par le backend s'il manque). */
 export interface CreateWarehouseRequest {
   name: string;
+  /** Magasin (point de vente) ou entrepôt ; le code généré en dépend (MAG-nn / DEP-nn). */
+  type?: WarehouseTypeFilter;
   code?: string;
   address?: string;
   phone?: string;

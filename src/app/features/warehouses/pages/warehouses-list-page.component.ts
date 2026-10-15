@@ -1,16 +1,17 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChild, inject } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDrawer, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Observable, Subject, combineLatest, finalize, map, take } from 'rxjs';
+import { Observable, Subject, combineLatest, firstValueFrom, map, of, take } from 'rxjs';
 
 import { Warehouse } from '../../../core/models/warehouse.model';
 import { WarehouseTypeFilter, WarehousesApiService } from '../../../core/services/warehouses-api.service';
@@ -24,8 +25,12 @@ import { FilterResetComponent } from '../../../shared/table/filter-reset.compone
 import { ServerTable } from '../../../shared/table/server-table';
 import { confirmWith } from '../../../shared/dialog/confirm-dialog.component';
 import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
-import { UpdateWarehouseRequest } from '../../../core/services/warehouses-api.service';
-import { WarehouseEditDialogComponent } from '../ui/warehouse-edit-dialog.component';
+import { WarehouseDrawerComponent, WarehouseDrawerContext } from '../ui/warehouse-drawer.component';
+import {
+  WarehouseDetailsDialogComponent,
+  WarehouseDetailsDialogData,
+  WarehouseDetailsDialogResult
+} from '../ui/warehouse-details-dialog.component';
 
 @Component({
   selector: 'app-warehouses-list-page',
@@ -46,7 +51,9 @@ import { WarehouseEditDialogComponent } from '../ui/warehouse-edit-dialog.compon
     MatTableModule,
     MatProgressBarModule,
     MatSnackBarModule,
-    MatTooltipModule
+    MatSidenavModule,
+    MatTooltipModule,
+    WarehouseDrawerComponent
   ],
   templateUrl: './warehouses-list-page.component.html',
   styleUrl: './warehouses-list-page.component.scss',
@@ -54,7 +61,7 @@ import { WarehouseEditDialogComponent } from '../ui/warehouse-edit-dialog.compon
 })
 export class WarehousesListPageComponent {
   private readonly api = inject(WarehousesApiService);
-  private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly snackbar = inject(MatSnackBar);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
@@ -68,10 +75,8 @@ export class WarehousesListPageComponent {
   readonly canSeeAll$ = this.auth.hasPermission$('warehouse:all');
   /** Filtre de statut (désactivés compris) : warehouse:all, ou warehouse:manage dans son périmètre. */
   readonly canFilterStatus$ = combineLatest([this.canManage$, this.canSeeAll$]).pipe(map(([m, a]) => m || a));
-  /** Colonnes affichées : actions pour qui administre les dépôts. */
-  readonly columns$: Observable<readonly string[]> = this.canManage$.pipe(
-    map((manage) => (manage ? [...this.displayedColumns, 'actions'] : this.displayedColumns))
-  );
+  /** Colonnes affichées : le détail pour tous, les actions d'administration selon warehouse:manage (dans la cellule). */
+  readonly columns$: Observable<readonly string[]> = of(['code', 'name', 'type', 'main', 'active', 'actions']);
 
   readonly typeLabels: Record<WarehouseTypeFilter, string> = { STORE: 'Magasin', WAREHOUSE: 'Entrepôt' };
   readonly typeOptions = Object.entries(this.typeLabels).map(([value, label]) => ({ value: value as WarehouseTypeFilter, label }));
@@ -91,57 +96,48 @@ export class WarehousesListPageComponent {
     reload$: this.changed$
   });
 
-  isSubmitting = false;
+  @ViewChild('drawer') drawer!: MatDrawer;
 
-  readonly displayedColumns: readonly string[] = ['code', 'name', 'type', 'main', 'active'];
-
-  readonly form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(2)]]
-  });
+  /** Dépôt ouvert dans le panneau latéral (null : panneau fermé). */
+  drawerCtx: WarehouseDrawerContext | null = null;
 
   typeLabel(w: Warehouse): string {
     return (w.type && this.typeLabels[w.type as WarehouseTypeFilter]) || w.type || '—';
   }
 
-  submit(): void {
-    if (this.form.invalid || this.isSubmitting) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.isSubmitting = true;
-    this.form.disable();
-
-    const name = this.form.controls.name.value.trim();
-
-    this.api
-      .create({ name })
-      .pipe(
-        take(1),
-        finalize(() => {
-          this.isSubmitting = false;
-          this.form.enable();
-        })
-      )
-      .subscribe({
-        next: () => {
-          this.form.reset();
-          this.done('Dépôt ajouté');
-        },
-        error: (e: unknown) => this.fail(e)
-      });
+  openCreate(): void {
+    this.openDrawer(null);
   }
 
   edit(w: Warehouse): void {
+    this.openDrawer(w);
+  }
+
+  /** Détail en lecture seule ; « Modifier » ouvre le panneau de modification. */
+  async openDetails(w: Warehouse): Promise<void> {
+    const canEdit = await firstValueFrom(this.canManage$);
     this.dialog
-      .open<WarehouseEditDialogComponent, Warehouse, UpdateWarehouseRequest>(WarehouseEditDialogComponent, { data: w })
+      .open<WarehouseDetailsDialogComponent, WarehouseDetailsDialogData, WarehouseDetailsDialogResult>(
+        WarehouseDetailsDialogComponent,
+        { data: { warehouse: w, typeLabel: this.typeLabel(w), canEdit }, width: '520px', maxWidth: '95vw' }
+      )
       .afterClosed()
       .pipe(take(1))
-      .subscribe((request) => {
-        if (!request) return;
-        this.api.update(w.id, request).pipe(take(1)).subscribe({ next: () => this.done('Dépôt modifié'), error: (e) => this.fail(e) });
+      .subscribe((result) => {
+        if (result === 'edit') this.edit(w);
       });
   }
+
+  closeDrawer(): void {
+    void this.drawer.close();
+  }
+
+  onSaved(saved: Warehouse): void {
+    const created = !this.drawerCtx?.warehouse;
+    this.closeDrawer();
+    this.done(created ? `Dépôt « ${saved.name} » ajouté${saved.code ? ` (${saved.code})` : ''}` : `Dépôt « ${saved.name} » modifié`);
+  }
+
 
   async toggleActive(w: Warehouse): Promise<void> {
     const activate = w.active === false;
@@ -167,6 +163,12 @@ export class WarehousesListPageComponent {
     });
     if (!confirmed) return;
     this.api.setMain(w.id).pipe(take(1)).subscribe({ next: () => this.done('Dépôt principal modifié'), error: (e) => this.fail(e) });
+  }
+
+  private openDrawer(warehouse: Warehouse | null): void {
+    this.drawerCtx = { warehouse };
+    this.cdr.markForCheck();
+    void this.drawer.open();
   }
 
   /** Liste rechargée et sélecteur de l'en-tête revalidé (nom changé, dépôt désactivé…), sans recharger la page. */

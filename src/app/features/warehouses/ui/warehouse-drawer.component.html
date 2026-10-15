@@ -1,0 +1,78 @@
+<div class="drawer">
+  <div class="drawer__header">
+    <div>
+      <div class="drawer__title">{{ title }}</div>
+      @if (ctx.warehouse; as w) {
+        <div class="drawer__subtitle">
+          {{ w.code }}{{ w.main ? ' · Dépôt principal' : '' }} · {{ w.active === false ? 'Désactivé' : 'Actif' }}
+        </div>
+      } @else {
+        <div class="drawer__subtitle">Magasin ou entrepôt</div>
+      }
+    </div>
+
+    <button mat-icon-button type="button" (click)="close.emit()" aria-label="Fermer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider />
+
+  <form class="drawer__content" [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Nom</mat-label>
+      <input matInput formControlName="name" maxlength="100" placeholder="Ex : Magasin Plateau" />
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <mat-error>Nom obligatoire (2 à 100 caractères)</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Type</mat-label>
+      <mat-select formControlName="type">
+        @for (t of typeOptions; track t.value) {
+          <mat-option [value]="t.value">{{ t.label }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.type.value) {
+        <mat-hint>{{ typeHint() }}</mat-hint>
+      }
+      @if (form.controls.type.touched && form.controls.type.invalid) {
+        <mat-error>Choisissez le type</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Code</mat-label>
+      <input matInput formControlName="code" maxlength="20" [placeholder]="ctx.warehouse ? 'Conservé si vide' : 'Généré si vide'" />
+      @if (form.controls.code.touched && form.controls.code.invalid) {
+        <mat-error>Lettres, chiffres et tirets uniquement (20 au plus)</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Adresse</mat-label>
+      <textarea matInput formControlName="address" rows="2" maxlength="255"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Téléphone</mat-label>
+      <input matInput formControlName="phone" maxlength="30" inputmode="tel" />
+      @if (form.controls.phone.touched && form.controls.phone.invalid) {
+        <mat-error>Numéro de téléphone invalide</mat-error>
+      }
+    </mat-form-field>
+
+    @if (errorMessage) {
+      <div class="error" role="alert">{{ errorMessage }}</div>
+    }
+
+    <div class="drawer__actions">
+      <span class="spacer"></span>
+      <button mat-stroked-button type="button" (click)="close.emit()">Fermer</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="saving">
+        {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </form>
+</div>
