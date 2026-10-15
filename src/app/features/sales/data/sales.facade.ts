@@ -176,6 +176,11 @@ export class SalesFacade {
     this.cartSubject.next(this.cartSubject.value.filter((r) => r.productId !== productId));
   }
 
+  /** Ticket fermé : la vente encaissée n'est plus affichée (la prochaine vente repart de zéro). */
+  dismissLastSale(): void {
+    if (this.lastSaleSubject.value) this.lastSaleSubject.next(null);
+  }
+
   clearCart(): void {
     this.cartSubject.next([]);
     this.lastSaleSubject.next(null);
