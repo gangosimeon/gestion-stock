@@ -25,6 +25,13 @@
 
   <mat-divider />
 
+  @if (sale.status === 'CANCELLED') {
+    <div class="invoice__cancelled">
+      <strong>Vente annulée</strong>@if (sale.cancelledAt) { le {{ sale.cancelledAt | date: 'short' }}}
+      @if (sale.cancellationReason) { — {{ sale.cancellationReason }} }
+    </div>
+  }
+
   <div class="invoice__body">
     <div class="block">
       <div class="label">Client</div>
@@ -78,5 +85,26 @@
         </div>
       }
     </div>
+
+    @if (returns.length > 0) {
+      <div class="returns">
+        <div class="returns__title">Retours ({{ returns.length }}) — {{ returnedTotal | number: '1.0-0' }}</div>
+        @for (r of returns; track r.id) {
+          <div class="returns__item">
+            <div class="returns__head">
+              <strong>{{ r.number }}</strong> · {{ r.createdAt | date: 'short' }} ·
+              {{ settlementLabels[r.settlement] }} · <strong>{{ r.totalAmount | number: '1.0-0' }}</strong>
+            </div>
+            @for (l of r.lines; track l.id) {
+              <div class="returns__line">
+                {{ l.productName ?? l.productId }} × {{ l.quantity }}
+                ({{ l.condition === 'RESELLABLE' ? 'remis en stock' : 'défectueux' }})
+              </div>
+            }
+            <div class="returns__reason">Motif : {{ r.reason }}</div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>

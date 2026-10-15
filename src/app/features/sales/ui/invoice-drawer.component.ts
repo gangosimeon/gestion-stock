@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 
+import { CustomerReturn, settlementLabels } from '../../../core/models/customer-return.model';
 import { Customer } from '../../../core/models/customer.model';
 import { PaymentMethod, Sale } from '../../../core/models/sale.model';
 import { paymentMethodLabels } from '../data/sales-vm.model';
@@ -18,6 +19,14 @@ import { paymentMethodLabels } from '../data/sales-vm.model';
 export class InvoiceDrawerComponent {
   @Input({ required: true }) sale!: Sale;
   @Input() customer: Customer | null = null;
+  /** Retours enregistrés sur cette vente (historique) ; vide pour une vente qui vient d'être faite. */
+  @Input() returns: CustomerReturn[] = [];
+
+  readonly settlementLabels = settlementLabels;
+
+  get returnedTotal(): number {
+    return this.returns.reduce((sum, r) => sum + Number(r.totalAmount ?? 0), 0);
+  }
   @Output() readonly close = new EventEmitter<void>();
 
   requestClose(): void {
@@ -37,7 +46,7 @@ export class InvoiceDrawerComponent {
     let y = 48;
 
     doc.setFontSize(16);
-    doc.text('Facture', marginX, y);
+    doc.text(this.sale.status === 'CANCELLED' ? 'Facture — VENTE ANNULÉE' : 'Facture', marginX, y);
     y += 18;
 
     doc.setFontSize(10);

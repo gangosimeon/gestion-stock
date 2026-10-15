@@ -1,0 +1,45 @@
+.container {
+  height: 100%;
+}
+
+.mat-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.page {
+  padding: var(--page-padding);
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.error {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.right {
+  text-align: right;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+// Reste à payer porté au compte du client.
+.due {
+  color: var(--color-warning, #b45309);
+  font-weight: 700;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+// Vente annulée : visible mais atténuée (elle ne compte plus) ; le badge rouge reste net.
+tr.cancelled td {
+  color: var(--color-text-secondary);
+}

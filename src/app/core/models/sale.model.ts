@@ -1,5 +1,7 @@
 export type PaymentMethod = 'CASH' | 'MOBILE_MONEY' | 'BANK_TRANSFER';
 export type SaleType = 'RETAIL' | 'WHOLESALE';
+/** Statuts du backend (enum SaleStatus). */
+export type SaleStatus = 'COMPLETED' | 'CANCELLED';
 
 export interface SaleItem {
   productId: string;
@@ -27,8 +29,13 @@ export interface Sale {
   createdByUserId: string;
   // Champs du backend.
   number?: string;
-  status?: 'CONFIRMED' | 'CANCELLED';
+  status?: SaleStatus;
+  warehouseId?: string;
   customerName?: string | null;
+  note?: string | null;
+  /** Annulation : date et motif (vente toujours visible, marquée annulée). */
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
   subtotal?: number;
   discountTotal?: number;
   /** Part vendue à crédit (dette du client), calculée par le backend. */

@@ -5,8 +5,10 @@ import { Observable } from 'rxjs';
 import { catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+import { CreateCustomerReturnRequest, CustomerReturn } from '../models/customer-return.model';
 import { Customer } from '../models/customer.model';
-import { PaymentMethod, Sale, SaleType } from '../models/sale.model';
+import { PaymentMethod, Sale, SaleStatus, SaleType } from '../models/sale.model';
+import { PageRequest, dayEndIso, dayStartIso, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
 function toApiError(err: unknown): Error {
@@ -41,15 +43,60 @@ export interface CreateSaleRequest {
   items: CreateSaleItem[];
 }
 
+/** Critères de l'historique des ventes (GET /api/sales). Dates : jours AAAA-MM-JJ inclus. */
+export interface SaleSearchFilters {
+  status?: SaleStatus | null;
+  paymentMethod?: PaymentMethod | null;
+  from?: string | null;
+  to?: string | null;
+  /** Tous les dépôts au lieu du dépôt courant (permission warehouse:all). */
+  allWarehouses?: boolean | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class SalesApiService {
   private readonly http = inject(HttpClient);
 
-  list(): Observable<PaginatedResult<Sale>> {
+  /** Historique : recherche (n°, client), filtres, tri et pagination côté serveur. */
+  salesPage(page: PageRequest, filters: SaleSearchFilters = {}): Observable<PaginatedResult<Sale>> {
+    const params = pageParams(page, {
+      status: filters.status,
+      paymentMethod: filters.paymentMethod,
+      from: dayStartIso(filters.from),
+      to: dayEndIso(filters.to),
+      allWarehouses: filters.allWarehouses ? true : null
+    });
     return this.http
-      .get<PaginatedResult<Sale>>(`${environment.apiUrl}/sales`)
+      .get<PaginatedResult<Sale>>(`${environment.apiUrl}/sales`, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  get(id: string): Observable<Sale> {
+    return this.http
+      .get<Sale>(`${environment.apiUrl}/sales/${id}`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Retours déjà enregistrés sur une vente, du plus ancien au plus récent. */
+  returnsForSale(saleId: string): Observable<CustomerReturn[]> {
+    return this.http
+      .get<CustomerReturn[]>(`${environment.apiUrl}/sales/${saleId}/returns`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Retour client (return:create) : montants calculés par le serveur au prix net de la vente. */
+  createReturn(saleId: string, payload: CreateCustomerReturnRequest): Observable<CustomerReturn> {
+    return this.http
+      .post<CustomerReturn>(`${environment.apiUrl}/sales/${saleId}/returns`, payload)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Annulation (sale:cancel) : remise en stock, remboursement depuis la caisse ouverte, créance annulée. */
+  cancel(id: string, reason: string): Observable<Sale> {
+    return this.http
+      .post<Sale>(`${environment.apiUrl}/sales/${id}/cancel`, { reason })
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 

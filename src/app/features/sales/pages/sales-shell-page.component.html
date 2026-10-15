@@ -3,6 +3,12 @@
     <header class="page-header page-header--bar">
       <h1 class="page-header__title">Vente</h1>
       <div class="page-header__spacer"></div>
+      @if (canSeeHistory) {
+        <a mat-stroked-button [routerLink]="['/sales/history']">
+          <mat-icon>history</mat-icon>
+          Historique
+        </a>
+      }
       <button mat-stroked-button type="button" (click)="clear()">
         <mat-icon>delete</mat-icon>
         Vider

@@ -15,10 +15,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { RouterLink } from '@angular/router';
 import { Subject, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod } from '../../../core/models/sale.model';
+import { AuthService } from '../../../auth/services/auth.service';
 import { SalesFacade } from '../data/sales.facade';
 import { CartRow, matchingCustomers, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
@@ -28,6 +30,7 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
   selector: 'app-sales-shell-page',
   standalone: true,
   imports: [
+    RouterLink,
     SelectSearchComponent,
     CommonModule,
     AsyncPipe,
@@ -55,6 +58,9 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(SalesFacade);
   private readonly snackbar = inject(MatSnackBar);
   private readonly destroy$ = new Subject<void>();
+
+  /** Lien vers l'historique des ventes (sale:read). */
+  readonly canSeeHistory = inject(AuthService).hasPermission('sale:read');
 
   @ViewChild('invoiceDrawer') invoiceDrawer!: MatSidenav;
 

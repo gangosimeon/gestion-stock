@@ -15,7 +15,8 @@ export const ROUTE_PERMISSIONS = {
   products: ['product:read'],
   categories: ['category:read'],
   stock: ['stock:read'],
-  sales: ['sale:read'],
+  // Vendre (sale:create) ou consulter l'historique (sale:read).
+  sales: ['sale:create', 'sale:read'],
   clients: ['customer:read'],
   purchases: ['purchase:read'],
   suppliers: ['supplier:read'],

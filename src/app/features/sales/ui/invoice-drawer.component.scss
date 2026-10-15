@@ -32,6 +32,37 @@
   gap: 8px;
 }
 
+.invoice__cancelled {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-danger-soft, #fee2e2);
+  color: var(--color-danger, #b91c1c);
+  font-size: 13px;
+}
+
+.returns {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.returns__title {
+  font-weight: 700;
+}
+
+.returns__item {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.returns__line,
+.returns__reason {
+  color: var(--color-text-secondary);
+}
+
 .invoice__body {
   padding: 16px;
   overflow: auto;
