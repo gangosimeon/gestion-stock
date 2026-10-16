@@ -27,7 +27,8 @@ function acceptLogos(page: InvoiceSettingsPageComponent): void {
 
 const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-describe('InvoiceSettingsPageComponent (Paramètres → Configuration de la facture)', () => {
+// Délai élargi : le premier rendu compile onglets, formulaires et aperçu (plus de 5 s sur un poste chargé).
+describe('InvoiceSettingsPageComponent (Paramètres → Configuration de la facture)', { timeout: 20_000 }, () => {
   let http: HttpTestingController;
   let confirmAnswer: boolean;
   let snackbar: { open: ReturnType<typeof vi.fn> };
