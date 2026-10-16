@@ -3,18 +3,17 @@
     <div>
       <div class="invoice__title">Facture</div>
       <div class="invoice__meta">
-        <div><strong>N°:</strong> {{ sale.number ?? sale.id }}</div>
-        <div><strong>Date:</strong> {{ sale.createdAt | date: 'short' }}</div>
+        <div><strong>N° :</strong> {{ sale.number ?? sale.id }}</div>
       </div>
     </div>
 
     <div class="invoice__actions">
-      <button mat-stroked-button type="button" (click)="print()">
-        <mat-icon>print</mat-icon>
+      <button mat-stroked-button type="button" (click)="print()" [disabled]="!settings() || busy() !== null">
+        @if (busy() === 'print') { <mat-spinner diameter="16" /> } @else { <mat-icon>print</mat-icon> }
         Imprimer
       </button>
-      <button mat-stroked-button type="button" (click)="exportPdf()">
-        <mat-icon>picture_as_pdf</mat-icon>
+      <button mat-stroked-button type="button" (click)="exportPdf()" [disabled]="!settings() || busy() !== null">
+        @if (busy() === 'pdf') { <mat-spinner diameter="16" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
         Exporter PDF
       </button>
       <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer">
@@ -25,85 +24,23 @@
 
   <mat-divider />
 
-  @if (sale.status === 'CANCELLED') {
-    <div class="invoice__cancelled">
-      <strong>Vente annulée</strong>@if (sale.cancelledAt) { le {{ sale.cancelledAt | date: 'short' }}}
-      @if (sale.cancellationReason) { — {{ sale.cancellationReason }} }
-    </div>
-  }
-
   <div class="invoice__body">
-    <div class="block">
-      <div class="label">Client</div>
-      <div class="value">{{ sale.customerName ?? customer?.name ?? 'Comptoir' }}</div>
-      @if (customer?.phone) { <div class="hint">{{ customer?.phone }}</div> }
-    </div>
-
-    <div class="block">
-      <div class="label">Type</div>
-      <div class="value">{{ sale.type === 'WHOLESALE' ? 'Gros' : 'Détail' }}</div>
-    </div>
-
-    <div class="items">
-      <div class="items__head">
-        <div>Article</div>
-        <div class="right">Qté</div>
-        <div class="right">PU</div>
-        <div class="right">Total</div>
+    @if (settingsUnavailable()) {
+      <div class="error" role="alert">
+        Configuration de la facture indisponible : la facture est présentée sans les informations de l'entreprise.
       </div>
+    }
 
-      @for (it of sale.items; track trackByIndex($index)) {
-        <div class="items__row">
-          <!-- Libellés et montants de la vente enregistrée (backend). -->
-          <div>{{ it.productName ?? it.productId }}</div>
-          <div class="right">{{ it.quantity }}</div>
-          <div class="right">{{ it.unitPrice | number: '1.0-0' }}</div>
-          <div class="right">{{ (it.lineTotal ?? it.unitPrice * it.quantity) | number: '1.0-0' }}</div>
+    @if (settings(); as s) {
+      @if (data(); as d) {
+        <div class="invoice__paper">
+          <app-invoice-document [settings]="s" [data]="d" [logoUrl]="logoUrl()" />
         </div>
       }
-    </div>
-
-    <div class="totals">
-      <div class="totals__row">
-        <div>Total</div>
-        <div class="right"><strong>{{ sale.total | number: '1.0-0' }}</strong></div>
-      </div>
-      @if (sale.discountTotal) {
-        <div class="totals__row">
-          <div>Remises</div>
-          <div class="right">{{ sale.discountTotal | number: '1.0-0' }}</div>
-        </div>
-      }
-      <div class="totals__row">
-        <div>Payé ({{ methodLabel(sale.paymentMethod) }})</div>
-        <div class="right">{{ sale.paidAmount | number: '1.0-0' }}</div>
-      </div>
-      @if (sale.creditAmount) {
-        <div class="totals__row">
-          <div>À crédit (compte client)</div>
-          <div class="right">{{ sale.creditAmount | number: '1.0-0' }}</div>
-        </div>
-      }
-    </div>
-
-    @if (returns.length > 0) {
-      <div class="returns">
-        <div class="returns__title">Retours ({{ returns.length }}) — {{ returnedTotal | number: '1.0-0' }}</div>
-        @for (r of returns; track r.id) {
-          <div class="returns__item">
-            <div class="returns__head">
-              <strong>{{ r.number }}</strong> · {{ r.createdAt | date: 'short' }} ·
-              {{ settlementLabels[r.settlement] }} · <strong>{{ r.totalAmount | number: '1.0-0' }}</strong>
-            </div>
-            @for (l of r.lines; track l.id) {
-              <div class="returns__line">
-                {{ l.productName ?? l.productId }} × {{ l.quantity }}
-                ({{ l.condition === 'RESELLABLE' ? 'remis en stock' : 'défectueux' }})
-              </div>
-            }
-            <div class="returns__reason">Motif : {{ r.reason }}</div>
-          </div>
-        }
+    } @else {
+      <div class="invoice__loading" aria-live="polite">
+        <mat-spinner diameter="28" />
+        Préparation de la facture…
       </div>
     }
   </div>

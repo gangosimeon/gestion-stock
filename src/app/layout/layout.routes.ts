@@ -106,6 +106,12 @@ export const LAYOUT_ROUTES: Routes = [
         canMatch: [permissionGuard],
         data: { permissions: ROUTE_PERMISSIONS['users'] },
         loadChildren: () => import('../features/users/users.routes').then((m) => m.USERS_ROUTES)
+      },
+      {
+        path: 'settings',
+        canMatch: [permissionGuard],
+        data: { permissions: ROUTE_PERMISSIONS['settings'] },
+        loadChildren: () => import('../features/settings/settings.routes').then((m) => m.SETTINGS_ROUTES)
       }
     ]
   }

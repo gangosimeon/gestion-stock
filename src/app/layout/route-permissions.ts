@@ -27,7 +27,9 @@ export const ROUTE_PERMISSIONS = {
   reports: ['report:read'],
   appointments: ['appointment:read'],
   'audit-logs': ['audit:read'],
-  users: ['user:manage']
+  users: ['user:manage'],
+  // Configuration de la facture et informations de l'entreprise : administrateur.
+  settings: ['settings:manage']
 } as const satisfies Record<string, readonly string[]>;
 
 export type AppSection = keyof typeof ROUTE_PERMISSIONS;

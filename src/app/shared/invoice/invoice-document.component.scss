@@ -1,0 +1,528 @@
+// Facture : styles globaux préfixés `gsi-` (recopiés dans la fenêtre d'impression et le PDF).
+// Couleurs : variables --gsi-primary, --gsi-secondary, --gsi-text (configuration).
+// Thème clair imposé : une facture s'imprime sur papier blanc, quel que soit le thème de l'écran.
+
+app-invoice-document {
+  display: block;
+}
+
+.gsi {
+  --gsi-primary: #1e3a8a;
+  --gsi-secondary: #f59e0b;
+  --gsi-text: #1f2937;
+  --gsi-muted: #6b7280;
+  --gsi-border: #e5e7eb;
+  --gsi-soft: #f8fafc;
+  --gsi-pad: 28px;
+  --gsi-cell: 8px 10px;
+
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 794px; // A4 à 96 dpi
+  margin: 0 auto;
+  padding: var(--gsi-pad);
+  background: #fff;
+  color: var(--gsi-text);
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+.gsi-align-left {
+  text-align: left;
+}
+
+.gsi-align-center {
+  text-align: center;
+}
+
+.gsi-align-right {
+  text-align: right;
+}
+
+.gsi-right {
+  text-align: right;
+}
+
+.gsi-label {
+  color: var(--gsi-muted);
+  font-weight: 600;
+}
+
+.gsi-pre {
+  white-space: pre-line;
+}
+
+.gsi-sample {
+  margin: calc(var(--gsi-pad) * -1) calc(var(--gsi-pad) * -1) 16px;
+  padding: 4px 12px;
+  background: repeating-linear-gradient(-45deg, #fef3c7, #fef3c7 10px, #fde68a 10px, #fde68a 20px);
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.gsi-cancelled {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border: 2px solid #b91c1c;
+  border-radius: 6px;
+  color: #b91c1c;
+  background: #fef2f2;
+  text-align: center;
+}
+
+// --- En-tête -------------------------------------------------------------------------------------
+
+.gsi-header {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 16px;
+}
+
+.gsi-header--logo-right {
+  flex-direction: row-reverse;
+}
+
+.gsi-header--logo-top {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+
+  .gsi-brand {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+.gsi-header--separator {
+  border-bottom: 3px solid var(--gsi-primary);
+  border-image: linear-gradient(90deg, var(--gsi-secondary) 0 40%, var(--gsi-primary) 40% 70%, var(--gsi-secondary) 70%) 1;
+}
+
+.gsi-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  max-width: 50%;
+}
+
+.gsi-header--logo-top .gsi-brand {
+  max-width: none;
+}
+
+.gsi-header--logo-right .gsi-brand {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.gsi-logo {
+  display: block;
+  max-width: 180px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-bottom: 6px;
+}
+
+.gsi-company {
+  color: var(--gsi-primary);
+  font-size: 17px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.gsi-legal-name {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.gsi-slogan {
+  color: var(--gsi-muted);
+  font-size: 11.5px;
+  font-style: italic;
+}
+
+.gsi-contacts {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+}
+
+.gsi-ids {
+  margin-top: 2px;
+}
+
+.gsi-dot {
+  margin: 0 6px;
+  color: var(--gsi-muted);
+}
+
+.gsi-header-note {
+  margin-top: 10px;
+  color: var(--gsi-muted);
+  font-size: 11.5px;
+  white-space: pre-line;
+}
+
+// --- Titre, client -------------------------------------------------------------------------------
+
+.gsi-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin: 20px 0 14px;
+}
+
+.gsi-title {
+  margin: 0;
+  color: var(--gsi-primary);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.gsi-meta {
+  margin: 0;
+  text-align: right;
+
+  div {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  dt {
+    color: var(--gsi-muted);
+    font-weight: 600;
+
+    &::after {
+      content: ' :';
+    }
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 700;
+  }
+}
+
+.gsi-parties {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.gsi-party--right {
+  text-align: right;
+}
+
+.gsi-party__title,
+.gsi-section-title {
+  color: var(--gsi-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.gsi-party__name {
+  font-weight: 700;
+}
+
+// --- Lignes --------------------------------------------------------------------------------------
+
+.gsi-lines {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: var(--gsi-cell);
+    border-bottom: 1px solid var(--gsi-border);
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 11px;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  th.gsi-right {
+    text-align: right;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  .gsi-num {
+    width: 36px;
+    text-align: center;
+  }
+
+  .gsi-sku {
+    color: var(--gsi-muted);
+    white-space: nowrap;
+  }
+}
+
+// --- Totaux --------------------------------------------------------------------------------------
+
+.gsi-totals {
+  width: min(320px, 100%);
+  margin: 12px 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  break-inside: avoid;
+}
+
+.gsi-totals__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--gsi-border);
+
+  span:last-child {
+    white-space: nowrap;
+    text-align: right;
+  }
+}
+
+.gsi-totals__grand {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.gsi-words {
+  margin: 14px 0 0;
+  font-style: italic;
+  break-inside: avoid;
+}
+
+.gsi-returns {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px dashed var(--gsi-border);
+  border-radius: 6px;
+  break-inside: avoid;
+}
+
+.gsi-return {
+  margin-top: 6px;
+}
+
+.gsi-return__line {
+  color: var(--gsi-muted);
+  font-size: 11.5px;
+}
+
+// --- Pied de page --------------------------------------------------------------------------------
+
+.gsi-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 14px;
+  font-size: 11.5px;
+  break-inside: avoid;
+}
+
+.gsi-footer--separator {
+  border-top: 2px solid var(--gsi-primary);
+  border-image: linear-gradient(90deg, var(--gsi-secondary) 0 30%, var(--gsi-primary) 30% 70%, var(--gsi-secondary) 70%) 1;
+}
+
+.gsi-footer__block--promo {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--gsi-secondary) 15%, #fff);
+  font-weight: 600;
+}
+
+.gsi-footer__block--legal {
+  color: var(--gsi-muted);
+  font-size: 10.5px;
+}
+
+.gsi-thanks {
+  color: var(--gsi-primary);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.gsi-signature {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: flex-end;
+  min-width: 200px;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.gsi-align-left .gsi-signature {
+  align-self: flex-start;
+}
+
+.gsi-align-center .gsi-signature {
+  align-self: center;
+}
+
+.gsi-signature__line {
+  height: 36px;
+  border-bottom: 1px solid var(--gsi-text);
+}
+
+.gsi-closing {
+  font-style: italic;
+}
+
+.gsi-page-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 6px;
+  border-top: 1px solid var(--gsi-border);
+  color: var(--gsi-muted);
+  font-size: 10px;
+}
+
+// --- Modèle « Moderne » : bandeaux de couleur ---------------------------------------------------
+
+.gsi--modern {
+  .gsi-lines thead th {
+    background: var(--gsi-primary);
+    color: #fff;
+  }
+
+  .gsi-lines tbody tr:nth-child(even) td {
+    background: var(--gsi-soft);
+  }
+
+  .gsi-totals__grand {
+    border-radius: 4px;
+    background: var(--gsi-primary);
+    color: #fff;
+  }
+}
+
+// --- Modèle « Classique » : sobre, tableau quadrillé --------------------------------------------
+
+.gsi--classic {
+  font-family: Georgia, 'Times New Roman', serif;
+
+  .gsi-company,
+  .gsi-title {
+    color: var(--gsi-text);
+  }
+
+  .gsi-title {
+    font-size: 22px;
+    letter-spacing: 0.12em;
+  }
+
+  .gsi-lines th,
+  .gsi-lines td {
+    border: 1px solid #9ca3af;
+  }
+
+  .gsi-lines thead th {
+    background: #f3f4f6;
+    border-bottom: 2px solid var(--gsi-primary);
+  }
+
+  .gsi-totals__grand {
+    border-top: 2px solid var(--gsi-text);
+    border-bottom: 2px solid var(--gsi-text);
+  }
+}
+
+// --- Modèle « Compact » : resserré pour les longues factures ------------------------------------
+
+.gsi--compact {
+  --gsi-pad: 16px;
+  --gsi-cell: 3px 6px;
+
+  font-size: 11px;
+  line-height: 1.3;
+
+  .gsi-header {
+    padding-bottom: 8px;
+  }
+
+  .gsi-logo {
+    max-height: 48px;
+  }
+
+  .gsi-company {
+    font-size: 14px;
+  }
+
+  .gsi-title-row {
+    margin: 10px 0 8px;
+  }
+
+  .gsi-title {
+    font-size: 18px;
+  }
+
+  .gsi-lines thead th {
+    border-bottom: 2px solid var(--gsi-primary);
+  }
+
+  .gsi-totals__grand {
+    color: var(--gsi-primary);
+  }
+
+  .gsi-footer {
+    gap: 6px;
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .gsi {
+    --gsi-pad: 14px;
+
+    font-size: 11.5px;
+  }
+
+  .gsi-header:not(.gsi-header--logo-top) {
+    flex-direction: column;
+
+    .gsi-brand {
+      max-width: none;
+    }
+  }
+
+  .gsi-lines {
+    th,
+    td {
+      padding: 4px;
+    }
+  }
+}

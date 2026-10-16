@@ -86,6 +86,14 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
     expect(navLabels()).toEqual(['Dashboard', 'Ventes', 'Caisse', 'RDV']);
   });
 
+  it('« Paramètres » (configuration de la facture) : proposé avec settings:manage', () => {
+    expect(setup(false, ['settings:manage']).navLabels()).toEqual(['Dashboard', 'Paramètres']);
+  });
+
+  it('« Paramètres » : masqué sans settings:manage, même pour un gestionnaire des ventes et des comptes', () => {
+    expect(setup(false, ['sale:read', 'sale:create', 'user:manage']).navLabels()).not.toContain('Paramètres');
+  });
+
   it('sans permission : seul le tableau de bord est proposé (plus de « Accès refusé » au clic)', () => {
     const { navLabels } = setup(false, []);
     expect(navLabels()).toEqual(['Dashboard']);

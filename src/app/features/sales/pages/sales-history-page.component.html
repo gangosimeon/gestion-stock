@@ -165,7 +165,12 @@
 
   <mat-drawer #invoiceDrawer position="end" mode="over">
     @if (selected(); as sale) {
-      <app-invoice-drawer [sale]="sale" [returns]="selectedReturns()" (close)="closeInvoice()" />
+      <app-invoice-drawer
+        [sale]="sale"
+        [returns]="selectedReturns()"
+        [warehouseName]="sale.warehouseId ? (warehouseNames$ | async)?.get(sale.warehouseId) : null"
+        (close)="closeInvoice()"
+      />
     }
   </mat-drawer>
 </mat-drawer-container>

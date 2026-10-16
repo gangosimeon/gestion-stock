@@ -1,0 +1,202 @@
+@let s = settings();
+@let d = data();
+@let h = header();
+@let c = company();
+@let a = appearance();
+
+<article
+  class="gsi"
+  [class.gsi--classic]="a.template === 'CLASSIC'"
+  [class.gsi--modern]="a.template === 'MODERN'"
+  [class.gsi--compact]="a.template === 'COMPACT'"
+  [style]="cssVars()"
+  [attr.aria-label]="'Facture ' + d.number"
+>
+  @if (preview()) {
+    <div class="gsi-sample" aria-hidden="true">Aperçu — données d'exemple</div>
+  }
+
+  @if (d.cancelled) {
+    <div class="gsi-cancelled" role="note">
+      <strong>VENTE ANNULÉE</strong>
+      @if (d.cancelled.at) { le {{ date(d.cancelled.at) }} à {{ time(d.cancelled.at) }} }
+      @if (d.cancelled.reason) { — {{ d.cancelled.reason }} }
+    </div>
+  }
+
+  <!-- En-tête -->
+  <header
+    class="gsi-header"
+    [class.gsi-header--logo-left]="h.logoPosition === 'LEFT'"
+    [class.gsi-header--logo-right]="h.logoPosition === 'RIGHT'"
+    [class.gsi-header--logo-top]="h.logoPosition === 'TOP'"
+    [class.gsi-header--separator]="h.headerSeparator"
+  >
+    @if (showLogo() || (h.showCompanyName && c.companyName) || (h.showSlogan && c.slogan) || legalName()) {
+      <div class="gsi-brand">
+        @if (showLogo()) {
+          <img class="gsi-logo" [src]="logoUrl()" alt="Logo de l'entreprise" />
+        }
+        @if (h.showCompanyName && c.companyName) {
+          <div class="gsi-company">{{ c.companyName }}</div>
+        }
+        @if (legalName()) {
+          <div class="gsi-legal-name">{{ legalName() }}</div>
+        }
+        @if (h.showSlogan && c.slogan) {
+          <div class="gsi-slogan">{{ c.slogan }}</div>
+        }
+      </div>
+    }
+
+    @if (contacts().length > 0 || legalIds().length > 0) {
+      <div class="gsi-contacts" [class]="alignClass(h.headerAlignment)">
+        @for (row of contacts(); track $index) {
+          <div>
+            @if (row.label) { <span class="gsi-label">{{ row.label }} :</span> }
+            {{ row.value }}
+          </div>
+        }
+        @if (legalIds().length > 0) {
+          <div class="gsi-ids">
+            @for (id of legalIds(); track id.label; let last = $last) {
+              <span><span class="gsi-label">{{ id.label }} :</span> {{ id.value }}</span>
+              @if (!last) { <span class="gsi-dot" aria-hidden="true">|</span> }
+            }
+          </div>
+        }
+      </div>
+    }
+  </header>
+
+  @if (h.headerNote) {
+    <div class="gsi-header-note" [class]="alignClass(h.headerAlignment)">{{ h.headerNote }}</div>
+  }
+
+  <!-- Titre et références -->
+  <section class="gsi-title-row">
+    <h1 class="gsi-title">FACTURE</h1>
+    <dl class="gsi-meta">
+      <div><dt>N°</dt><dd>{{ d.number }}</dd></div>
+      <div><dt>Date</dt><dd>{{ date(d.date) }} {{ time(d.date) }}</dd></div>
+      @if (h.showWarehouse && d.warehouseName) {
+        <div><dt>Dépôt</dt><dd>{{ d.warehouseName }}</dd></div>
+      }
+    </dl>
+  </section>
+
+  <section class="gsi-parties">
+    <div class="gsi-party">
+      <div class="gsi-party__title">Client</div>
+      <div class="gsi-party__name">{{ d.customerName }}</div>
+      @if (d.customerPhone) { <div>Tél. : {{ d.customerPhone }}</div> }
+    </div>
+    <div class="gsi-party gsi-party--right">
+      <div class="gsi-party__title">Règlement</div>
+      @if (d.saleTypeLabel) { <div>{{ d.saleTypeLabel }}</div> }
+      <div>{{ d.paymentMethodLabel }}</div>
+    </div>
+  </section>
+
+  <!-- Lignes -->
+  <table class="gsi-lines">
+    <thead>
+      <tr>
+        @if (a.showLineNumber) { <th class="gsi-num">N°</th> }
+        @if (showSkuColumn()) { <th>Réf.</th> }
+        <th>Désignation</th>
+        <th class="gsi-right">Qté</th>
+        <th class="gsi-right">Prix unitaire</th>
+        @if (showDiscountColumn()) { <th class="gsi-right">Remise</th> }
+        <th class="gsi-right">Total ({{ a.currencyLabel }})</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (line of d.lines; track $index) {
+        <tr>
+          @if (a.showLineNumber) { <td class="gsi-num">{{ $index + 1 }}</td> }
+          @if (showSkuColumn()) { <td class="gsi-sku">{{ line.sku ?? '' }}</td> }
+          <td>{{ line.name }}</td>
+          <td class="gsi-right">{{ line.quantity }}</td>
+          <td class="gsi-right">{{ amount(line.unitPrice) }}</td>
+          @if (showDiscountColumn()) {
+            <td class="gsi-right">{{ line.discountPercent ? line.discountPercent + ' %' : '' }}</td>
+          }
+          <td class="gsi-right">{{ amount(line.lineTotal) }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <!-- Totaux : uniquement ceux de la vente (le modèle de vente n'a pas de taxe). -->
+  <section class="gsi-totals">
+    @if (d.discountTotal > 0 && d.subtotal != null) {
+      <div class="gsi-totals__row"><span>Sous-total</span><span>{{ money(d.subtotal) }}</span></div>
+    }
+    @if (d.discountTotal > 0) {
+      <div class="gsi-totals__row"><span>Remises</span><span>-{{ money(d.discountTotal) }}</span></div>
+    }
+    <div class="gsi-totals__row gsi-totals__grand"><span>Total</span><span>{{ money(d.total) }}</span></div>
+    <div class="gsi-totals__row"><span>Payé ({{ d.paymentMethodLabel }})</span><span>{{ money(d.paidAmount) }}</span></div>
+    @if (d.creditAmount > 0) {
+      <div class="gsi-totals__row"><span>Reste à payer (compte client)</span><span>{{ money(d.creditAmount) }}</span></div>
+    }
+  </section>
+
+  @if (a.showAmountInWords) {
+    <p class="gsi-words"><span class="gsi-label">Arrêtée la présente facture à la somme de :</span> {{ words(d.total) }}</p>
+  }
+
+  @if ((d.returns ?? []).length > 0) {
+    <section class="gsi-returns">
+      <div class="gsi-section-title">Retours ({{ d.returns!.length }}) — {{ money(returnedTotal()) }}</div>
+      @for (r of d.returns!; track r.id) {
+        <div class="gsi-return">
+          <div>
+            <strong>{{ r.number }}</strong> · {{ date(r.createdAt) }} · {{ settlementLabels[r.settlement] }} ·
+            <strong>{{ money(r.totalAmount) }}</strong>
+          </div>
+          @for (l of r.lines; track l.id) {
+            <div class="gsi-return__line">
+              {{ l.productName ?? l.productId }} × {{ l.quantity }}
+              ({{ l.condition === 'RESELLABLE' ? 'remis en stock' : 'défectueux' }})
+            </div>
+          }
+          <div class="gsi-return__line">Motif : {{ r.reason }}</div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Pied de page -->
+  @if (footerBlocks().length > 0 || thankYou() || signature() || closing()) {
+    <footer class="gsi-footer" [class.gsi-footer--separator]="s.footer.footerSeparator" [class]="alignClass(s.footer.footerAlignment)">
+      @for (block of footerBlocks(); track $index) {
+        <div class="gsi-footer__block" [class]="'gsi-footer__block--' + block.kind">
+          @if (block.title) { <div class="gsi-section-title">{{ block.title }}</div> }
+          <div class="gsi-pre">{{ block.text }}</div>
+        </div>
+      }
+      @if (thankYou()) {
+        <div class="gsi-thanks">{{ thankYou() }}</div>
+      }
+      @if (signature()) {
+        <div class="gsi-signature">
+          <div class="gsi-signature__line"></div>
+          <div>{{ signature() }}</div>
+        </div>
+      }
+      @if (closing()) {
+        <div class="gsi-closing">{{ closing() }}</div>
+      }
+    </footer>
+  }
+
+  @if (preview() && (pageFooter() || a.showPageNumbers)) {
+    <!-- À l'impression et dans le PDF, cette mention est reportée en bas de chaque page. -->
+    <div class="gsi-page-footer">
+      <span>{{ pageFooter() }}</span>
+      @if (a.showPageNumbers) { <span>Page 1 / 1</span> }
+    </div>
+  }
+</article>

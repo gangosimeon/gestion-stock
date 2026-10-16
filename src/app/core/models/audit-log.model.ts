@@ -123,7 +123,10 @@ export const auditActionLabels: Record<string, string> = {
   REOPEN: 'Réouverture',
   COMPLETE: 'Rendez-vous honoré',
   NO_SHOW: 'Rendez-vous manqué',
-  STATUS: 'Clôture de rendez-vous'
+  STATUS: 'Clôture de rendez-vous',
+  RESET: 'Réinitialisation',
+  LOGO_UPLOAD: 'Logo ajouté ou remplacé',
+  LOGO_DELETE: 'Logo retiré'
 };
 
 export const auditModuleLabels: Record<AuditModule, string> = {
@@ -170,6 +173,7 @@ export const auditEntityTypeLabels: Record<string, string> = {
   EXPENSE: 'Dépense',
   APPOINTMENT: 'Rendez-vous',
   ALERT_SETTING: 'Réglage d\'alerte',
+  INVOICE_SETTING: 'Configuration de la facture',
   AUDIT_LOG: 'Journal d\'audit',
   SYSTEM: 'Système'
 };

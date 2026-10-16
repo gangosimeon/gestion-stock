@@ -148,7 +148,8 @@ export class LayoutShellComponent {
       { label: 'Rapports', icon: 'bar_chart', section: 'reports' },
       { label: 'RDV', icon: 'event', section: 'appointments' },
       { label: 'Audit', icon: 'history', section: 'audit-logs' },
-      { label: 'Utilisateurs', icon: 'admin_panel_settings', section: 'users' }
+      { label: 'Utilisateurs', icon: 'admin_panel_settings', section: 'users' },
+      { label: 'Paramètres', icon: 'settings', section: 'settings' }
     ] satisfies { label: string; icon: string; section: AppSection }[]
   ).map(({ label, icon, section }) => ({
     label,

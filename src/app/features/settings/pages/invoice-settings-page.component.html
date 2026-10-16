@@ -1,0 +1,343 @@
+<div class="page">
+  <header class="page__header">
+    <mat-icon class="page__icon" aria-hidden="true">settings</mat-icon>
+    <div>
+      <h1 class="page__title">Configuration de la facture</h1>
+      <p class="page__subtitle">Personnalisez les informations affichées sur vos factures de vente.</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="state" aria-live="polite">
+      <mat-spinner diameter="32" />
+      Chargement de la configuration…
+    </div>
+  } @else if (loadError(); as error) {
+    <div class="error" role="alert">{{ error }}</div>
+    <div>
+      <button mat-stroked-button type="button" (click)="load()">
+        <mat-icon>refresh</mat-icon>
+        Réessayer
+      </button>
+    </div>
+  } @else {
+    <div class="layout">
+      <!-- Formulaire -->
+      <form class="card form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms">
+          <!-- Informations générales -->
+          <mat-tab label="Informations générales">
+            <section class="tab" formGroupName="company">
+              <h2 class="section-title">Informations de l’entreprise</h2>
+              <p class="section-hint">Aucun champ n’est obligatoire : un champ vide n’apparaît pas sur la facture.</p>
+
+              <div class="grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nom commercial</mat-label>
+                  <input matInput formControlName="companyName" maxlength="150" autocomplete="organization" />
+                  @if (fieldError('company', 'companyName'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Raison sociale</mat-label>
+                  <input matInput formControlName="legalName" maxlength="150" />
+                  <mat-hint>Si elle diffère du nom commercial</mat-hint>
+                  @if (fieldError('company', 'legalName'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Slogan</mat-label>
+                  <input matInput formControlName="slogan" maxlength="200" />
+                  @if (fieldError('company', 'slogan'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Adresse</mat-label>
+                  <input matInput formControlName="address" maxlength="255" autocomplete="street-address" />
+                  @if (fieldError('company', 'address'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Ville</mat-label>
+                  <input matInput formControlName="city" maxlength="100" autocomplete="address-level2" />
+                  @if (fieldError('company', 'city'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Pays</mat-label>
+                  <input matInput formControlName="country" maxlength="100" autocomplete="country-name" />
+                  @if (fieldError('company', 'country'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Téléphone</mat-label>
+                  <input matInput formControlName="phone" maxlength="50" inputmode="tel" autocomplete="tel" />
+                  @if (fieldError('company', 'phone'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Email</mat-label>
+                  <input matInput formControlName="email" maxlength="254" type="email" autocomplete="email" />
+                  @if (fieldError('company', 'email'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Site web</mat-label>
+                  <input matInput formControlName="website" maxlength="200" autocomplete="url" />
+                  @if (fieldError('company', 'website'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Numéro d’enregistrement (RCCM)</mat-label>
+                  <input matInput formControlName="registrationNumber" maxlength="100" />
+                  @if (fieldError('company', 'registrationNumber'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>IFU / NIF</mat-label>
+                  <input matInput formControlName="taxId" maxlength="100" />
+                  @if (fieldError('company', 'taxId'); as e) { <mat-error>{{ e }}</mat-error> }
+                </mat-form-field>
+              </div>
+
+              <h2 class="section-title">Logo de l’entreprise</h2>
+              <div class="logo">
+                <div class="logo__preview" [class.logo__preview--empty]="!hasLogo()">
+                  @if (previewLogoUrl(); as url) {
+                    <img [src]="url" alt="Logo de l’entreprise" />
+                  } @else {
+                    <mat-icon aria-hidden="true">image</mat-icon>
+                    <span>Aucun logo</span>
+                  }
+                </div>
+                <div class="logo__actions">
+                  <input #logoInput type="file" accept="image/png,image/jpeg" hidden (change)="onLogoSelected($event)" />
+                  <button mat-stroked-button type="button" (click)="logoInput.click()" [disabled]="saving()">
+                    <mat-icon>upload</mat-icon>
+                    {{ hasLogo() ? 'Remplacer le logo' : 'Choisir un logo' }}
+                  </button>
+                  @if (hasLogo() || logo().kind === 'pending') {
+                    <button mat-button type="button" color="warn" (click)="removeLogo()" [disabled]="saving()">
+                      <mat-icon>delete</mat-icon>
+                      {{ logo().kind === 'pending' ? 'Annuler ce choix' : 'Retirer le logo' }}
+                    </button>
+                  }
+                  <div class="hint">PNG ou JPEG · {{ logoMaxMb }} Mo maximum · 4000 × 4000 px maximum</div>
+                  @if (logo().kind === 'pending') {
+                    <div class="pending" role="status">Nouveau logo : il sera enregistré avec « Enregistrer ».</div>
+                  } @else if (logo().kind === 'removed') {
+                    <div class="pending" role="status">Le logo sera retiré à l’enregistrement.</div>
+                  }
+                  @if (logoError(); as e) {
+                    <div class="error" role="alert">{{ e }}</div>
+                  }
+                </div>
+              </div>
+            </section>
+          </mat-tab>
+
+          <!-- En-tête -->
+          <mat-tab label="En-tête">
+            <section class="tab" formGroupName="header">
+              <h2 class="section-title">Éléments affichés</h2>
+              <div class="toggles">
+                @for (t of headerToggles; track t.control) {
+                  <mat-slide-toggle [formControlName]="t.control">{{ t.label }}</mat-slide-toggle>
+                }
+              </div>
+
+              <h2 class="section-title">Disposition</h2>
+              <div class="field-row">
+                <span class="field-row__label">Position du logo</span>
+                <mat-button-toggle-group formControlName="logoPosition" aria-label="Position du logo">
+                  <mat-button-toggle value="LEFT">À gauche</mat-button-toggle>
+                  <mat-button-toggle value="TOP">Au-dessus</mat-button-toggle>
+                  <mat-button-toggle value="RIGHT">À droite</mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+              <div class="field-row">
+                <span class="field-row__label">Alignement des coordonnées</span>
+                <mat-button-toggle-group formControlName="headerAlignment" aria-label="Alignement de l’en-tête">
+                  <mat-button-toggle value="LEFT" matTooltip="À gauche"><mat-icon>format_align_left</mat-icon></mat-button-toggle>
+                  <mat-button-toggle value="CENTER" matTooltip="Centré"><mat-icon>format_align_center</mat-icon></mat-button-toggle>
+                  <mat-button-toggle value="RIGHT" matTooltip="À droite"><mat-icon>format_align_right</mat-icon></mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+              <mat-slide-toggle formControlName="headerSeparator">Ligne de séparation sous l’en-tête</mat-slide-toggle>
+
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Note d’en-tête (facultative)</mat-label>
+                <textarea matInput formControlName="headerNote" rows="2" maxlength="300"></textarea>
+                <mat-hint align="end">{{ form.controls.header.controls.headerNote.value.length }} / 300</mat-hint>
+                @if (fieldError('header', 'headerNote'); as e) { <mat-error>{{ e }}</mat-error> }
+              </mat-form-field>
+
+              <p class="section-hint">Les couleurs se règlent dans « Apparence et affichage ».</p>
+            </section>
+          </mat-tab>
+
+          <!-- Pied de page -->
+          <mat-tab label="Pied de page">
+            <section class="tab" formGroupName="footer">
+              <p class="section-hint">
+                Une mention n’apparaît que si elle est activée <strong>et</strong> renseignée.
+              </p>
+              @for (f of footerFields; track f.text) {
+                <div class="footer-field">
+                  <mat-slide-toggle [formControlName]="f.show" [aria-label]="'Afficher : ' + f.label" />
+                  <mat-form-field appearance="outline" class="full">
+                    <mat-label>{{ f.label }}</mat-label>
+                    @if (f.rows > 1) {
+                      <textarea matInput [formControlName]="f.text" [rows]="f.rows" [maxlength]="f.max" [placeholder]="f.placeholder"></textarea>
+                    } @else {
+                      <input matInput [formControlName]="f.text" [maxlength]="f.max" [placeholder]="f.placeholder" />
+                    }
+                    @if (fieldError('footer', f.text); as e) { <mat-error>{{ e }}</mat-error> }
+                  </mat-form-field>
+                </div>
+              }
+
+              <div class="field-row">
+                <span class="field-row__label">Alignement du pied de page</span>
+                <mat-button-toggle-group formControlName="footerAlignment" aria-label="Alignement du pied de page">
+                  <mat-button-toggle value="LEFT" matTooltip="À gauche"><mat-icon>format_align_left</mat-icon></mat-button-toggle>
+                  <mat-button-toggle value="CENTER" matTooltip="Centré"><mat-icon>format_align_center</mat-icon></mat-button-toggle>
+                  <mat-button-toggle value="RIGHT" matTooltip="À droite"><mat-icon>format_align_right</mat-icon></mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+              <mat-slide-toggle formControlName="footerSeparator">Ligne de séparation au-dessus du pied de page</mat-slide-toggle>
+            </section>
+          </mat-tab>
+
+          <!-- Apparence et affichage -->
+          <mat-tab label="Apparence et affichage">
+            <section class="tab" formGroupName="appearance">
+              <h2 class="section-title">Modèle</h2>
+              <mat-button-toggle-group formControlName="template" aria-label="Modèle de facture" class="templates">
+                <mat-button-toggle value="CLASSIC">Classique</mat-button-toggle>
+                <mat-button-toggle value="MODERN">Moderne</mat-button-toggle>
+                <mat-button-toggle value="COMPACT">Compact</mat-button-toggle>
+              </mat-button-toggle-group>
+
+              <h2 class="section-title">Couleurs</h2>
+              <div class="colors">
+                @for (c of colorControls; track c.control) {
+                  @let name = c.control;
+                  <div class="color">
+                    <input
+                      type="color"
+                      class="color__picker"
+                      [value]="colorFor(name)"
+                      (input)="onColorPicked(name, $event)"
+                      [attr.aria-label]="c.label"
+                    />
+                    <mat-form-field appearance="outline">
+                      <mat-label>{{ c.label }}</mat-label>
+                      <input matInput [formControlName]="name" maxlength="7" spellcheck="false" />
+                      @if (fieldError('appearance', name); as e) { <mat-error>{{ e }}</mat-error> }
+                    </mat-form-field>
+                  </div>
+                }
+              </div>
+
+              <h2 class="section-title">Formats</h2>
+              <div class="grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Format de date</mat-label>
+                  <mat-select formControlName="dateFormat">
+                    @for (d of dateFormats; track d.value) {
+                      <mat-option [value]="d.value">{{ d.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Devise</mat-label>
+                  <mat-select formControlName="currencyLabel">
+                    <mat-option value="FCFA">FCFA (franc CFA)</mat-option>
+                    <mat-option value="F CFA">F CFA</mat-option>
+                    <mat-option value="XOF">XOF</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Séparateur des milliers</mat-label>
+                  <mat-select formControlName="thousandsSeparator">
+                    <mat-option value="SPACE">Espace (1 250 000)</mat-option>
+                    <mat-option value="DOT">Point (1.250.000)</mat-option>
+                    <mat-option value="COMMA">Virgule (1,250,000)</mat-option>
+                    <mat-option value="NONE">Aucun (1250000)</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Décimales</mat-label>
+                  <mat-select formControlName="decimals">
+                    <mat-option [value]="0">Aucune</mat-option>
+                    <mat-option [value]="2">2 décimales</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <h2 class="section-title">Affichage</h2>
+              <div class="toggles">
+                <mat-slide-toggle formControlName="showLineNumber">Numéro de ligne</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showSku">Référence produit</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showDiscountColumn">Colonne « Remise » (si une ligne est remisée)</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showAmountInWords">Montant en lettres</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showPageNumbers">Numéros de page</mat-slide-toggle>
+                <mat-slide-toggle formControlName="showPageFooterText">Mention en bas de page</mat-slide-toggle>
+              </div>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Mention en bas de chaque page</mat-label>
+                <input matInput formControlName="pageFooterText" maxlength="200" />
+                @if (fieldError('appearance', 'pageFooterText'); as e) { <mat-error>{{ e }}</mat-error> }
+              </mat-form-field>
+            </section>
+          </mat-tab>
+        </mat-tab-group>
+
+        @if (saveError(); as e) {
+          <div class="error form__error" role="alert">{{ e }}</div>
+        }
+
+        <div class="actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving() || !dirty()">
+            @if (saving()) { <mat-spinner diameter="18" /> } @else { <mat-icon>save</mat-icon> }
+            Enregistrer
+          </button>
+          <button mat-stroked-button type="button" (click)="cancelChanges()" [disabled]="saving() || !dirty()">
+            <mat-icon>undo</mat-icon>
+            Annuler les modifications
+          </button>
+          <button mat-stroked-button type="button" (click)="reset()" [disabled]="saving()">
+            <mat-icon>restart_alt</mat-icon>
+            Réinitialiser
+          </button>
+          @if (dirty() && !saving()) {
+            <span class="actions__status">Modifications non enregistrées</span>
+          }
+        </div>
+      </form>
+
+      <!-- Aperçu -->
+      <aside class="card preview" aria-label="Aperçu de la facture">
+        <div class="preview__header">
+          <h2 class="preview__title">Aperçu de la facture</h2>
+          <div class="preview__actions">
+            <button mat-stroked-button type="button" (click)="openPreview()">
+              <mat-icon>visibility</mat-icon>
+              Prévisualiser
+            </button>
+            <button mat-stroked-button type="button" (click)="printPreview()" [disabled]="printing()">
+              <mat-icon>print</mat-icon>
+              Imprimer l’aperçu
+            </button>
+          </div>
+        </div>
+        <div class="preview__paper">
+          <app-invoice-document
+            #previewDocument
+            [settings]="previewSettings()"
+            [data]="sample"
+            [logoUrl]="previewLogoUrl()"
+            [preview]="true"
+          />
+        </div>
+        <p class="preview__note">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          Aperçu avec des données d’exemple. Une fois enregistrée, la configuration s’applique à l’affichage,
+          à l’impression et à l’export PDF des factures, y compris à la réimpression des ventes passées
+          (présentation uniquement : les montants restent ceux de chaque vente).
+        </p>
+      </aside>
+    </div>
+  }
+</div>
