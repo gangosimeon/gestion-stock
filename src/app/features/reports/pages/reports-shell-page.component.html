@@ -1,7 +1,17 @@
 @if (vm$ | async; as vm) {
   <div class="page">
     <div class="page-header">
-      <h1 class="page-header__title">Bilans & Rapports</h1>
+      <div>
+        <h1 class="page-header__title">Bilans & Rapports</h1>
+        <div class="scope" [class.scope--all]="vm.filters.allWarehouses">
+          <mat-icon aria-hidden="true">{{ vm.filters.allWarehouses ? 'domain' : 'store' }}</mat-icon>
+          @if (vm.filters.allWarehouses) {
+            Tous les dépôts (chiffres fusionnés)
+          } @else {
+            {{ (warehouse$ | async)?.name ?? 'Dépôt courant' }}
+          }
+        </div>
+      </div>
       <div class="page-header__spacer"></div>
       <button mat-stroked-button type="button" (click)="exportExcel()">
         <mat-icon>download</mat-icon>
@@ -53,6 +63,10 @@
             }
           </mat-select>
         </mat-form-field>
+      }
+
+      @if (canSeeAllWarehouses) {
+        <mat-checkbox [formControl]="allWarehousesCtrl">Tous les dépôts</mat-checkbox>
       }
 
       @if (vm.errorMessage) {

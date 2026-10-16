@@ -5,6 +5,8 @@ export interface ReportsFilters {
   date: Date;
   month: string; // YYYY-MM
   year: number;
+  /** Tous les dépôts fusionnés (warehouse:all) au lieu du dépôt courant. */
+  allWarehouses: boolean;
 }
 
 /** Totaux de la période, calculés par le backend. */

@@ -108,6 +108,34 @@ describe('ReportsFacade (rapports calculés par le backend)', () => {
     screen.unsubscribe();
   });
 
+  it('tous les dépôts : allWarehouses envoyé aux totaux, à la série et aux produits ; absent par défaut', async () => {
+    init(['report:read', 'warehouse:all']);
+    const screen = facade.vm$.subscribe();
+    const live = () => byPeriod().filter((r) => !r.cancelled);
+    expect(live().map((r) => r.request.params.has('allWarehouses'))).toEqual([false, false]);
+    live().forEach((r) => r.flush([]));
+
+    facade.setAllWarehouses(true);
+    const merged = live();
+    expect(merged).toHaveLength(2);
+    merged.forEach((r) => expect(r.request.params.get('allWarehouses')).toBe('true'));
+    merged.forEach((r) => r.flush([]));
+
+    const page = firstValueFrom(facade.topProducts({ page: 0, size: 10 }));
+    const top = http.expectOne((r) => r.url === `${API}/reports/sales/by-product`);
+    expect(top.request.params.get('allWarehouses')).toBe('true');
+    top.flush({ items: [], total: 0, page: 0, size: 10, totalPages: 0, summary: {} });
+    await page;
+
+    // Retour au dépôt courant.
+    facade.setAllWarehouses(false);
+    live().forEach((r) => {
+      expect(r.request.params.has('allWarehouses')).toBe(false);
+      r.flush([]);
+    });
+    screen.unsubscribe();
+  });
+
   it('sans report:read : aucun appel, message explicite', async () => {
     init(['sale:create']);
     const vm = await firstValueFrom(facade.vm$.pipe(skipWhile((v) => v.errorMessage === null)));

@@ -2,6 +2,7 @@ import { AsyncPipe, CommonModule, DecimalPipe } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -15,6 +16,8 @@ import { MatTableModule } from '@angular/material/table';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject, firstValueFrom, takeUntil } from 'rxjs';
 
+import { AuthService } from '../../../auth/services/auth.service';
+import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { ReportsFacade } from '../data/reports.facade';
 import { ReportsTab, TopProductRow } from '../data/reports-vm.model';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -40,6 +43,7 @@ import { DatePickerDirective } from '../../../shared/date/date-picker.directive'
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
@@ -53,6 +57,11 @@ import { DatePickerDirective } from '../../../shared/date/date-picker.directive'
 })
 export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
   readonly facade = inject(ReportsFacade);
+  /** Dépôt courant (sélecteur de l'en-tête), rappelé à côté du titre. */
+  readonly warehouse$ = inject(WarehouseContextService).warehouse$;
+
+  /** Vue fusionnée de tous les dépôts : interface seulement, le serveur exige warehouse:all. */
+  readonly canSeeAllWarehouses = inject(AuthService).hasPermission('warehouse:all');
 
   /** Produits vendus sur la période : recherche, tri et pagination traités par le backend. */
   readonly table = new ServerTable((query) => this.facade.topProducts(query), {
@@ -70,6 +79,7 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
   readonly dateCtrl = new FormControl<Date>(new Date(), { nonNullable: true });
   readonly monthCtrl = new FormControl<string>(new Date().toISOString().slice(0, 7), { nonNullable: true });
   readonly yearCtrl = new FormControl<number>(new Date().getFullYear(), { nonNullable: true });
+  readonly allWarehousesCtrl = new FormControl<boolean>(false, { nonNullable: true });
 
   readonly displayedColumns = ['product', 'quantity', 'total', 'profit'] as const;
 
@@ -86,6 +96,9 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
     this.dateCtrl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((d) => this.facade.setDate(d));
     this.monthCtrl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((m) => this.facade.setMonth(m));
     this.yearCtrl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((y) => this.facade.setYear(y));
+    this.allWarehousesCtrl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((all) => this.facade.setAllWarehouses(this.canSeeAllWarehouses && all));
   }
 
   ngAfterViewInit(): void {
@@ -223,7 +236,11 @@ export class ReportsShellPageComponent implements AfterViewInit, OnDestroy {
     return Array.from({ length: 6 }, (_, i) => y - i);
   }
 
-  private syncControls(vm: { filters: { date: Date; month: string; year: number } }): void {
+  private syncControls(vm: { filters: { date: Date; month: string; year: number; allWarehouses: boolean } }): void {
+    if (this.allWarehousesCtrl.value !== vm.filters.allWarehouses) {
+      this.allWarehousesCtrl.setValue(vm.filters.allWarehouses, { emitEvent: false });
+    }
+
     const currentDate = this.dateCtrl.value;
     if (!currentDate || currentDate.getTime() !== vm.filters.date.getTime()) {
       this.dateCtrl.setValue(vm.filters.date, { emitEvent: false });

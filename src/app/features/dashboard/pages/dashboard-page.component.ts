@@ -1,10 +1,12 @@
 import { AsyncPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subject, takeUntil } from 'rxjs';
 
+import { AuthService } from '../../../auth/services/auth.service';
 import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { DashboardFacade, DashboardVm } from '../data/dashboard.facade';
 
@@ -13,7 +15,7 @@ type ChartName = 'salesByDay' | 'topProducts' | 'stockEvolution' | 'mySales';
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [AsyncPipe, DatePipe, DecimalPipe, MatCardModule, MatIconModule],
+  imports: [AsyncPipe, DatePipe, DecimalPipe, MatCardModule, MatCheckboxModule, MatIconModule],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss'
 })
@@ -31,6 +33,14 @@ export class DashboardPageComponent implements AfterViewInit, OnDestroy {
   private readonly charts = new Map<ChartName, Chart>();
 
   readonly vm$ = this.facade.vm$;
+  /** Dépôt courant (sélecteur de l'en-tête), rappelé sous le titre. */
+  readonly warehouse$ = this.warehouseCtx.warehouse$;
+  /** Vue fusionnée de tous les dépôts : interface seulement, le serveur exige warehouse:all. */
+  readonly canSeeAllWarehouses = inject(AuthService).hasPermission('warehouse:all');
+
+  setAllWarehouses(allWarehouses: boolean): void {
+    this.facade.setAllWarehouses(allWarehouses);
+  }
 
   constructor() {
     Chart.register(...registerables);

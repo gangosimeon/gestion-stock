@@ -90,4 +90,35 @@ describe('DashboardFacade', () => {
     http.expectOne(`${API}/dashboard`).flush({ kpis: { todaySalesTotal: 0, todayProfit: 0, stockTotal: 0 }, salesByDay: [], topProducts: [], stockEvolution: [] });
     http.expectNone(`${API}/dashboard/me`);
   });
+  it('admin : tous les dépôts fusionnés sur demande (allWarehouses), puis retour au dépôt courant', () => {
+    init(['report:read', 'warehouse:all']);
+    const empty = { kpis: { todaySalesTotal: 0, todayProfit: 0, stockTotal: 0 }, salesByDay: [], topProducts: [], stockEvolution: [] };
+    let allWarehouses = false;
+    const screen = facade.vm$.subscribe((v) => (allWarehouses = v.allWarehouses));
+
+    facade.refresh();
+    const current = http.expectOne((r) => r.url === `${API}/dashboard`);
+    expect(current.request.params.has('allWarehouses')).toBe(false);
+    current.flush(empty);
+
+    facade.setAllWarehouses(true);
+    const merged = http.expectOne((r) => r.url === `${API}/dashboard`);
+    expect(merged.request.params.get('allWarehouses')).toBe('true');
+    merged.flush(empty);
+    expect(allWarehouses).toBe(true);
+
+    facade.setAllWarehouses(false);
+    const back = http.expectOne((r) => r.url === `${API}/dashboard`);
+    expect(back.request.params.has('allWarehouses')).toBe(false);
+    back.flush(empty);
+    screen.unsubscribe();
+  });
+
+  it('sans warehouse:all : la vue fusionnée n’est jamais demandée au serveur', () => {
+    init(['report:read']);
+    facade.setAllWarehouses(true);
+    const req = http.expectOne((r) => r.url === `${API}/dashboard`);
+    expect(req.request.params.has('allWarehouses')).toBe(false);
+    req.flush({ kpis: { todaySalesTotal: 0, todayProfit: 0, stockTotal: 0 }, salesByDay: [], topProducts: [], stockEvolution: [] });
+  });
 });

@@ -1,8 +1,23 @@
 @if (vm$ | async; as vm) {
   <div class="page">
     <div class="page-header">
-      <h1 class="page-header__title">Dashboard</h1>
+      <div>
+        <h1 class="page-header__title">Dashboard</h1>
+        @if (vm.canRead) {
+          <div class="scope" [class.scope--all]="vm.allWarehouses">
+            <mat-icon aria-hidden="true">{{ vm.allWarehouses ? 'domain' : 'store' }}</mat-icon>
+            @if (vm.allWarehouses) {
+              Tous les dépôts (chiffres fusionnés)
+            } @else {
+              {{ (warehouse$ | async)?.name ?? 'Dépôt courant' }}
+            }
+          </div>
+        }
+      </div>
       <div class="page-header__spacer"></div>
+      @if (vm.canRead && canSeeAllWarehouses) {
+        <mat-checkbox [checked]="vm.allWarehouses" (change)="setAllWarehouses($event.checked)">Tous les dépôts</mat-checkbox>
+      }
     </div>
 
     @if (vm.errorMessage) {

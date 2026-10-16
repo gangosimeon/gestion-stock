@@ -74,7 +74,8 @@ export class ReportsFacade {
     tab: 'DAILY',
     date: new Date(),
     month: isoMonth(new Date()),
-    year: new Date().getFullYear()
+    year: new Date().getFullYear(),
+    allWarehouses: false
   });
 
   private readonly data$: Observable<ReportData> = combineLatest([
@@ -91,8 +92,8 @@ export class ReportsFacade {
       this.isLoadingSubject.next(true);
       this.errorSubject.next(null);
       return forkJoin({
-        totals: this.api.salesByPeriod(p.from, p.to, p.totalsGroup),
-        series: this.api.salesByPeriod(p.seriesFrom, p.to, p.seriesGroup)
+        totals: this.api.salesByPeriod(p.from, p.to, p.totalsGroup, filters.allWarehouses),
+        series: this.api.salesByPeriod(p.seriesFrom, p.to, p.seriesGroup, filters.allWarehouses)
       }).pipe(
         catchError((e: unknown) => {
           this.errorSubject.next(e instanceof Error ? e.message : 'Erreur');
@@ -142,8 +143,9 @@ export class ReportsFacade {
       take(1),
       switchMap((canRead) => {
         if (!canRead) return of({ items: [] as TopProductRow[], total: 0 });
-        const p = periodOf(this.filtersSubject.value);
-        return this.api.salesByProductPage(p.from, p.to, page).pipe(
+        const filters = this.filtersSubject.value;
+        const p = periodOf(filters);
+        return this.api.salesByProductPage(p.from, p.to, page, filters.allWarehouses).pipe(
           map((r) => ({
             total: r.total,
             items: r.items.map(
@@ -175,6 +177,12 @@ export class ReportsFacade {
   setMonth(month: string): void {
     const current = this.filtersSubject.value;
     this.filtersSubject.next({ ...current, month });
+  }
+
+  /** Vue fusionnée de tous les dépôts (le serveur exige warehouse:all). */
+  setAllWarehouses(allWarehouses: boolean): void {
+    const current = this.filtersSubject.value;
+    if (current.allWarehouses !== allWarehouses) this.filtersSubject.next({ ...current, allWarehouses });
   }
 
   setYear(year: number): void {

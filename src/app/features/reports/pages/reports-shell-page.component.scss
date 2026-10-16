@@ -71,3 +71,24 @@
     height: 240px;
   }
 }
+
+// Périmètre des chiffres affichés : dépôt courant, ou tous les dépôts fusionnés.
+.scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}
+
+.scope--all {
+  color: var(--color-primary);
+  font-weight: 600;
+}
