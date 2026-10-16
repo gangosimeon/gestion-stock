@@ -75,10 +75,16 @@
 
   <!-- Titre et références -->
   <section class="gsi-title-row">
-    <h1 class="gsi-title">FACTURE</h1>
+    <h1 class="gsi-title">{{ d.title ?? 'FACTURE' }}</h1>
     <dl class="gsi-meta">
       <div><dt>N°</dt><dd>{{ d.number }}</dd></div>
-      <div><dt>Date</dt><dd>{{ date(d.date) }} {{ time(d.date) }}</dd></div>
+      <div><dt>Date</dt><dd>{{ date(d.date) }}@if (d.kind !== 'quote') { {{ time(d.date) }}}</dd></div>
+      @if (d.validUntil) {
+        <div><dt>Valable jusqu'au</dt><dd>{{ date(d.validUntil) }}</dd></div>
+      }
+      @if (d.quoteNumber) {
+        <div><dt>Devis</dt><dd>{{ d.quoteNumber }}</dd></div>
+      }
       @if (h.showWarehouse && d.warehouseName) {
         <div><dt>Dépôt</dt><dd>{{ d.warehouseName }}</dd></div>
       }
@@ -87,16 +93,29 @@
 
   <section class="gsi-parties">
     <div class="gsi-party">
-      <div class="gsi-party__title">Client</div>
+      <div class="gsi-party__title">Client / Organisme commanditaire</div>
       <div class="gsi-party__name">{{ d.customerName }}</div>
       @if (d.customerPhone) { <div>Tél. : {{ d.customerPhone }}</div> }
     </div>
-    <div class="gsi-party gsi-party--right">
-      <div class="gsi-party__title">Règlement</div>
-      @if (d.saleTypeLabel) { <div>{{ d.saleTypeLabel }}</div> }
-      <div>{{ d.paymentMethodLabel }}</div>
-    </div>
+    @if (d.paymentMethodLabel) {
+      <div class="gsi-party gsi-party--right">
+        <div class="gsi-party__title">Règlement</div>
+        @if (d.saleTypeLabel) { <div>{{ d.saleTypeLabel }}</div> }
+        <div>{{ d.paymentMethodLabel }}</div>
+      </div>
+    }
   </section>
+
+  @if ((d.details ?? []).length > 0) {
+    <dl class="gsi-details">
+      @for (detail of d.details; track detail.label) {
+        <div class="gsi-details__row">
+          <dt>{{ detail.label }}</dt>
+          <dd class="gsi-pre">{{ detail.value }}</dd>
+        </div>
+      }
+    </dl>
+  }
 
   <!-- Lignes -->
   <table class="gsi-lines">
@@ -137,14 +156,30 @@
       <div class="gsi-totals__row"><span>Remises</span><span>-{{ money(d.discountTotal) }}</span></div>
     }
     <div class="gsi-totals__row gsi-totals__grand"><span>Total</span><span>{{ money(d.total) }}</span></div>
-    <div class="gsi-totals__row"><span>Payé ({{ d.paymentMethodLabel }})</span><span>{{ money(d.paidAmount) }}</span></div>
-    @if (d.creditAmount > 0) {
+    @if (d.paymentMethodLabel && d.paidAmount != null) {
+      <div class="gsi-totals__row"><span>Payé ({{ d.paymentMethodLabel }})</span><span>{{ money(d.paidAmount) }}</span></div>
+    }
+    @if ((d.creditAmount ?? 0) > 0) {
       <div class="gsi-totals__row"><span>Reste à payer (compte client)</span><span>{{ money(d.creditAmount) }}</span></div>
     }
   </section>
 
   @if (a.showAmountInWords) {
-    <p class="gsi-words"><span class="gsi-label">Arrêtée la présente facture à la somme de :</span> {{ words(d.total) }}</p>
+    <p class="gsi-words">
+      <span class="gsi-label">{{ d.kind === 'quote' ? 'Arrêté le présent devis à la somme de' : 'Arrêtée la présente facture à la somme de' }} :</span>
+      {{ words(d.total) }}
+    </p>
+  }
+
+  @if ((d.sections ?? []).length > 0) {
+    <section class="gsi-sections">
+      @for (section of d.sections; track section.title) {
+        <div class="gsi-section">
+          <div class="gsi-section-title">{{ section.title }}</div>
+          <div class="gsi-pre">{{ section.text }}</div>
+        </div>
+      }
+    </section>
   }
 
   @if ((d.returns ?? []).length > 0) {

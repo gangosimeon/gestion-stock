@@ -86,6 +86,10 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
     expect(navLabels()).toEqual(['Dashboard', 'Ventes', 'Caisse', 'RDV']);
   });
 
+  it('« Devis » : proposé avec quote:read, masqué pour un caissier', () => {
+    expect(setup(false, ['quote:read', 'quote:manage']).navLabels()).toEqual(['Dashboard', 'Devis']);
+  });
+
   it('« Paramètres » (configuration de la facture) : proposé avec settings:manage', () => {
     expect(setup(false, ['settings:manage']).navLabels()).toEqual(['Dashboard', 'Paramètres']);
   });

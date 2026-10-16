@@ -14,10 +14,13 @@ import { PaymentMethod, Sale } from '../../../core/models/sale.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { CustomersApiService } from '../../../core/services/customers-api.service';
 import { InvoiceSettingsStore } from '../../../core/services/invoice-settings-api.service';
+import { QuotesApiService } from '../../../core/services/quotes-api.service';
+import { QuoteReference } from '../../../core/models/quote.model';
 import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { InvoiceData, saleToInvoiceData } from '../../../shared/invoice/invoice-data';
 import { InvoiceDocumentComponent } from '../../../shared/invoice/invoice-document.component';
 import { exportInvoicePdf, printInvoice } from '../../../shared/invoice/invoice-output';
+import { withQuoteReference } from '../../../shared/invoice/quote-document';
 import { paymentMethodLabels } from '../data/sales-vm.model';
 
 /**
@@ -37,6 +40,12 @@ export class InvoiceDrawerComponent implements OnChanges {
   @Input() customer: Customer | null = null;
   /** Retours enregistrés sur cette vente (historique) ; vide pour une vente qui vient d'être faite. */
   @Input() returns: CustomerReturn[] = [];
+  /**
+   * Devis dont la vente est la facture, s'il est connu de l'écran appelant (caisse, dès le
+   * rattachement) ; sinon (undefined) il est demandé au serveur.
+   */
+  @Input() quote: QuoteReference | null | undefined = undefined;
+
   /** Nom du dépôt de la vente, s'il est connu de l'écran appelant (sinon : dépôt courant). */
   @Input() warehouseName: string | null | undefined = null;
 
@@ -46,6 +55,7 @@ export class InvoiceDrawerComponent implements OnChanges {
 
   private readonly store = inject(InvoiceSettingsStore);
   private readonly customers = inject(CustomersApiService);
+  private readonly quotes = inject(QuotesApiService);
   private readonly auth = inject(AuthService);
   private readonly warehouseContext = inject(WarehouseContextService);
   private readonly snackbar = inject(MatSnackBar);
@@ -59,6 +69,9 @@ export class InvoiceDrawerComponent implements OnChanges {
   readonly busy = signal<'print' | 'pdf' | null>(null);
 
   private customerPhone: string | null = null;
+  /** Devis dont la vente est la facture : objet, lot… repris sur la facture définitive. */
+  private quoteReference: QuoteReference | null = null;
+  private quoteSaleId: string | null = null;
 
   constructor() {
     this.store
@@ -80,6 +93,7 @@ export class InvoiceDrawerComponent implements OnChanges {
     this.customerPhone = this.customer?.phone ?? null;
     this.refreshData();
     this.loadCustomerPhone();
+    this.loadQuoteReference();
   }
 
   requestClose(): void {
@@ -121,15 +135,43 @@ export class InvoiceDrawerComponent implements OnChanges {
   private refreshData(): void {
     if (!this.sale) return;
     const sameWarehouse = !!this.sale.warehouseId && this.sale.warehouseId === this.warehouseContext.warehouseId;
-    this.data.set(
+    this.data.set(withQuoteReference(
       saleToInvoiceData(this.sale, {
         customerName: this.customer?.name ?? null,
         customerPhone: this.customerPhone,
         warehouseName: this.warehouseName ?? (sameWarehouse ? this.warehouseContext.warehouseName : null),
         paymentMethodLabel: this.methodLabel(this.sale.paymentMethod),
         returns: this.returns
-      })
-    );
+      }),
+      this.quoteReference
+    ));
+  }
+
+  /** Vente issue d'un devis : ses informations renseignées (objet, lot, conditions…) figurent sur la facture. */
+  private loadQuoteReference(): void {
+    if (this.quote) {
+      // Rattachement confirmé par l'écran appelant : facture définitive sans attendre le serveur.
+      this.quoteReference = this.quote;
+      this.quoteSaleId = this.sale?.id ?? null;
+      this.refreshData();
+      return;
+    }
+    const saleId = this.sale?.id;
+    if (!saleId || saleId === this.quoteSaleId) return;
+    this.quoteSaleId = saleId;
+    this.quoteReference = null;
+    this.quotes
+      .forSale(saleId)
+      .pipe(
+        catchError(() => of(null)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((quote) => {
+        if (quote && this.sale?.id === saleId) {
+          this.quoteReference = quote;
+          this.refreshData();
+        }
+      });
   }
 
   /** Téléphone du client (historique) : lu seulement si l'utilisateur consulte les clients. */

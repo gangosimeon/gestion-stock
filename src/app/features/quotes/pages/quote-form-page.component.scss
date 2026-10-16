@@ -1,0 +1,210 @@
+.page {
+  padding: var(--page-padding);
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+  color: var(--color-text-secondary);
+}
+
+// Formulaire à gauche, aperçu à droite ; empilés sur petit écran.
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.card {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.section {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.section-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+}
+
+.span-2,
+.full {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.empty {
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.lines {
+  display: grid;
+  gap: 6px;
+}
+
+.lines__head,
+.lines__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 96px 130px 110px 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.lines__head {
+  padding: 0 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.lines__row {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.lines__product {
+  display: grid;
+  min-width: 0;
+
+  strong {
+    overflow-wrap: anywhere;
+  }
+}
+
+.lines__total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.lines__sum {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 4px 0;
+  font-size: 15px;
+}
+
+.right {
+  text-align: right;
+}
+
+.sub,
+.hint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.hint {
+  margin: 0;
+}
+
+.form__error {
+  margin: 16px 16px 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px;
+
+  mat-spinner {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+}
+
+.preview {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.preview__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.preview__paper {
+  max-height: calc(100vh - 200px);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.preview__note {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+
+  mat-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview {
+    position: static;
+  }
+
+  .preview__paper {
+    max-height: none;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lines__head {
+    display: none;
+  }
+
+  // Ligne sur deux rangées : produit, puis quantité / prix / total / suppression.
+  .lines__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto 40px;
+
+    .lines__product {
+      grid-column: 1 / -1;
+    }
+  }
+}

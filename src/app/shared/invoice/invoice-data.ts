@@ -11,22 +11,52 @@ export interface InvoiceLine {
   lineTotal: number;
 }
 
-/** Contenu d'une facture, indépendant de sa présentation (configuration). */
+/** Information du document (objet, lot…) : n'est transmise que si elle est renseignée. */
+export interface DocumentDetail {
+  label: string;
+  value: string;
+}
+
+/** Section de texte libre (conditions, observations) : transmise seulement si renseignée. */
+export interface DocumentSection {
+  title: string;
+  text: string;
+}
+
+/**
+ * Contenu d'une facture ou d'un devis, indépendant de sa présentation (configuration). Une
+ * information absente n'est jamais transmise : le document n'affiche ni intitulé vide ni
+ * valeur de remplacement.
+ */
 export interface InvoiceData {
+  /** Titre du document : FACTURE par défaut, DEVIS pour un devis. */
+  title?: string;
+  /** Formule du montant en lettres ; facture par défaut. */
+  kind?: 'invoice' | 'quote';
   number: string;
   date: string;
+  /** Date de fin de validité (devis). */
+  validUntil?: string | null;
+  /** Devis d'origine (facture définitive d'un devis). */
+  quoteNumber?: string | null;
   customerName: string;
   customerPhone?: string | null;
   warehouseName?: string | null;
   saleTypeLabel?: string | null;
-  paymentMethodLabel: string;
+  /** Mode de règlement (vente) ; absent pour un devis. */
+  paymentMethodLabel?: string | null;
+  /** Objet, lot, références… (seulement les informations renseignées). */
+  details?: DocumentDetail[];
+  /** Conditions et observations (seulement celles renseignées). */
+  sections?: DocumentSection[];
   lines: InvoiceLine[];
   /** Total avant remises, s'il est connu. */
   subtotal?: number | null;
   discountTotal: number;
   total: number;
-  paidAmount: number;
-  creditAmount: number;
+  /** Montants réglés (vente) ; absents pour un devis. */
+  paidAmount?: number | null;
+  creditAmount?: number | null;
   cancelled?: { at?: string | null; reason?: string | null } | null;
   returns?: CustomerReturn[];
 }

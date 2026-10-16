@@ -2,6 +2,7 @@ import { Customer } from '../../../core/models/customer.model';
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod, Sale, SaleType } from '../../../core/models/sale.model';
 import { CreateSaleItem } from '../../../core/services/sales-api.service';
+import { QuoteReference } from '../../../core/models/quote.model';
 
 export interface CartRow {
   productId: string;
@@ -38,6 +39,26 @@ export interface SalesTotals {
   itemsCount: number;
 }
 
+/**
+ * Vente préparée à partir d'un devis (« Générer la facture ») : une fois la vente enregistrée,
+ * elle est rattachée au devis, qui passe à « Facturé ».
+ */
+export interface QuoteCheckout {
+  id: string;
+  number: string;
+  customerId: string;
+  customerName: string;
+  /** Produits du devis absents du catalogue actif du dépôt : non repris dans le panier. */
+  missing: string[];
+  /** pending : vente à valider ; linked : devis facturé ; error : vente enregistrée, rattachement à refaire. */
+  status: 'pending' | 'linking' | 'linked' | 'error';
+  /** Informations du devis reprises sur la facture définitive. */
+  reference: QuoteReference;
+  saleId: string | null;
+  saleNumber: string | null;
+  error: string | null;
+}
+
 export interface SalesVm {
   isLoading: boolean;
   errorMessage: string | null;
@@ -51,6 +72,8 @@ export interface SalesVm {
   canSell: boolean;
   /** Permission customer:create : ajout d'un client depuis la caisse. */
   canCreateCustomer: boolean;
+  /** Vente issue d'un devis, le cas échéant. */
+  quote: QuoteCheckout | null;
 }
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {

@@ -42,6 +42,12 @@ export const LAYOUT_ROUTES: Routes = [
         loadChildren: () => import('../features/sales/sales.routes').then((m) => m.SALES_ROUTES)
       },
       {
+        path: 'quotes',
+        canMatch: [permissionGuard],
+        data: { permissions: ROUTE_PERMISSIONS['quotes'] },
+        loadChildren: () => import('../features/quotes/quotes.routes').then((m) => m.QUOTES_ROUTES)
+      },
+      {
         path: 'clients',
         canMatch: [permissionGuard],
         data: { permissions: ROUTE_PERMISSIONS['clients'] },

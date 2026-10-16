@@ -35,10 +35,17 @@ export function formatInvoiceMoney(value: number | null | undefined, appearance:
   return `${formatInvoiceAmount(value, appearance)} ${appearance.currencyLabel}`;
 }
 
+/** Date seule `AAAA-MM-JJ` lue comme un jour local (jamais décalée par le fuseau). */
+function toDate(value: string | Date): Date {
+  if (value instanceof Date) return value;
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return day ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])) : new Date(value);
+}
+
 /** Date au format configuré, dans le fuseau du navigateur (comme le reste de l'application). */
 export function formatInvoiceDate(value: string | Date | null | undefined, format: InvoiceDateFormat): string {
   if (!value) return '';
-  const date = value instanceof Date ? value : new Date(value);
+  const date = toDate(value);
   if (Number.isNaN(date.getTime())) return '';
   const d = date.getDate();
   const m = date.getMonth() + 1;

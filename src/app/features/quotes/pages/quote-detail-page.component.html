@@ -1,0 +1,100 @@
+<mat-drawer-container class="container" autosize>
+  <mat-drawer-content>
+    <div class="page">
+      @if (loading()) {
+        <div class="state" aria-live="polite"><mat-spinner diameter="28" /> Chargement du devis…</div>
+      } @else if (loadError(); as e) {
+        <div class="error" role="alert">{{ e }}</div>
+        <div><a mat-stroked-button routerLink="/quotes"><mat-icon>list</mat-icon>Retour aux devis</a></div>
+      } @else if (quote(); as q) {
+        <div class="page-header">
+          <a mat-icon-button routerLink="/quotes" aria-label="Retour aux devis"><mat-icon>arrow_back</mat-icon></a>
+          <div>
+            <h1 class="page-header__title">
+              Devis {{ q.number }}
+              <span class="badge" [class]="badge[q.displayStatus]">{{ statusLabels[q.displayStatus] }}</span>
+            </h1>
+            <p class="page-header__subtitle">
+              {{ q.customerName }} · {{ q.quoteDate | date: 'dd/MM/yyyy' }} · {{ q.total | number: '1.0-0' }} FCFA
+              @if (q.saleNumber) { · Facture {{ q.saleNumber }} du {{ q.invoicedAt | date: 'dd/MM/yyyy' }} }
+              @if (q.cancellationReason) { · Motif : {{ q.cancellationReason }} }
+            </p>
+          </div>
+          <div class="page-header__spacer"></div>
+
+          <div class="toolbar">
+            <button mat-stroked-button type="button" (click)="print()" [disabled]="busy() !== null">
+              @if (busy() === 'print') { <mat-spinner diameter="16" /> } @else { <mat-icon>print</mat-icon> }
+              Imprimer
+            </button>
+            <button mat-stroked-button type="button" (click)="downloadPdf()" [disabled]="busy() !== null">
+              @if (busy() === 'pdf') { <mat-spinner diameter="16" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
+              Télécharger le PDF
+            </button>
+
+            @if (canManage) {
+              @if (editable()) {
+                <a mat-stroked-button [routerLink]="['/quotes', q.id, 'edit']"><mat-icon>edit</mat-icon>Modifier</a>
+              }
+              @if (q.status === 'DRAFT') {
+                <button mat-flat-button color="primary" type="button" (click)="issue()" [disabled]="busy() !== null">
+                  <mat-icon>send</mat-icon>Émettre
+                </button>
+              }
+              @if (q.status === 'ISSUED') {
+                <button mat-flat-button color="primary" type="button" (click)="accept()" [disabled]="busy() !== null">
+                  <mat-icon>thumb_up</mat-icon>Accepté
+                </button>
+                <button mat-stroked-button type="button" (click)="refuse()" [disabled]="busy() !== null">
+                  <mat-icon>thumb_down</mat-icon>Refusé
+                </button>
+              }
+              @if (invoiceable() && canSell) {
+                <button mat-flat-button color="primary" type="button" (click)="generateInvoice()" [disabled]="busy() !== null">
+                  @if (busy() === 'invoice') { <mat-spinner diameter="16" /> } @else { <mat-icon>receipt_long</mat-icon> }
+                  Générer la facture
+                </button>
+              }
+            }
+            @if (q.saleId && canReadSales) {
+              <button mat-flat-button color="primary" type="button" (click)="openInvoice()" [disabled]="busy() !== null">
+                <mat-icon>receipt_long</mat-icon>Voir la facture
+              </button>
+            }
+
+            @if (canManage) {
+              <button mat-icon-button type="button" [matMenuTriggerFor]="more" aria-label="Autres actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #more="matMenu" xPosition="before">
+                <button mat-menu-item type="button" (click)="duplicate()"><mat-icon>content_copy</mat-icon>Dupliquer</button>
+                @if (q.status === 'DRAFT' || q.status === 'ISSUED' || q.status === 'ACCEPTED') {
+                  <button mat-menu-item type="button" (click)="cancel()"><mat-icon>cancel</mat-icon>Annuler le devis</button>
+                }
+              </mat-menu>
+            }
+          </div>
+        </div>
+
+        @if (q.displayStatus === 'EXPIRED') {
+          <div class="notice" role="note">
+            <mat-icon aria-hidden="true">schedule</mat-icon>
+            Validité dépassée depuis le {{ q.validUntil | date: 'dd/MM/yyyy' }} : le devis reste émis tant que vous ne le marquez pas accepté, refusé ou annulé.
+          </div>
+        }
+
+        @if (documentData(); as d) {
+          <div class="paper">
+            <app-invoice-document [settings]="settings()" [data]="d" [logoUrl]="logoUrl()" />
+          </div>
+        }
+      }
+    </div>
+  </mat-drawer-content>
+
+  <mat-drawer #invoiceDrawer class="invoice-drawer" position="end" mode="over">
+    @if (invoiceSale(); as sale) {
+      <app-invoice-drawer [sale]="sale" (close)="closeInvoice()" />
+    }
+  </mat-drawer>
+</mat-drawer-container>

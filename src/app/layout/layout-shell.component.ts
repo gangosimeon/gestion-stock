@@ -138,6 +138,7 @@ export class LayoutShellComponent {
       { label: 'Catégories', icon: 'category', section: 'categories' },
       { label: 'Stock', icon: 'warehouse', section: 'stock' },
       { label: 'Ventes', icon: 'point_of_sale', section: 'sales' },
+      { label: 'Devis', icon: 'request_quote', section: 'quotes' },
       { label: 'Clients', icon: 'people', section: 'clients' },
       { label: 'Achats', icon: 'shopping_cart', section: 'purchases' },
       { label: 'Fournisseurs', icon: 'local_shipping', section: 'suppliers' },

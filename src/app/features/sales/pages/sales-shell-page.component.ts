@@ -15,8 +15,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { RouterLink } from '@angular/router';
-import { Subject, map, startWith, switchMap, take, takeUntil } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subject, filter, map, startWith, switchMap, take, takeUntil } from 'rxjs';
+import { QuotesApiService } from '../../../core/services/quotes-api.service';
 
 import { Product } from '../../../core/models/product.model';
 import { PaymentMethod } from '../../../core/models/sale.model';
@@ -60,6 +61,10 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly snackbar = inject(MatSnackBar);
   private readonly warehouseCtx = inject(WarehouseContextService);
   private readonly destroy$ = new Subject<void>();
+
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly quotesApi = inject(QuotesApiService);
 
   /** Lien vers l'historique des ventes (sale:read). */
   readonly canSeeHistory = inject(AuthService).hasPermission('sale:read');
@@ -125,6 +130,41 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     this.newCustomerForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.facade.setNewCustomer(this.newCustomerForm.getRawValue()));
+
+    this.loadQuoteFromUrl();
+  }
+
+  /**
+   * « Générer la facture » d'un devis (/sales/new?quote=…) : une fois le catalogue du dépôt
+   * chargé, le panier reprend le client, les produits et les quantités du devis.
+   */
+  private loadQuoteFromUrl(): void {
+    const quoteId = this.route.snapshot.queryParamMap.get('quote');
+    if (!quoteId) return;
+    this.quotesApi
+      .get(quoteId)
+      .pipe(
+        switchMap((quote) =>
+          this.vm$.pipe(
+            filter((vm) => !vm.isLoading && vm.products.length > 0),
+            take(1),
+            map(() => quote)
+          )
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (quote) => {
+          this.facade.loadQuote(quote);
+          // Le lien ne recharge pas le devis si l'utilisateur actualise la page après la vente.
+          void this.router.navigate([], { queryParams: { quote: null }, queryParamsHandling: 'merge', replaceUrl: true });
+        },
+        error: () => this.snackbar.open('Devis introuvable : la vente repart d’un panier vide.', 'OK', { duration: 4000 })
+      });
+  }
+
+  retryQuoteLink(): void {
+    this.facade.retryQuoteLink();
   }
 
   ngAfterViewInit(): void {

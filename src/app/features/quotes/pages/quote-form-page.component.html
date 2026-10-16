@@ -1,0 +1,185 @@
+<div class="page">
+  <div class="page-header">
+    <a mat-icon-button [routerLink]="quote() ? ['/quotes', quote()!.id] : ['/quotes']" aria-label="Retour">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1 class="page-header__title">{{ isEdit() ? 'Modifier le devis ' + quote()!.number : 'Nouveau devis' }}</h1>
+      <p class="page-header__subtitle">Seuls le client / organisme commanditaire et les produits sont obligatoires ; un champ vide n’apparaît pas sur le devis.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="state" aria-live="polite"><mat-spinner diameter="28" /> Chargement…</div>
+  } @else if (loadError(); as e) {
+    <div class="error" role="alert">{{ e }}</div>
+    <div><a mat-stroked-button routerLink="/quotes"><mat-icon>list</mat-icon>Retour aux devis</a></div>
+  } @else {
+    <div class="layout">
+      <form class="card form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <!-- A. Informations du document -->
+        <section class="section">
+          <h2 class="section-title">Informations du document</h2>
+          <div class="grid">
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Client / Organisme commanditaire</mat-label>
+              <mat-select formControlName="customerId" required>
+                <app-select-search />
+                @for (c of customers(); track c.id) {
+                  <mat-option [value]="c.id">{{ c.name }}@if (c.phone) { — {{ c.phone }} }</mat-option>
+                }
+              </mat-select>
+              @if (form.controls.customerId.touched && form.controls.customerId.invalid) {
+                <mat-error>Choisissez le client ou l’organisme commanditaire parmi les clients existants.</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Date du devis</mat-label>
+              <input matInput type="date" formControlName="quoteDate" required appDatePicker #datePicker="datePicker" />
+              <button mat-icon-button matSuffix type="button" (click)="datePicker.open()" aria-label="Choisir dans le calendrier">
+                <mat-icon>calendar_month</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Valable jusqu’au</mat-label>
+              <input matInput type="date" formControlName="validUntil" appDatePicker #validPicker="datePicker" />
+              <button mat-icon-button matSuffix type="button" (click)="validPicker.open()" aria-label="Choisir dans le calendrier">
+                <mat-icon>calendar_month</mat-icon>
+              </button>
+              <mat-hint>Facultatif</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Objet du devis</mat-label>
+              <textarea matInput formControlName="subject" rows="2" maxlength="500"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Lot / référence</mat-label>
+              <input matInput formControlName="lotReference" maxlength="100" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nombre de bénéficiaires</mat-label>
+              <input matInput type="number" min="1" formControlName="beneficiaries" />
+              @if (form.controls.beneficiaries.invalid) { <mat-error>Nombre entier positif.</mat-error> }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Lieu de livraison ou d’exécution</mat-label>
+              <input matInput formControlName="deliveryAddress" maxlength="500" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Référence du marché ou du bon de commande</mat-label>
+              <input matInput formControlName="contractReference" maxlength="150" />
+            </mat-form-field>
+          </div>
+        </section>
+
+        <!-- B. Produits -->
+        <section class="section">
+          <h2 class="section-title">Produits</h2>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Ajouter un produit du catalogue</mat-label>
+            <mat-select [formControl]="productPicker" (selectionChange)="addProduct($event.value)">
+              <app-select-search />
+              @for (p of availableProducts(); track p.id) {
+                <mat-option [value]="p.id">{{ p.name }} — {{ p.sku }}</mat-option>
+              }
+            </mat-select>
+            <mat-icon matPrefix>search</mat-icon>
+            <mat-hint>{{ productHint }}</mat-hint>
+          </mat-form-field>
+
+          @if (lines.length === 0) {
+            <div class="empty">Aucun produit : choisissez-en au moins un dans le catalogue.</div>
+          } @else {
+            <div class="lines" formArrayName="lines">
+              <div class="lines__head" aria-hidden="true">
+                <span>Produit</span><span class="right">Quantité</span><span class="right">Prix unitaire</span>
+                <span class="right">Total</span><span></span>
+              </div>
+              @for (line of lines.controls; track line; let i = $index) {
+                <div class="lines__row" [formGroupName]="i">
+                  <div class="lines__product">
+                    <strong>{{ line.controls.productName.value }}</strong>
+                    <span class="sub">{{ line.controls.productSku.value }}</span>
+                  </div>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Qté</mat-label>
+                    <input matInput type="number" min="1" formControlName="quantity" />
+                    @if (lineError(i, 'quantity'); as e) { <mat-error>{{ e }}</mat-error> }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Prix unitaire</mat-label>
+                    <input matInput type="number" min="0" step="1" formControlName="unitPrice" />
+                    @if (lineError(i, 'unitPrice'); as e) { <mat-error>{{ e }}</mat-error> }
+                  </mat-form-field>
+                  <div class="right lines__total">{{ lineTotal(i) | number: '1.0-2' }}</div>
+                  <button mat-icon-button type="button" color="warn" (click)="removeLine(i)" matTooltip="Retirer la ligne"
+                          [attr.aria-label]="'Retirer ' + line.controls.productName.value">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+              <div class="lines__sum">
+                <span>Montant total estimé</span>
+                <strong>{{ estimatedTotal() | number: '1.0-2' }} FCFA</strong>
+              </div>
+              <p class="hint">Le total définitif est recalculé par le serveur (quantité × prix unitaire) à l’enregistrement.</p>
+            </div>
+          }
+        </section>
+
+        <!-- D. Informations complémentaires -->
+        <section class="section">
+          <h2 class="section-title">Informations complémentaires</h2>
+          <div class="grid">
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Conditions de livraison</mat-label>
+              <textarea matInput formControlName="deliveryTerms" rows="2" maxlength="1000"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Conditions de paiement</mat-label>
+              <textarea matInput formControlName="paymentTerms" rows="2" maxlength="1000"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Délai d’exécution</mat-label>
+              <input matInput formControlName="executionDelay" maxlength="200" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Observations</mat-label>
+              <textarea matInput formControlName="notes" rows="3" maxlength="2000"></textarea>
+            </mat-form-field>
+          </div>
+        </section>
+
+        @if (saveError(); as e) {
+          <div class="error form__error" role="alert">{{ e }}</div>
+        }
+
+        <div class="actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) { <mat-spinner diameter="18" /> } @else { <mat-icon>save</mat-icon> }
+            {{ isEdit() ? 'Enregistrer les modifications' : 'Enregistrer le devis' }}
+          </button>
+          <a mat-stroked-button [routerLink]="quote() ? ['/quotes', quote()!.id] : ['/quotes']">Annuler</a>
+        </div>
+      </form>
+
+      <aside class="card preview" aria-label="Aperçu du devis">
+        <h2 class="preview__title">Aperçu du devis</h2>
+        <div class="preview__paper">
+          <app-invoice-document [settings]="settings()" [data]="preview()" [logoUrl]="logoUrl()" />
+        </div>
+        <p class="preview__note">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          Mis en page avec la configuration de la facture (Paramètres). Les champs vides n’apparaissent pas.
+        </p>
+      </aside>
+    </div>
+  }
+</div>

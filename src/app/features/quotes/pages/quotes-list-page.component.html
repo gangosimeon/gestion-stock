@@ -1,0 +1,139 @@
+@if (table.state$ | async; as s) {
+  @if (s.loading) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-header__title">Devis</h1>
+        <p class="page-header__subtitle">Propositions commerciales : aucun effet sur le stock ni sur la caisse.</p>
+      </div>
+      <div class="page-header__spacer"></div>
+      @if (canManage) {
+        <a mat-flat-button color="primary" routerLink="/quotes/new"><mat-icon>add</mat-icon>Nouveau devis</a>
+      }
+    </div>
+
+    @if (s.error) {
+      <div class="error" role="alert">{{ s.error }}</div>
+    }
+
+    <div class="data-table-toolbar" [formGroup]="table.filters">
+      <mat-form-field appearance="outline" class="search filter-bar__wide" subscriptSizing="dynamic">
+        <mat-label>Rechercher</mat-label>
+        <input matInput [formControl]="table.search" placeholder="N° de devis, client ou objet" />
+        @if (table.search.value) {
+          <button mat-icon-button matSuffix type="button" (click)="table.search.setValue('')" aria-label="Vider">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Statut</mat-label>
+        <mat-select formControlName="status">
+          <mat-option [value]="null">Tous</mat-option>
+          @for (o of statusOptions; track o.value) {
+            <mat-option [value]="o.value">{{ o.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Du</mat-label>
+        <input matInput type="date" formControlName="from" appDatePicker #fromPicker="datePicker" />
+        <button mat-icon-button matSuffix type="button" (click)="fromPicker.open()" aria-label="Choisir dans le calendrier">
+          <mat-icon>calendar_month</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Au</mat-label>
+        <input matInput type="date" formControlName="to" appDatePicker #toPicker="datePicker" />
+        <button mat-icon-button matSuffix type="button" (click)="toPicker.open()" aria-label="Choisir dans le calendrier">
+          <mat-icon>calendar_month</mat-icon>
+        </button>
+      </mat-form-field>
+
+      @if (canSeeAllWarehouses) {
+        <mat-checkbox formControlName="allWarehouses">Tous les dépôts</mat-checkbox>
+      }
+
+      <app-filter-reset [table]="table" />
+    </div>
+
+    <div class="data-table">
+      <table mat-table [dataSource]="s.rows" matSort matSortActive="quoteDate" matSortDirection="desc" (matSortChange)="table.onSort($event)">
+        <ng-container matColumnDef="number">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>N°</th>
+          <td mat-cell *matCellDef="let q"><a [routerLink]="['/quotes', q.id]" class="link">{{ q.number }}</a></td>
+        </ng-container>
+
+        <ng-container matColumnDef="quoteDate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+          <td mat-cell *matCellDef="let q">{{ q.quoteDate | date: 'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="customer">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Client</th>
+          <td mat-cell *matCellDef="let q">{{ q.customerName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="subject">
+          <th mat-header-cell *matHeaderCellDef>Objet</th>
+          <td mat-cell *matCellDef="let q" class="subject" [matTooltip]="q.subject ?? ''">{{ q.subject ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="total">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="right">Montant total</th>
+          <td mat-cell *matCellDef="let q" class="right"><strong>{{ q.total | number: '1.0-0' }}</strong> FCFA</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let q">
+            <span class="badge" [class]="badgeOf(q)">{{ statusLabelOf(q) }}</span>
+            @if (q.saleNumber) { <div class="sub">Facture {{ q.saleNumber }}</div> }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="right">Actions</th>
+          <td mat-cell *matCellDef="let q" class="right actions">
+            <a mat-icon-button [routerLink]="['/quotes', q.id]" matTooltip="Consulter, imprimer, PDF" aria-label="Consulter">
+              <mat-icon>visibility</mat-icon>
+            </a>
+            @if (canManage) {
+              <button mat-icon-button type="button" [matMenuTriggerFor]="menu" aria-label="Autres actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu" xPosition="before">
+                @if (isEditable(q)) {
+                  <a mat-menu-item [routerLink]="['/quotes', q.id, 'edit']"><mat-icon>edit</mat-icon>Modifier</a>
+                }
+                <button mat-menu-item type="button" (click)="duplicate(q)"><mat-icon>content_copy</mat-icon>Dupliquer</button>
+              </mat-menu>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.muted]="row.status === 'CANCELLED' || row.status === 'REFUSED'"></tr>
+      </table>
+      @if (!s.loading && s.rows.length === 0) {
+        <div class="data-table-empty">
+          @if (table.search.value) { Aucun devis ne correspond à la recherche. } @else { Aucun devis pour le moment. }
+        </div>
+      }
+      <mat-paginator
+        [length]="s.total"
+        [pageIndex]="table.pageIndex"
+        [pageSize]="table.pageSize"
+        [pageSizeOptions]="table.pageSizeOptions"
+        (page)="table.onPage($event)"
+        showFirstLastButtons
+      />
+    </div>
+  </div>
+}

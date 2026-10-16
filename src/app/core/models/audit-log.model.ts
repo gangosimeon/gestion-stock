@@ -126,7 +126,10 @@ export const auditActionLabels: Record<string, string> = {
   STATUS: 'Clôture de rendez-vous',
   RESET: 'Réinitialisation',
   LOGO_UPLOAD: 'Logo ajouté ou remplacé',
-  LOGO_DELETE: 'Logo retiré'
+  LOGO_DELETE: 'Logo retiré',
+  ISSUE: 'Émission',
+  ACCEPT: 'Acceptation',
+  REFUSE: 'Refus'
 };
 
 export const auditModuleLabels: Record<AuditModule, string> = {
@@ -166,6 +169,7 @@ export const auditEntityTypeLabels: Record<string, string> = {
   SUPPLIER_PAYMENT: 'Paiement fournisseur',
   CUSTOMER: 'Client',
   SALE: 'Vente',
+  QUOTE: 'Devis',
   CUSTOMER_RETURN: 'Retour client',
   INVENTORY_SESSION: 'Inventaire',
   CASH_SESSION: 'Session de caisse',

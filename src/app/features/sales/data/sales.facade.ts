@@ -10,7 +10,11 @@ import { PaymentMethod, Sale, SaleType } from '../../../core/models/sale.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ProductsApiService } from '../../../core/services/products-api.service';
 import { CreateSaleRequest, SalesApiService } from '../../../core/services/sales-api.service';
-import { CartRow, NewCustomerDraft, SalesFormState, SalesTotals, SalesVm, toSaleItems } from './sales-vm.model';
+import { Quote } from '../../../core/models/quote.model';
+import { QuotesApiService } from '../../../core/services/quotes-api.service';
+import { toMessage } from '../../../core/interceptors/api-error.interceptor';
+import { HttpErrorResponse } from '@angular/common/http';
+import { CartRow, NewCustomerDraft, QuoteCheckout, SalesFormState, SalesTotals, SalesVm, toSaleItems } from './sales-vm.model';
 
 /**
  * Point de vente. Le panier n'est qu'un aperçu : le backend fixe les prix (tarif du produit),
@@ -23,6 +27,7 @@ import { CartRow, NewCustomerDraft, SalesFormState, SalesTotals, SalesVm, toSale
 export class SalesFacade {
   private readonly productsApi = inject(ProductsApiService);
   private readonly salesApi = inject(SalesApiService);
+  private readonly quotesApi = inject(QuotesApiService);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly warehouseCtx = inject(WarehouseContextService);
@@ -46,6 +51,7 @@ export class SalesFacade {
   });
 
   private readonly lastSaleSubject = new BehaviorSubject<Sale | null>(null);
+  private readonly quoteSubject = new BehaviorSubject<QuoteCheckout | null>(null);
 
   readonly vm$: Observable<SalesVm> = combineLatest([
     this.isLoadingSubject,
@@ -57,9 +63,10 @@ export class SalesFacade {
     this.lastSaleSubject,
     // Interface seulement : le backend exige sale:create.
     this.auth.hasPermission$('sale:create'),
-    this.auth.hasPermission$('customer:create')
+    this.auth.hasPermission$('customer:create'),
+    this.quoteSubject
   ]).pipe(
-    map(([isLoading, errorMessage, products, customers, cart, form, lastSale, canSell, canCreateCustomer]): SalesVm => ({
+    map(([isLoading, errorMessage, products, customers, cart, form, lastSale, canSell, canCreateCustomer, quote]): SalesVm => ({
       isLoading,
       errorMessage,
       products,
@@ -69,7 +76,8 @@ export class SalesFacade {
       totals: this.computeTotals(cart),
       lastSale,
       canSell,
-      canCreateCustomer
+      canCreateCustomer,
+      quote
     })),
     shareReplay({ bufferSize: 1, refCount: true })
   );
@@ -194,9 +202,81 @@ export class SalesFacade {
   /** Ticket fermé : la vente encaissée n'est plus affichée (la prochaine vente repart de zéro). */
   dismissLastSale(): void {
     if (this.lastSaleSubject.value) this.lastSaleSubject.next(null);
+    // Devis facturé : la vente suivante n'a plus de lien avec lui.
+    if (this.quoteSubject.value?.status === 'linked') this.quoteSubject.next(null);
+  }
+
+  /**
+   * Prépare la vente d'un devis (catalogue du dépôt chargé) : client, produits et quantités du
+   * devis. Les prix restent ceux du catalogue, appliqués par le serveur comme pour toute vente.
+   */
+  loadQuote(quote: Quote): void {
+    const products = this.productsSubject.value;
+    const type = this.formSubject.value.type;
+    const missing: string[] = [];
+    const rows: CartRow[] = [];
+    for (const line of quote.lines) {
+      const p = products.find((x) => x.id === line.productId);
+      if (!p) {
+        missing.push(line.productName);
+        continue;
+      }
+      rows.push(
+        this.recomputeLine({
+          productId: p.id,
+          sku: p.sku,
+          name: p.name,
+          stockQuantity: p.stockQuantity,
+          quantity: line.quantity,
+          unitPrice: type === 'WHOLESALE' ? p.wholesalePrice : p.retailPrice,
+          lineTotal: 0
+        })
+      );
+    }
+    this.cartSubject.next(rows);
+    this.lastSaleSubject.next(null);
+    this.formSubject.next({
+      ...this.formSubject.value,
+      customerId: quote.customerId,
+      newCustomer: null,
+      paidAmount: 0,
+      partialPayment: false
+    });
+    this.quoteSubject.next({
+      id: quote.id,
+      number: quote.number,
+      customerId: quote.customerId,
+      customerName: quote.customerName,
+      missing,
+      reference: {
+        id: quote.id,
+        number: quote.number,
+        quoteDate: quote.quoteDate,
+        subject: quote.subject,
+        lotReference: quote.lotReference,
+        beneficiaries: quote.beneficiaries,
+        deliveryAddress: quote.deliveryAddress,
+        contractReference: quote.contractReference,
+        deliveryTerms: quote.deliveryTerms,
+        paymentTerms: quote.paymentTerms,
+        executionDelay: quote.executionDelay,
+        notes: quote.notes
+      },
+      status: 'pending',
+      saleId: null,
+      saleNumber: null,
+      error: null
+    });
+  }
+
+  /** Rattachement de la vente au devis à refaire (la vente, elle, est déjà enregistrée). */
+  retryQuoteLink(): void {
+    const q = this.quoteSubject.value;
+    if (q?.status === 'error' && q.saleId) this.linkQuote(q, q.saleId, q.saleNumber);
   }
 
   clearCart(): void {
+    this.quoteSubject.next(null);
     this.cartSubject.next([]);
     this.lastSaleSubject.next(null);
     this.formSubject.next({ ...this.formSubject.value, paidAmount: 0, partialPayment: false });
@@ -238,12 +318,32 @@ export class SalesFacade {
             paidAmount: 0,
             partialPayment: false
           });
+          // Vente issue d'un devis : elle en devient la facture.
+          const quote = this.quoteSubject.value;
+          if (quote && (quote.status === 'pending' || quote.status === 'error') && sale.id) {
+            this.linkQuote(quote, sale.id, sale.number ?? null);
+          }
           // Stocks et liste des clients à jour après la vente.
           this.refresh();
         },
         error: (e: unknown) => this.errorSubject.next(e instanceof Error ? e.message : 'Erreur')
       })
     );
+  }
+
+  private linkQuote(quote: QuoteCheckout, saleId: string, saleNumber: string | null): void {
+    this.quoteSubject.next({ ...quote, status: 'linking', saleId, saleNumber, error: null });
+    this.quotesApi.invoice(quote.id, saleId).subscribe({
+      next: () => this.quoteSubject.next({ ...quote, status: 'linked', saleId, saleNumber, error: null }),
+      error: (e: unknown) =>
+        this.quoteSubject.next({
+          ...quote,
+          status: 'error',
+          saleId,
+          saleNumber,
+          error: e instanceof HttpErrorResponse ? toMessage(e) : 'Rattachement impossible.'
+        })
+    });
   }
 
   /** Panier vide : rien à perdre ; sinon l'utilisateur confirme qu'il abandonne le panier. */

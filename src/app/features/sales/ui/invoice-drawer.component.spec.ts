@@ -46,6 +46,11 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
     return { fixture, text };
   }
 
+  /** Vente issue d'aucun devis : réponse vide. */
+  function noQuote(): void {
+    http.expectOne(`${environment.apiUrl}/quotes/for-sale/s1`).flush(null);
+  }
+
   afterEach(() => http.verify());
 
   it('la configuration enregistrée s’applique à la facture ; les montants restent ceux de la vente', () => {
@@ -56,6 +61,7 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
     settings.footer.returnPolicy = 'Retour sous 7 jours.';
     settings.appearance.thousandsSeparator = 'DOT';
     http.expectOne(URL).flush({ ...settings, logo: null, updatedAt: '2026-10-16T08:00:00Z' });
+    noQuote();
     fixture.detectChanges();
 
     expect(text()).toContain('Quincaillerie Moderne');
@@ -69,10 +75,69 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
   it('configuration illisible : facture affichée quand même, sans informations inventées, avec un avertissement', () => {
     const { fixture, text } = setup();
     http.expectOne(URL).flush({ message: 'indisponible' }, { status: 503, statusText: 'Unavailable' });
+    noQuote();
     fixture.detectChanges();
 
     expect(text()).toContain('Configuration de la facture indisponible');
     expect(text()).toContain('VTE-2026-000007');
     expect(fixture.nativeElement.querySelector('.gsi-company')).toBeNull();
+  });
+
+  it('vente issue d’un devis : la facture reprend le n° du devis et ses seules informations renseignées', () => {
+    const { fixture, text } = setup();
+    http.expectOne(URL).flush({ ...defaultInvoiceSettings(), logo: null, updatedAt: '2026-10-16T08:00:00Z' });
+    http.expectOne(`${environment.apiUrl}/quotes/for-sale/s1`).flush({
+      id: 'q1',
+      number: 'DEV-2026-000001',
+      quoteDate: '2022-03-23',
+      subject: 'Matériels de latrine',
+      lotReference: '2',
+      beneficiaries: 20,
+      deliveryAddress: null,
+      contractReference: null,
+      deliveryTerms: null,
+      paymentTerms: 'Paiement à 30 jours',
+      executionDelay: null,
+      notes: null
+    });
+    fixture.detectChanges();
+
+    expect(text()).toContain('FACTURE DÉFINITIVE');
+    // Intitulé et valeur (le « : » est ajouté par la feuille de style).
+    expect(text()).toContain('DevisDEV-2026-000001');
+    expect(text()).toContain('ObjetMatériels de latrine');
+    expect(text()).toContain('Nombre de bénéficiaires20');
+    expect(text()).toContain('Conditions de paiement');
+    expect(text()).not.toContain('Lieu de livraison');
+    expect(text()).not.toContain('null');
+    // Montants : ceux de la vente.
+    expect(text()).toContain('30 000 FCFA');
+  });
+
+  it('caisse : devis transmis dès le rattachement, facture définitive sans attendre le serveur', () => {
+    sessionStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [InvoiceDrawerComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()]
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(InvoiceDrawerComponent);
+    fixture.componentRef.setInput('sale', SALE);
+    fixture.componentRef.setInput('quote', {
+      id: 'q1', number: 'DEV-2026-000001', quoteDate: '2022-03-23', subject: 'Matériels de latrine', lotReference: '2',
+      beneficiaries: 20, deliveryAddress: null, contractReference: null, deliveryTerms: null, paymentTerms: null,
+      executionDelay: null, notes: null
+    });
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ ...defaultInvoiceSettings(), logo: null, updatedAt: '' });
+    // Devis connu : aucune demande /quotes/for-sale.
+    http.expectNone(`${environment.apiUrl}/quotes/for-sale/s1`);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('FACTURE DÉFINITIVE');
+    expect(text).toContain('ObjetMatériels de latrine');
+    expect(text).toContain('Lot2');
+    expect(text).toContain('Nombre de bénéficiaires20');
   });
 });

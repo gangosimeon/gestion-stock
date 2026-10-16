@@ -24,6 +24,39 @@
     @if (vm$ | async; as vm) {
       @if (vm.isLoading) { <mat-progress-bar mode="indeterminate" /> }
 
+      @if (vm.quote; as q) {
+        <div class="quote-banner" [class.quote-banner--done]="q.status === 'linked'" role="status">
+          <mat-icon aria-hidden="true">{{ q.status === 'linked' ? 'task_alt' : 'request_quote' }}</mat-icon>
+          <div>
+            @switch (q.status) {
+              @case ('linked') {
+                Devis <a [routerLink]="['/quotes', q.id]">{{ q.number }}</a> facturé par la vente {{ q.saleNumber }}.
+              }
+              @case ('linking') {
+                Vente {{ q.saleNumber }} enregistrée : rattachement au devis {{ q.number }}…
+              }
+              @case ('error') {
+                <div class="error" role="alert">
+                  La vente {{ q.saleNumber }} est enregistrée, mais n’a pas pu être rattachée au devis {{ q.number }} : {{ q.error }}
+                </div>
+                <button mat-stroked-button type="button" (click)="retryQuoteLink()"><mat-icon>refresh</mat-icon>Réessayer</button>
+              }
+              @default {
+                <strong>Facture du devis <a [routerLink]="['/quotes', q.id]">{{ q.number }}</a></strong> — client et produits repris.
+                Choisissez le paiement puis « Encaisser » : la vente sortira le stock et le devis passera à « Facturé ».
+                Les prix sont ceux du catalogue.
+                @if (vm.form.customerId !== q.customerId) {
+                  <div class="quote-banner__warn">Le client n’est plus celui du devis ({{ q.customerName }}) : la vente ne pourra pas lui être rattachée.</div>
+                }
+                @if (q.missing.length > 0) {
+                  <div class="quote-banner__warn">Non repris (produit inactif ou absent du catalogue) : {{ q.missing.join(', ') }}.</div>
+                }
+              }
+            }
+          </div>
+        </div>
+      }
+
       <div class="content">
         <mat-card class="panel">
           <div class="panel__title">Écran vente</div>
@@ -224,6 +257,7 @@
         <app-invoice-drawer
           [sale]="sale"
           [customer]="vm.customers.find(c => c.id === sale.customerId) ?? null"
+          [quote]="vm.quote?.status === 'linked' && vm.quote?.saleId === sale.id ? vm.quote!.reference : undefined"
           (close)="closeInvoice()"
         />
       }

@@ -247,6 +247,42 @@ app-invoice-document {
   font-weight: 700;
 }
 
+// Informations du document (objet, lot, références…) : seules les informations renseignées.
+.gsi-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0 0 14px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--gsi-secondary);
+  background: var(--gsi-soft);
+}
+
+.gsi-details__row {
+  // Les intitulés de toutes les lignes partagent la même colonne (valeurs alignées).
+  display: contents;
+
+  dt {
+    color: var(--gsi-muted);
+    font-weight: 600;
+
+    &::after {
+      content: ' :';
+    }
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.gsi-sections {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  break-inside: avoid;
+}
+
 // --- Lignes --------------------------------------------------------------------------------------
 
 .gsi-lines {
