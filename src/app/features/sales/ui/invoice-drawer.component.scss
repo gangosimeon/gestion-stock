@@ -1,6 +1,12 @@
 // Le tiroir prend la largeur de la facture (feuille A4 de 794 px, voir .gsi), sans dépasser l'écran.
 $invoice-width: 794px;
 
+// Hauteur du tiroir : l'en-tête reste visible, seule la facture défile.
+:host {
+  display: block;
+  height: 100%;
+}
+
 .invoice {
   width: fit-content;
   max-width: 100vw;
@@ -50,6 +56,8 @@ $invoice-width: 794px;
   gap: 16px;
   background: var(--color-surface-muted);
   flex: 1;
+  // Sans cela, un élément flex ne descend pas sous la hauteur de son contenu : pas de défilement.
+  min-height: 0;
   align-content: start;
 }
 
