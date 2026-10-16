@@ -163,7 +163,7 @@
     }
   </mat-drawer-content>
 
-  <mat-drawer #invoiceDrawer position="end" mode="over">
+  <mat-drawer #invoiceDrawer class="invoice-drawer" position="end" mode="over">
     @if (selected(); as sale) {
       <app-invoice-drawer
         [sale]="sale"

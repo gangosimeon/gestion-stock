@@ -1000,6 +1000,13 @@ a {
   box-shadow: -8px 0 32px rgba(11, 31, 58, 0.12) !important;
 }
 
+// Drawer de facture : largeur de la facture (feuille A4), plutôt que 45vw. Placé avant la règle
+// « petit écran » ci-dessous, qui le remet en pleine largeur sur mobile.
+.mat-drawer.invoice-drawer {
+  width: auto !important;
+  max-width: 100vw;
+}
+
 // Contenu des drawers de formulaire : en-tête et pied d'actions harmonisés (deux conventions de
 // nommage existent : drawer__header / header, drawer__actions / actions). Sélecteur limité au
 // panneau de drawer, un cran plus spécifique que les styles des composants, sans changer leur HTML.
