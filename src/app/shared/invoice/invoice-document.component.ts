@@ -139,6 +139,12 @@ export class InvoiceDocumentComponent {
     return f.showSignature ? f.signatureText : '';
   });
 
+  /** Nom complet du signataire (avec la signature) ; vide pour une configuration antérieure. */
+  readonly signatureName = computed(() => {
+    const f = this.settings().footer;
+    return f.showSignature ? (f.signatureName ?? '') : '';
+  });
+
   readonly closing = computed(() => {
     const f = this.settings().footer;
     return f.showClosingText ? f.closingText : '';

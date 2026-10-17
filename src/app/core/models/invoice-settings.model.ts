@@ -67,6 +67,8 @@ export interface InvoiceFooter {
   showClosingText: boolean;
   footerAlignment: TextAlignment;
   footerSeparator: boolean;
+  /** Nom complet du signataire, en gras sous l'espace de signature et de cachet. */
+  signatureName: string;
 }
 
 export interface InvoiceAppearance {
@@ -166,7 +168,8 @@ export function defaultInvoiceSettings(): InvoiceSettings {
       closingText: '',
       showClosingText: true,
       footerAlignment: 'CENTER',
-      footerSeparator: true
+      footerSeparator: true,
+      signatureName: ''
     },
     appearance: {
       template: 'MODERN',

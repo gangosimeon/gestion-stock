@@ -185,6 +185,17 @@
                     @if (fieldError('footer', f.text); as e) { <mat-error>{{ e }}</mat-error> }
                   </mat-form-field>
                 </div>
+                @if (f.text === 'signatureText') {
+                  <!-- Juste sous la signature : nom imprimé sous l'espace de signature et de cachet. -->
+                  <div class="footer-field footer-field--sub">
+                    <mat-form-field appearance="outline" class="full">
+                      <mat-label>Nom complet du signataire</mat-label>
+                      <input matInput formControlName="signatureName" maxlength="150" placeholder="Prénom et nom" />
+                      <mat-hint>En gras sous l’espace réservé à la signature et au cachet.</mat-hint>
+                      @if (fieldError('footer', 'signatureName'); as e) { <mat-error>{{ e }}</mat-error> }
+                    </mat-form-field>
+                  </div>
+                }
               }
 
               <div class="field-row">

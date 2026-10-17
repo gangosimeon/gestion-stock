@@ -104,6 +104,11 @@
   align-items: flex-start;
   gap: 12px;
 
+  // Champ rattaché au précédent (nom du signataire sous la signature) : aligné sur sa saisie.
+  &--sub {
+    padding-left: 52px;
+  }
+
   mat-slide-toggle {
     margin-top: 16px;
   }

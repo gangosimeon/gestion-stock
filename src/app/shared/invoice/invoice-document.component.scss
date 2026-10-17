@@ -472,9 +472,14 @@ app-invoice-document {
   align-self: center;
 }
 
+// Espace pour la signature manuscrite et le cachet.
 .gsi-signature__line {
-  height: 36px;
+  height: 80px;
   border-bottom: 1px solid var(--gsi-text);
+}
+
+.gsi-signature__name {
+  font-weight: 700;
 }
 
 .gsi-closing {

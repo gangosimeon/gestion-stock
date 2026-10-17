@@ -213,4 +213,33 @@ describe('InvoiceDocumentComponent (rendu des factures)', () => {
     const arial = article(render(configured((s) => (s.appearance.fontFamily = 'ARIAL'))).root);
     expect(arial.style.fontFamily).toContain('Arial');
   });
+
+  it('signature : titre, espace pour signature et cachet, puis nom complet en gras', () => {
+    const { root } = render(
+      configured((s) => {
+        s.footer.signatureText = 'Le responsable';
+        s.footer.signatureName = 'Awa Koné';
+      })
+    );
+    const block = root.querySelector('.gsi-signature') as HTMLElement;
+    const parts = Array.from(block.children).map((c) => c.className || c.textContent?.trim());
+    expect(parts).toEqual(['Le responsable', 'gsi-signature__line', 'gsi-signature__name']);
+    expect(root.querySelector('.gsi-signature__name')?.textContent?.trim()).toBe('Awa Koné');
+    TestBed.resetTestingModule();
+
+    // Nom vide (ou configuration antérieure sans nom) : pas de ligne de nom.
+    const noName = render(configured((s) => (s.footer.signatureText = 'Le responsable'))).root;
+    expect(noName.querySelector('.gsi-signature__name')).toBeNull();
+    TestBed.resetTestingModule();
+
+    // Signature masquée : ni titre ni nom.
+    const hidden = render(
+      configured((s) => {
+        s.footer.signatureText = 'Le responsable';
+        s.footer.signatureName = 'Awa Koné';
+        s.footer.showSignature = false;
+      })
+    ).root;
+    expect(hidden.querySelector('.gsi-signature')).toBeNull();
+  });
 });

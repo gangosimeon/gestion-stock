@@ -142,7 +142,8 @@ export class InvoiceSettingsPageComponent implements OnInit {
       closingText: ['', Validators.maxLength(300)],
       showClosingText: true,
       footerAlignment: this.fb.control<InvoiceSettings['footer']['footerAlignment']>('CENTER'),
-      footerSeparator: true
+      footerSeparator: true,
+      signatureName: ['', Validators.maxLength(150)]
     }),
     appearance: this.fb.group({
       template: this.fb.control<InvoiceSettings['appearance']['template']>('MODERN'),
@@ -234,7 +235,7 @@ export class InvoiceSettingsPageComponent implements OnInit {
     { text: 'paymentDetails', show: 'showPaymentDetails', label: 'Coordonnées de paiement', max: 500, rows: 2, placeholder: 'Orange Money : … · Banque : …' },
     { text: 'promoMessage', show: 'showPromoMessage', label: 'Message promotionnel', max: 300, rows: 1, placeholder: '' },
     { text: 'legalText', show: 'showLegalText', label: 'Mentions légales', max: 1000, rows: 2, placeholder: '' },
-    { text: 'signatureText', show: 'showSignature', label: 'Signature (libellé sous la ligne)', max: 200, rows: 1, placeholder: 'Le gérant' },
+    { text: 'signatureText', show: 'showSignature', label: 'Signature (titre au-dessus de l’espace de signature)', max: 200, rows: 1, placeholder: 'Le responsable' },
     { text: 'closingText', show: 'showClosingText', label: 'Texte de clôture', max: 300, rows: 1, placeholder: '' }
   ];
 

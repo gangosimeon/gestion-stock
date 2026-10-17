@@ -101,6 +101,33 @@ describe('InvoiceSettingsPageComponent (Paramètres → Configuration de la fact
     http.expectNone(URL);
   });
 
+  it('nom complet du signataire : saisi dans la configuration, visible dans l’aperçu et enregistré', async () => {
+    const { page, fixture, root } = setup();
+    // Onglet « Pied de page » : le champ suit directement celui de la signature.
+    const footerTab = Array.from(root.querySelectorAll<HTMLElement>('[role="tab"]')).find((t) =>
+      t.textContent?.includes('Pied de page')
+    )!;
+    footerTab.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const labels = Array.from(root.querySelectorAll('mat-label')).map((l) => l.textContent?.trim());
+    const signature = labels.indexOf('Signature (titre au-dessus de l’espace de signature)');
+    expect(signature).toBeGreaterThanOrEqual(0);
+    expect(labels[signature + 1]).toBe('Nom complet du signataire');
+
+    page.form.controls.footer.controls.signatureText.setValue('Le responsable');
+    page.form.controls.footer.controls.signatureName.setValue('Awa Koné');
+    fixture.detectChanges();
+    expect(root.querySelector('.preview .gsi-signature__name')?.textContent?.trim()).toBe('Awa Koné');
+
+    const saving = page.save();
+    const put = http.expectOne((r) => r.url === URL && r.method === 'PUT');
+    expect(put.request.body.footer.signatureName).toBe('Awa Koné');
+    put.flush(serverState((r) => (r.footer = { ...r.footer, signatureText: 'Le responsable', signatureName: 'Awa Koné' })));
+    await saving;
+  });
+
   it('validation : un champ invalide bloque l’enregistrement, sans appel au serveur', async () => {
     const { page, fixture, root } = setup();
     page.form.controls.company.controls.email.setValue('pas-un-email');

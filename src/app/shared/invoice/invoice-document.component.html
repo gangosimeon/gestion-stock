@@ -215,7 +215,7 @@
   }
 
   <!-- Pied de page -->
-  @if (footerBlocks().length > 0 || thankYou() || signature() || closing()) {
+  @if (footerBlocks().length > 0 || thankYou() || signature() || signatureName() || closing()) {
     <footer class="gsi-footer" [class.gsi-footer--separator]="s.footer.footerSeparator" [class]="alignClass(s.footer.footerAlignment)">
       @for (block of footerBlocks(); track $index) {
         <div class="gsi-footer__block" [class]="'gsi-footer__block--' + block.kind">
@@ -226,10 +226,12 @@
       @if (thankYou()) {
         <div class="gsi-thanks">{{ thankYou() }}</div>
       }
-      @if (signature()) {
+      @if (signature() || signatureName()) {
+        <!-- Titre, espace pour la signature et le cachet, puis nom complet du signataire. -->
         <div class="gsi-signature">
+          @if (signature()) { <div>{{ signature() }}</div> }
           <div class="gsi-signature__line"></div>
-          <div>{{ signature() }}</div>
+          @if (signatureName()) { <div class="gsi-signature__name">{{ signatureName() }}</div> }
         </div>
       }
       @if (closing()) {
