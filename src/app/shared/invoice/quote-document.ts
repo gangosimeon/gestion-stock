@@ -23,7 +23,14 @@ export interface QuoteDocumentInput extends QuoteOptionalFields {
   customerName: string;
   customerPhone?: string | null;
   warehouseName?: string | null;
-  lines: { productSku?: string | null; productName: string; quantity: number; unitPrice: number; lineTotal?: number }[];
+  lines: {
+    productSku?: string | null;
+    productName: string;
+    quantity: number;
+    quantityPerBeneficiary?: number | null;
+    unitPrice: number;
+    lineTotal?: number;
+  }[];
   /** Total du serveur (devis enregistré) ; à défaut, somme des lignes (aperçu de saisie). */
   total?: number;
 }
@@ -45,7 +52,7 @@ export function quoteDetails(q: QuoteOptionalFields): DocumentDetail[] {
   // Un nombre de bénéficiaires absent (ou nul) n'est pas affiché.
   add('Nombre de bénéficiaires', q.beneficiaries && q.beneficiaries > 0 ? String(q.beneficiaries) : null);
   add('Lieu de livraison / d’exécution', filled(q.deliveryAddress));
-  add('Réf. marché / bon de commande', filled(q.contractReference));
+  add('Référence du marché / bon de commande', filled(q.contractReference));
   return rows;
 }
 
@@ -68,6 +75,7 @@ export function quoteToDocumentData(q: QuoteDocumentInput): InvoiceData {
     sku: l.productSku ?? null,
     name: l.productName,
     quantity: l.quantity,
+    quantityPerBeneficiary: l.quantityPerBeneficiary ?? null,
     unitPrice: l.unitPrice,
     discountPercent: null,
     lineTotal: l.lineTotal ?? l.quantity * l.unitPrice

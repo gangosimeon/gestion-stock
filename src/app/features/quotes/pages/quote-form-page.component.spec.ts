@@ -113,15 +113,63 @@ describe('QuoteFormPageComponent (nouveau devis)', { timeout: 20_000 }, () => {
       executionDelay: null,
       notes: null,
       lines: [
-        { productId: CEMENT.id, quantity: 120, unitPrice: 6000 },
-        { productId: IRON.id, quantity: 40, unitPrice: 5500 },
-        { productId: WIRE.id, quantity: 20, unitPrice: 600 }
+        { productId: CEMENT.id, quantity: 120, quantityPerBeneficiary: null, unitPrice: 6000 },
+        { productId: IRON.id, quantity: 40, quantityPerBeneficiary: null, unitPrice: 5500 },
+        { productId: WIRE.id, quantity: 20, quantityPerBeneficiary: null, unitPrice: 600 }
       ]
     });
     expect('total' in post.request.body).toBe(false);
     post.flush({ id: 'q1', number: 'DEV-2026-000001' });
     await saving;
     expect(navigate).toHaveBeenCalledWith(['/quotes', 'q1']);
+  });
+
+  it('quantité par bénéficiaire : quantité totale = × bénéficiaires, chiffrée et envoyée pour calcul serveur', async () => {
+    const { page, fixture } = setup();
+    page.form.patchValue({ customerId: HELP.id, beneficiaries: 20 });
+    page.addProduct(CEMENT.id);
+    page.lines.at(0).patchValue({ quantityPerBeneficiary: 6, unitPrice: 6000 });
+    page.addProduct(WIRE.id);
+    page.lines.at(1).patchValue({ quantity: 20, unitPrice: 600 });
+
+    expect(page.isPerBeneficiary(0)).toBe(true);
+    expect(page.lineQuantity(0)).toBe(120);
+    expect(page.lineTotal(0)).toBe(720000);
+    expect(page.lineQuantity(1)).toBe(20);
+    expect(page.estimatedTotal()).toBe(732000);
+
+    // Moins de bénéficiaires : tout est recalculé.
+    page.form.controls.beneficiaries.setValue(10);
+    expect(page.lineQuantity(0)).toBe(60);
+    expect(page.estimatedTotal()).toBe(372000);
+
+    fixture.detectChanges();
+    const preview = (fixture.nativeElement as HTMLElement).querySelector('.preview')!.textContent!.replace(/\s+/g, ' ');
+    expect(preview).toContain('Quantité par bénéficiaire');
+    expect(preview).toContain('Quantité totale');
+
+    const saving = page.save();
+    const post = http.expectOne((r) => r.url === `${API}/quotes` && r.method === 'POST');
+    expect(post.request.body.beneficiaries).toBe(10);
+    expect(post.request.body.lines).toEqual([
+      { productId: CEMENT.id, quantity: null, quantityPerBeneficiary: 6, unitPrice: 6000 },
+      { productId: WIRE.id, quantity: 20, quantityPerBeneficiary: null, unitPrice: 600 }
+    ]);
+    post.flush({ id: 'q1', number: 'DEV-2026-000001' });
+    await saving;
+  });
+
+  it('quantité par bénéficiaire sans nombre de bénéficiaires : enregistrement bloqué, aucun appel', async () => {
+    const { page } = setup();
+    page.form.patchValue({ customerId: HELP.id });
+    page.addProduct(CEMENT.id);
+    page.lines.at(0).patchValue({ quantityPerBeneficiary: 6 });
+    expect(page.missingBeneficiaries()).toBe(true);
+    expect(page.lineQuantity(0)).toBe(0);
+
+    await page.save();
+    expect(page.saveError()).toContain('nombre de bénéficiaires');
+    http.expectNone(`${API}/quotes`);
   });
 
   it('client et produits obligatoires ; erreurs du serveur affichées', async () => {
@@ -175,7 +223,7 @@ describe('QuoteFormPageComponent (nouveau devis)', { timeout: 20_000 }, () => {
       subject: null,
       lotReference: '2',
       beneficiaries: null,
-      lines: [{ id: 'l', lineNumber: 1, productId: CEMENT.id, productSku: 'CIM-50', productName: CEMENT.name, quantity: 120, unitPrice: 6000, lineTotal: 720000 }]
+      lines: [{ id: 'l', lineNumber: 1, productId: CEMENT.id, productSku: 'CIM-50', productName: CEMENT.name, quantity: 120, quantityPerBeneficiary: null, unitPrice: 6000, lineTotal: 720000 }]
     };
     http.expectOne(`${API}/quotes/q1`).flush(quote);
     await flushMicrotasks();

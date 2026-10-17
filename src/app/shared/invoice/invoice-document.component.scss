@@ -285,8 +285,15 @@ app-invoice-document {
 
 // --- Lignes --------------------------------------------------------------------------------------
 
+// Sur un écran étroit, le tableau garde une largeur lisible et défile (jamais de mot coupé
+// lettre par lettre) ; à l'impression et dans le PDF, il occupe toute la page.
+.gsi-lines-wrap {
+  overflow-x: auto;
+}
+
 .gsi-lines {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 
@@ -295,6 +302,14 @@ app-invoice-document {
     padding: var(--gsi-cell);
     border-bottom: 1px solid var(--gsi-border);
     vertical-align: top;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: manual;
+  }
+
+  // Montants et quantités sur une seule ligne.
+  td.gsi-right {
+    white-space: nowrap;
   }
 
   th {
@@ -309,12 +324,42 @@ app-invoice-document {
     text-align: right;
   }
 
+  thead th {
+    vertical-align: middle;
+  }
+}
+
+// Alignement des intitulés et des colonnes de chiffres (configuration) ; la désignation reste
+// à gauche. « auto » : textes à gauche, nombres à droite.
+.gsi-lines.gsi-lines--head-left {
+  thead th,
+  td.gsi-right {
+    text-align: left;
+  }
+}
+
+.gsi-lines.gsi-lines--head-center {
+  thead th,
+  td.gsi-right {
+    text-align: center;
+  }
+}
+
+.gsi-lines.gsi-lines--head-right {
+  thead th,
+  td.gsi-right {
+    text-align: right;
+  }
+}
+
+.gsi-lines {
+
   tr {
     break-inside: avoid;
   }
 
   .gsi-num {
-    width: 36px;
+    width: 1%;
     text-align: center;
   }
 

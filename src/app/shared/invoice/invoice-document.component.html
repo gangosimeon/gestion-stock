@@ -77,7 +77,7 @@
   <section class="gsi-title-row">
     <h1 class="gsi-title">{{ d.title ?? 'FACTURE' }}</h1>
     <dl class="gsi-meta">
-      <div><dt>N°</dt><dd>{{ d.number }}</dd></div>
+      <div><dt>Numéro</dt><dd>{{ d.number }}</dd></div>
       <div><dt>Date</dt><dd>{{ date(d.date) }}@if (d.kind !== 'quote') { {{ time(d.date) }}}</dd></div>
       @if (d.validUntil) {
         <div><dt>Valable jusqu'au</dt><dd>{{ date(d.validUntil) }}</dd></div>
@@ -95,7 +95,7 @@
     <div class="gsi-party">
       <div class="gsi-party__title">Client / Organisme commanditaire</div>
       <div class="gsi-party__name">{{ d.customerName }}</div>
-      @if (d.customerPhone) { <div>Tél. : {{ d.customerPhone }}</div> }
+      @if (d.customerPhone) { <div>Téléphone : {{ d.customerPhone }}</div> }
     </div>
     @if (d.paymentMethodLabel) {
       <div class="gsi-party gsi-party--right">
@@ -118,13 +118,20 @@
   }
 
   <!-- Lignes -->
-  <table class="gsi-lines">
+  <!-- Défilement horizontal sur petit écran plutôt que des mots coupés (pleine largeur à l'impression). -->
+  <div class="gsi-lines-wrap">
+  <table class="gsi-lines" [class]="tableHeadClass()">
     <thead>
       <tr>
-        @if (a.showLineNumber) { <th class="gsi-num">N°</th> }
-        @if (showSkuColumn()) { <th>Réf.</th> }
+        @if (a.showLineNumber) { <th class="gsi-num">Numéro</th> }
+        @if (showSkuColumn()) { <th>Référence</th> }
         <th>Désignation</th>
-        <th class="gsi-right">Qté</th>
+        @if (showPerBeneficiaryColumn()) {
+          <th class="gsi-right">Quantité par bénéficiaire</th>
+          <th class="gsi-right">Quantité totale</th>
+        } @else {
+          <th class="gsi-right">Quantité</th>
+        }
         <th class="gsi-right">Prix unitaire</th>
         @if (showDiscountColumn()) { <th class="gsi-right">Remise</th> }
         <th class="gsi-right">Total ({{ a.currencyLabel }})</th>
@@ -136,6 +143,9 @@
           @if (a.showLineNumber) { <td class="gsi-num">{{ $index + 1 }}</td> }
           @if (showSkuColumn()) { <td class="gsi-sku">{{ line.sku ?? '' }}</td> }
           <td>{{ line.name }}</td>
+          @if (showPerBeneficiaryColumn()) {
+            <td class="gsi-right">{{ line.quantityPerBeneficiary ?? '' }}</td>
+          }
           <td class="gsi-right">{{ line.quantity }}</td>
           <td class="gsi-right">{{ amount(line.unitPrice) }}</td>
           @if (showDiscountColumn()) {
@@ -146,6 +156,7 @@
       }
     </tbody>
   </table>
+  </div>
 
   <!-- Totaux : uniquement ceux de la vente (le modèle de vente n'a pas de taxe). -->
   <section class="gsi-totals">

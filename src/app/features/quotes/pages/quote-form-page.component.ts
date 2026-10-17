@@ -34,8 +34,25 @@ type LineGroup = FormGroup<{
   productSku: FormControl<string>;
   productName: FormControl<string>;
   quantity: FormControl<number>;
+  /** Quantité pour un bénéficiaire (facultative) : la quantité totale en découle. */
+  quantityPerBeneficiary: FormControl<number | null>;
   unitPrice: FormControl<number>;
 }>;
+
+type LineValue = ReturnType<LineGroup['getRawValue']>;
+
+/**
+ * Quantité totale d'une ligne (même règle que le serveur) : quantité par bénéficiaire × nombre de
+ * bénéficiaires si elle est renseignée, sinon quantité saisie.
+ */
+export function totalQuantity(
+  line: Pick<LineValue, 'quantity' | 'quantityPerBeneficiary'>,
+  beneficiaries: number | null
+): number {
+  const perBeneficiary = Number(line.quantityPerBeneficiary) || 0;
+  if (perBeneficiary > 0) return perBeneficiary * (Number(beneficiaries) || 0);
+  return Number(line.quantity) || 0;
+}
 
 /** Jour local `AAAA-MM-JJ`. */
 function today(): string {
@@ -133,9 +150,16 @@ export class QuoteFormPageComponent implements OnInit {
   });
 
   /** Estimation à l'écran ; le serveur recalcule chaque ligne à l'enregistrement. */
-  readonly estimatedTotal = computed(() =>
-    this.formValue().lines.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), 0)
-  );
+  readonly estimatedTotal = computed(() => {
+    const v = this.formValue();
+    return v.lines.reduce((sum, l) => sum + totalQuantity(l, v.beneficiaries) * (Number(l.unitPrice) || 0), 0);
+  });
+
+  /** Lignes chiffrées par bénéficiaire alors que le nombre de bénéficiaires n'est pas renseigné. */
+  readonly missingBeneficiaries = computed(() => {
+    const v = this.formValue();
+    return !(Number(v.beneficiaries) > 0) && v.lines.some((l) => (Number(l.quantityPerBeneficiary) || 0) > 0);
+  });
 
   /** Aperçu du document avec la configuration de la facture : seuls les champs renseignés apparaissent. */
   readonly preview = computed(() => {
@@ -158,11 +182,12 @@ export class QuoteFormPageComponent implements OnInit {
       executionDelay: v.executionDelay,
       notes: v.notes,
       lines: v.lines
-        .filter((l) => (Number(l.quantity) || 0) > 0)
+        .filter((l) => totalQuantity(l, v.beneficiaries) > 0)
         .map((l) => ({
           productSku: l.productSku,
           productName: l.productName,
-          quantity: Number(l.quantity) || 0,
+          quantity: totalQuantity(l, v.beneficiaries),
+          quantityPerBeneficiary: Number(l.quantityPerBeneficiary) > 0 ? Number(l.quantityPerBeneficiary) : null,
           unitPrice: Number(l.unitPrice) || 0
         }))
     });
@@ -224,7 +249,7 @@ export class QuoteFormPageComponent implements OnInit {
     if (!product) return;
     const customer = this.customers().find((c) => c.id === this.form.controls.customerId.value);
     const price = customer?.priceCategory === 'WHOLESALE' ? product.wholesalePrice : product.retailPrice;
-    this.lines.push(this.line(product.id, product.sku, product.name, 1, Number(price) || 0));
+    this.lines.push(this.line(product.id, product.sku, product.name, 1, null, Number(price) || 0));
     this.lines.markAsDirty();
   }
 
@@ -233,9 +258,18 @@ export class QuoteFormPageComponent implements OnInit {
     this.lines.markAsDirty();
   }
 
+  /** Quantité totale de la ligne (calculée si elle est chiffrée par bénéficiaire). */
+  lineQuantity(index: number): number {
+    return totalQuantity(this.lines.at(index).getRawValue(), this.form.controls.beneficiaries.value);
+  }
+
+  /** La ligne est chiffrée par bénéficiaire : sa quantité totale n'est pas saisie. */
+  isPerBeneficiary(index: number): boolean {
+    return (Number(this.lines.at(index).controls.quantityPerBeneficiary.value) || 0) > 0;
+  }
+
   lineTotal(index: number): number {
-    const l = this.lines.at(index).getRawValue();
-    return (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0);
+    return this.lineQuantity(index) * (Number(this.lines.at(index).controls.unitPrice.value) || 0);
   }
 
   async save(): Promise<void> {
@@ -251,6 +285,14 @@ export class QuoteFormPageComponent implements OnInit {
       return;
     }
     const v = this.form.getRawValue();
+    if (this.missingBeneficiaries()) {
+      this.saveError.set('Renseignez le nombre de bénéficiaires : des lignes sont chiffrées par bénéficiaire.');
+      return;
+    }
+    if (v.lines.some((l) => totalQuantity(l, v.beneficiaries) > 100_000)) {
+      this.saveError.set('Une quantité totale dépasse 100 000 : réduisez la quantité par bénéficiaire.');
+      return;
+    }
     if (v.validUntil && v.validUntil < v.quoteDate) {
       this.saveError.set('La date de validité ne peut pas précéder la date du devis.');
       return;
@@ -268,7 +310,16 @@ export class QuoteFormPageComponent implements OnInit {
       paymentTerms: optional(v.paymentTerms),
       executionDelay: optional(v.executionDelay),
       notes: optional(v.notes),
-      lines: v.lines.map((l) => ({ productId: l.productId, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice) }))
+      // Par bénéficiaire : le serveur calcule la quantité totale (× nombre de bénéficiaires).
+      lines: v.lines.map((l) => {
+        const perBeneficiary = Number(l.quantityPerBeneficiary) > 0 ? Number(l.quantityPerBeneficiary) : null;
+        return {
+          productId: l.productId,
+          quantity: perBeneficiary ? null : Number(l.quantity),
+          quantityPerBeneficiary: perBeneficiary,
+          unitPrice: Number(l.unitPrice)
+        };
+      })
     };
 
     this.saving.set(true);
@@ -287,10 +338,10 @@ export class QuoteFormPageComponent implements OnInit {
     }
   }
 
-  lineError(index: number, field: 'quantity' | 'unitPrice'): string | null {
+  lineError(index: number, field: 'quantity' | 'quantityPerBeneficiary' | 'unitPrice'): string | null {
     const control = this.lines.at(index).controls[field];
     if (!control.invalid || !(control.touched || control.dirty)) return null;
-    return field === 'quantity' ? 'Quantité : 1 à 100 000.' : 'Prix unitaire positif requis.';
+    return field === 'unitPrice' ? 'Prix unitaire positif requis.' : 'Entre 1 et 100 000.';
   }
 
   private fill(quote: Quote): void {
@@ -310,12 +361,21 @@ export class QuoteFormPageComponent implements OnInit {
     });
     this.lines.clear();
     for (const l of quote.lines) {
-      this.lines.push(this.line(l.productId, l.productSku, l.productName, l.quantity, Number(l.unitPrice)));
+      this.lines.push(
+        this.line(l.productId, l.productSku, l.productName, l.quantity, l.quantityPerBeneficiary, Number(l.unitPrice))
+      );
     }
     this.form.markAsPristine();
   }
 
-  private line(productId: string, sku: string, name: string, quantity: number, unitPrice: number): LineGroup {
+  private line(
+    productId: string,
+    sku: string,
+    name: string,
+    quantity: number,
+    quantityPerBeneficiary: number | null,
+    unitPrice: number
+  ): LineGroup {
     return new FormGroup({
       productId: new FormControl(productId, { nonNullable: true }),
       productSku: new FormControl(sku, { nonNullable: true }),
@@ -324,6 +384,10 @@ export class QuoteFormPageComponent implements OnInit {
         nonNullable: true,
         validators: [Validators.required, Validators.min(1), Validators.max(100_000)]
       }),
+      quantityPerBeneficiary: new FormControl<number | null>(quantityPerBeneficiary, [
+        Validators.min(1),
+        Validators.max(100_000)
+      ]),
       unitPrice: new FormControl(unitPrice, {
         nonNullable: true,
         validators: [Validators.required, Validators.min(0.01), Validators.max(999_999_999.99)]

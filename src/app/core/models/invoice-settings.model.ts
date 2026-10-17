@@ -4,6 +4,10 @@
  */
 export type LogoPosition = 'LEFT' | 'RIGHT' | 'TOP';
 export type TextAlignment = 'LEFT' | 'CENTER' | 'RIGHT';
+/** En-têtes du tableau des produits ; AUTO : textes à gauche, nombres à droite. */
+export type TableHeaderAlignment = 'AUTO' | 'LEFT' | 'CENTER' | 'RIGHT';
+/** Police du document ; MODEL : celle du modèle choisi. */
+export type InvoiceFont = 'MODEL' | 'TIMES_NEW_ROMAN' | 'ARIAL';
 export type InvoiceTemplate = 'CLASSIC' | 'MODERN' | 'COMPACT';
 export type ThousandsSeparator = 'SPACE' | 'DOT' | 'COMMA' | 'NONE';
 export type InvoiceDateFormat = 'dd/MM/yyyy' | 'dd-MM-yyyy' | 'yyyy-MM-dd' | 'd MMMM yyyy';
@@ -81,6 +85,10 @@ export interface InvoiceAppearance {
   showPageNumbers: boolean;
   pageFooterText: string;
   showPageFooterText: boolean;
+  /** Alignement des intitulés et des colonnes de chiffres du tableau des produits. */
+  tableHeaderAlignment: TableHeaderAlignment;
+  /** Police de tout le document (écran, impression, PDF). */
+  fontFamily: InvoiceFont;
 }
 
 export interface InvoiceSettings {
@@ -175,7 +183,9 @@ export function defaultInvoiceSettings(): InvoiceSettings {
       showAmountInWords: true,
       showPageNumbers: true,
       pageFooterText: '',
-      showPageFooterText: true
+      showPageFooterText: true,
+      tableHeaderAlignment: 'CENTER',
+      fontFamily: 'MODEL'
     }
   };
 }

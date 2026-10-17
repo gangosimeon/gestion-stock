@@ -10,7 +10,10 @@ export interface QuoteLine {
   productId: string;
   productSku: string;
   productName: string;
+  /** Quantité totale : chiffrée, puis sortie du stock par la vente qui facture le devis. */
   quantity: number;
+  /** Quantité pour un bénéficiaire (quantité totale = × nombre de bénéficiaires), ou null. */
+  quantityPerBeneficiary: number | null;
   unitPrice: number;
   lineTotal: number;
 }
@@ -61,7 +64,8 @@ export interface QuoteRequest {
   paymentTerms: string | null;
   executionDelay: string | null;
   notes: string | null;
-  lines: { productId: string; quantity: number; unitPrice: number }[];
+  /** quantityPerBeneficiary renseignée : la quantité totale est calculée par le serveur. */
+  lines: { productId: string; quantity: number | null; quantityPerBeneficiary: number | null; unitPrice: number }[];
 }
 
 /** Informations d'un devis reprises sur la facture de la vente qui en est issue. */

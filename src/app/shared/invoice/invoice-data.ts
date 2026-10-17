@@ -6,6 +6,8 @@ export interface InvoiceLine {
   sku?: string | null;
   name: string;
   quantity: number;
+  /** Quantité pour un bénéficiaire (devis), affichée à côté de la quantité totale. */
+  quantityPerBeneficiary?: number | null;
   unitPrice: number;
   discountPercent?: number | null;
   lineTotal: number;

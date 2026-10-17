@@ -76,7 +76,7 @@ describe('Devis mis en page (aperçu, impression, PDF)', () => {
     expect(data.sections).toEqual([]);
 
     const text = render(data);
-    for (const absent of ['Objet', 'Lot', 'bénéficiaires', 'Lieu de livraison', 'Réf. marché', 'Conditions', 'Délai', 'Observations', 'Valable', 'null', 'undefined']) {
+    for (const absent of ['Objet', 'Lot', 'bénéficiaires', 'Lieu de livraison', 'Référence du marché', 'Conditions', 'Délai', 'Observations', 'Valable', 'null', 'undefined']) {
       expect(text, absent).not.toContain(absent);
     }
     expect(text).not.toMatch(/:\s*(Lot|Objet|$)/);
@@ -93,6 +93,42 @@ describe('Devis mis en page (aperçu, impression, PDF)', () => {
     expect(text).toContain("Valable jusqu'au23/04/2022");
     expect(text).toContain('Conditions de paiement');
     expect(text).not.toContain('Observations');
+  });
+
+  it('lignes par bénéficiaire : colonnes « Quantité par bénéficiaire » et « Quantité totale », absentes sinon', () => {
+    const perBeneficiary = render(
+      quoteToDocumentData({
+        ...ONG_HELP,
+        lines: [
+          { productSku: 'CIM', productName: 'Sac de ciment', quantity: 120, quantityPerBeneficiary: 6, unitPrice: 6000 },
+          { productSku: 'FIL', productName: 'Rouleau de fil', quantity: 20, quantityPerBeneficiary: null, unitPrice: 600 }
+        ]
+      })
+    );
+    expect(perBeneficiary).toContain('Quantité par bénéficiaire');
+    expect(perBeneficiary).toContain('Quantité totale');
+    // Ciment : 6 par bénéficiaire, 120 au total, 720 000.
+    expect(perBeneficiary).toContain('Sac de ciment61206 000720 000');
+    TestBed.resetTestingModule();
+
+    expect(render(quoteToDocumentData(ONG_HELP))).not.toContain('Quantité par bénéficiaire');
+  });
+
+  it('libellés écrits en entier, sans abréviation', () => {
+    const text = render(
+      quoteToDocumentData({
+        ...ONG_HELP,
+        customerPhone: '+226 70 00 00 00',
+        contractReference: 'Marché 2022/045',
+        lines: [{ productSku: 'CIM', productName: 'Sac de ciment', quantity: 120, quantityPerBeneficiary: 6, unitPrice: 6000 }]
+      })
+    );
+    for (const full of ['Numéro', 'Référence', 'Désignation', 'Quantité par bénéficiaire', 'Quantité totale', 'Prix unitaire', 'Téléphone', 'Référence du marché']) {
+      expect(text, full).toContain(full);
+    }
+    for (const abbreviation of ['Qté', 'Réf.', 'Tél.', 'bénéf.', 'N°']) {
+      expect(text, abbreviation).not.toContain(abbreviation);
+    }
   });
 
   it('facture d’une vente issue d’un devis : référence du devis et seulement ses informations renseignées', () => {

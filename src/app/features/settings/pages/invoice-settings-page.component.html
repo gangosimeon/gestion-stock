@@ -209,6 +209,17 @@
                 <mat-button-toggle value="COMPACT">Compact</mat-button-toggle>
               </mat-button-toggle-group>
 
+              <h2 class="section-title">Police</h2>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Police du document</mat-label>
+                <mat-select formControlName="fontFamily">
+                  <mat-option value="MODEL">Police du modèle</mat-option>
+                  <mat-option value="TIMES_NEW_ROMAN"><span style="font-family: 'Times New Roman', Times, serif">Times New Roman</span></mat-option>
+                  <mat-option value="ARIAL"><span style="font-family: Arial, Helvetica, sans-serif">Arial</span></mat-option>
+                </mat-select>
+                <mat-hint>S'applique à toute la facture et à tout le devis : écran, impression et PDF.</mat-hint>
+              </mat-form-field>
+
               <h2 class="section-title">Couleurs</h2>
               <div class="colors">
                 @for (c of colorControls; track c.control) {
@@ -264,6 +275,17 @@
                     <mat-option [value]="2">2 décimales</mat-option>
                   </mat-select>
                 </mat-form-field>
+              </div>
+
+              <h2 class="section-title">Tableau des produits</h2>
+              <div class="field-row">
+                <span class="field-row__label">Alignement des en-têtes et des chiffres</span>
+                <mat-button-toggle-group formControlName="tableHeaderAlignment" aria-label="Alignement des en-têtes du tableau">
+                  <mat-button-toggle value="AUTO" matTooltip="Textes à gauche, quantités et montants à droite">Automatique</mat-button-toggle>
+                  <mat-button-toggle value="LEFT" matTooltip="À gauche"><mat-icon>format_align_left</mat-icon></mat-button-toggle>
+                  <mat-button-toggle value="CENTER" matTooltip="Centré"><mat-icon>format_align_center</mat-icon></mat-button-toggle>
+                  <mat-button-toggle value="RIGHT" matTooltip="À droite"><mat-icon>format_align_right</mat-icon></mat-button-toggle>
+                </mat-button-toggle-group>
               </div>
 
               <h2 class="section-title">Affichage</h2>

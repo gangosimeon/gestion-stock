@@ -27,6 +27,8 @@ function pageRules(appearance: InvoiceAppearance): string {
     html, body { margin: 0; background: #fff; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .gsi { max-width: none; padding: 0; }
+    .gsi-lines-wrap { overflow: visible; }
+    .gsi-lines { min-width: 0; }
     .gsi-sample, .gsi-page-footer { display: none !important; }`;
 }
 

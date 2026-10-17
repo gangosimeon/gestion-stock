@@ -13,7 +13,7 @@
   color: var(--color-text-secondary);
 }
 
-// Formulaire à gauche, aperçu à droite ; empilés sur petit écran.
+// Formulaire à gauche, aperçu à droite sur très grand écran ; empilés en dessous.
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
@@ -61,39 +61,115 @@
   text-align: center;
 }
 
+// Lignes de produits : disposition selon la largeur réellement disponible (requête de
+// conteneur) — une rangée sur grand écran, une fiche de deux ou trois rangées sinon.
 .lines {
   display: grid;
   gap: 6px;
-}
-
-.lines__head,
-.lines__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) 96px 130px 110px 40px;
-  gap: 8px;
-  align-items: center;
+  container-type: inline-size;
 }
 
 .lines__head {
-  padding: 0 4px;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
+  display: none;
 }
 
 .lines__row {
-  padding: 6px 4px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 40px;
+  grid-template-areas:
+    'product product total remove'
+    'per qty price .';
+  gap: 8px 10px;
+  align-items: center;
+  padding: 10px 4px;
   border-bottom: 1px solid var(--color-border-light);
 }
 
 .lines__product {
+  grid-area: product;
   display: grid;
   min-width: 0;
 
   strong {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
+}
+
+.lines__per {
+  grid-area: per;
+}
+
+.lines__qty {
+  grid-area: qty;
+}
+
+.lines__price {
+  grid-area: price;
+}
+
+.lines__total {
+  grid-area: total;
+}
+
+.lines__remove {
+  grid-area: remove;
+  justify-self: end;
+}
+
+// Intitulé au-dessus de la valeur calculée (fiche) ; inutile quand l'en-tête est visible.
+.lines__label {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+// Grand conteneur : une rangée par ligne, avec en-tête de colonnes.
+@container (min-width: 760px) {
+  .lines__head,
+  .lines__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) 120px 110px 130px 110px 40px;
+    grid-template-areas: 'product per qty price total remove';
+    gap: 8px;
+    align-items: center;
+  }
+
+  .lines__head {
+    padding: 0 4px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-transform: uppercase;
+
+    span {
+      overflow-wrap: break-word;
+    }
+  }
+
+  .lines__label {
+    display: none;
+  }
+}
+
+// Conteneur étroit (téléphone) : trois rangées.
+@container (max-width: 440px) {
+  .lines__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+    grid-template-areas:
+      'product product remove'
+      'per qty qty'
+      'price total total';
+  }
+}
+
+.lines__computed {
+  display: grid;
+  font-variant-numeric: tabular-nums;
+}
+
+// Nombre de bénéficiaires manquant : quantité totale non calculable.
+.lines__computed--missing strong {
+  color: var(--color-danger, #b91c1c);
 }
 
 .lines__total {
@@ -176,7 +252,7 @@
   }
 }
 
-@media (max-width: 1199.98px) {
+@media (max-width: 1439.98px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -193,18 +269,5 @@
 @media (max-width: 599.98px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .lines__head {
-    display: none;
-  }
-
-  // Ligne sur deux rangées : produit, puis quantité / prix / total / suppression.
-  .lines__row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto 40px;
-
-    .lines__product {
-      grid-column: 1 / -1;
-    }
   }
 }

@@ -74,7 +74,7 @@ describe('InvoiceDocumentComponent (rendu des factures)', () => {
     const { root, text } = render(defaultInvoiceSettings());
     expect(root.querySelector('.gsi-company')).toBeNull();
     expect(root.querySelector('.gsi-contacts')).toBeNull();
-    expect(text()).not.toContain('Tél.');
+    expect(text()).not.toContain('Téléphone');
     expect(text()).not.toContain('exemple');
   });
 
@@ -182,5 +182,35 @@ describe('InvoiceDocumentComponent (rendu des factures)', () => {
     const { text } = render(configured(), cancelled);
     expect(text()).toContain('VENTE ANNULÉE');
     expect(text()).toContain('Erreur de saisie');
+  });
+
+  it('en-têtes du tableau des produits : centrés par défaut, alignement configurable', () => {
+    const table = (root: HTMLElement) => root.querySelector('table.gsi-lines') as HTMLElement;
+
+    expect(table(render(configured()).root).classList).toContain('gsi-lines--head-center');
+    TestBed.resetTestingModule();
+    expect(table(render(configured((s) => (s.appearance.tableHeaderAlignment = 'AUTO'))).root).classList).toContain(
+      'gsi-lines--head-auto'
+    );
+    TestBed.resetTestingModule();
+    expect(table(render(configured((s) => (s.appearance.tableHeaderAlignment = 'RIGHT'))).root).classList).toContain(
+      'gsi-lines--head-right'
+    );
+    TestBed.resetTestingModule();
+    // Configuration enregistrée avant ce réglage : centré.
+    const legacy = configured((s) => delete (s.appearance as Partial<typeof s.appearance>).tableHeaderAlignment);
+    expect(table(render(legacy).root).classList).toContain('gsi-lines--head-center');
+  });
+
+  it('police : celle du modèle par défaut, Times New Roman ou Arial imposée à tout le document', () => {
+    const article = (root: HTMLElement) => root.querySelector('.gsi') as HTMLElement;
+
+    expect(article(render(configured()).root).style.fontFamily).toBe('');
+    TestBed.resetTestingModule();
+    const times = article(render(configured((s) => (s.appearance.fontFamily = 'TIMES_NEW_ROMAN'))).root);
+    expect(times.style.fontFamily).toContain('Times New Roman');
+    TestBed.resetTestingModule();
+    const arial = article(render(configured((s) => (s.appearance.fontFamily = 'ARIAL'))).root);
+    expect(arial.style.fontFamily).toContain('Arial');
   });
 });

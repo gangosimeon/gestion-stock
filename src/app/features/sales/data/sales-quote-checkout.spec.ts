@@ -46,8 +46,8 @@ const QUOTE: Quote = {
   status: 'ACCEPTED',
   displayStatus: 'ACCEPTED',
   lines: [
-    { id: 'l1', lineNumber: 1, productId: CEMENT.id, productSku: 'CIM-50', productName: CEMENT.name, quantity: 120, unitPrice: 6000, lineTotal: 720000 },
-    { id: 'l2', lineNumber: 2, productId: 'p-gone', productSku: 'OLD', productName: 'Produit retiré', quantity: 1, unitPrice: 100, lineTotal: 100 }
+    { id: 'l1', lineNumber: 1, productId: CEMENT.id, productSku: 'CIM-50', productName: CEMENT.name, quantity: 120, quantityPerBeneficiary: 6, unitPrice: 6000, lineTotal: 720000 },
+    { id: 'l2', lineNumber: 2, productId: 'p-gone', productSku: 'OLD', productName: 'Produit retiré', quantity: 1, quantityPerBeneficiary: null, unitPrice: 100, lineTotal: 100 }
   ],
   total: 720100,
   saleId: null,

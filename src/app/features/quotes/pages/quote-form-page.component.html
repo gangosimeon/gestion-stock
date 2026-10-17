@@ -82,7 +82,7 @@
         <!-- B. Produits -->
         <section class="section">
           <h2 class="section-title">Produits</h2>
-          <mat-form-field appearance="outline" class="full">
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
             <mat-label>Ajouter un produit du catalogue</mat-label>
             <mat-select [formControl]="productPicker" (selectionChange)="addProduct($event.value)">
               <app-select-search />
@@ -99,7 +99,8 @@
           } @else {
             <div class="lines" formArrayName="lines">
               <div class="lines__head" aria-hidden="true">
-                <span>Produit</span><span class="right">Quantité</span><span class="right">Prix unitaire</span>
+                <span>Produit</span><span class="right">Quantité par bénéficiaire</span><span class="right">Quantité totale</span>
+                <span class="right">Prix unitaire</span>
                 <span class="right">Total</span><span></span>
               </div>
               @for (line of lines.controls; track line; let i = $index) {
@@ -108,18 +109,36 @@
                     <strong>{{ line.controls.productName.value }}</strong>
                     <span class="sub">{{ line.controls.productSku.value }}</span>
                   </div>
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-label>Qté</mat-label>
-                    <input matInput type="number" min="1" formControlName="quantity" />
-                    @if (lineError(i, 'quantity'); as e) { <mat-error>{{ e }}</mat-error> }
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="lines__per">
+                    <mat-label>Par bénéficiaire</mat-label>
+                    <input matInput type="number" min="1" formControlName="quantityPerBeneficiary"
+                           matTooltip="Facultatif : quantité pour un bénéficiaire, multipliée par le nombre de bénéficiaires" />
+                    @if (lineError(i, 'quantityPerBeneficiary'); as e) { <mat-error>{{ e }}</mat-error> }
                   </mat-form-field>
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  @if (isPerBeneficiary(i)) {
+                    <!-- Quantité totale calculée : c'est elle qui sera sortie du stock à la facturation. -->
+                    <div class="right lines__computed lines__qty" [class.lines__computed--missing]="missingBeneficiaries()">
+                      <span class="lines__label">Quantité totale</span>
+                      <strong>{{ lineQuantity(i) | number: '1.0-0' }}</strong>
+                      <span class="sub">× {{ form.controls.beneficiaries.value || '?' }} bénéficiaire(s)</span>
+                    </div>
+                  } @else {
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="lines__qty">
+                      <mat-label>Quantité</mat-label>
+                      <input matInput type="number" min="1" formControlName="quantity" />
+                      @if (lineError(i, 'quantity'); as e) { <mat-error>{{ e }}</mat-error> }
+                    </mat-form-field>
+                  }
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="lines__price">
                     <mat-label>Prix unitaire</mat-label>
                     <input matInput type="number" min="0" step="1" formControlName="unitPrice" />
                     @if (lineError(i, 'unitPrice'); as e) { <mat-error>{{ e }}</mat-error> }
                   </mat-form-field>
-                  <div class="right lines__total">{{ lineTotal(i) | number: '1.0-2' }}</div>
-                  <button mat-icon-button type="button" color="warn" (click)="removeLine(i)" matTooltip="Retirer la ligne"
+                  <div class="right lines__total">
+                    <span class="lines__label">Total</span>
+                    <strong>{{ lineTotal(i) | number: '1.0-2' }}</strong>
+                  </div>
+                  <button mat-icon-button type="button" color="warn" class="lines__remove" (click)="removeLine(i)" matTooltip="Retirer la ligne"
                           [attr.aria-label]="'Retirer ' + line.controls.productName.value">
                     <mat-icon>delete</mat-icon>
                   </button>
@@ -129,7 +148,14 @@
                 <span>Montant total estimé</span>
                 <strong>{{ estimatedTotal() | number: '1.0-2' }} FCFA</strong>
               </div>
-              <p class="hint">Le total définitif est recalculé par le serveur (quantité × prix unitaire) à l’enregistrement.</p>
+              @if (missingBeneficiaries()) {
+                <div class="error" role="alert">Renseignez le nombre de bénéficiaires : des lignes sont chiffrées par bénéficiaire.</div>
+              }
+              <p class="hint">
+                Quantité par bénéficiaire renseignée : quantité totale = quantité par bénéficiaire × nombre de bénéficiaires. C’est cette
+                quantité totale qui est chiffrée, puis sortie du stock quand la facture (vente) est validée. Le total
+                définitif est recalculé par le serveur à l’enregistrement.
+              </p>
             </div>
           }
         </section>
