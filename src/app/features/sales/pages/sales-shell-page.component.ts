@@ -3,6 +3,7 @@ import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,7 +15,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, filter, map, startWith, switchMap, take, takeUntil } from 'rxjs';
 import { QuotesApiService } from '../../../core/services/quotes-api.service';
@@ -24,7 +25,16 @@ import { PaymentMethod } from '../../../core/models/sale.model';
 import { AuthService } from '../../../auth/services/auth.service';
 import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { SalesFacade } from '../data/sales.facade';
-import { CartRow, matchingCustomers, paymentMethodLabels, saleTypeLabels } from '../data/sales-vm.model';
+import {
+  CartRow,
+  CashTender,
+  SalesVm,
+  cashTender,
+  matchingCustomers,
+  paymentMethodLabels,
+  quickCashAmounts,
+  saleTypeLabels
+} from '../data/sales-vm.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
@@ -38,6 +48,7 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
     AsyncPipe,
     ReactiveFormsModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
@@ -50,7 +61,6 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
     MatDividerModule,
     MatProgressBarModule,
     MatSidenavModule,
-    MatSnackBarModule,
     InvoiceDrawerComponent
   ],
   templateUrl: './sales-shell-page.component.html',
@@ -78,6 +88,16 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   readonly selectedProductId = new FormControl<string | null>(null);
 
   readonly customerId = new FormControl<string | null>(null);
+
+  /** Espèces remises par le client (calcul de la monnaie à l'écran ; jamais envoyé au serveur). */
+  readonly received = new FormControl<number | null>(null, [Validators.min(0)]);
+
+  /** Moyens de paiement proposés à l'encaissement. */
+  readonly paymentOptions: { value: PaymentMethod; label: string; icon: string }[] = [
+    { value: 'CASH', label: 'Espèces', icon: 'payments' },
+    { value: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone_android' },
+    { value: 'BANK_TRANSFER', label: 'Virement', icon: 'account_balance' }
+  ];
   readonly paidAmount = new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0)] });
 
   /** Client absent de la base : mêmes règles que le serveur (nom obligatoire, téléphone libre). */
@@ -223,6 +243,31 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   clear(): void {
     this.facade.clearCart();
+    this.received.setValue(null);
+  }
+
+  /** Montant à encaisser maintenant : le total, ou le montant payé en paiement partiel. */
+  amountDue(vm: SalesVm): number {
+    return vm.form.partialPayment ? Math.max(0, Number(vm.form.paidAmount) || 0) : vm.totals.total;
+  }
+
+  /** Monnaie à rendre ou somme manquante (espèces seulement, dès qu'un montant reçu est saisi). */
+  tender(vm: SalesVm): CashTender | null {
+    if (vm.form.paymentMethod !== 'CASH' || vm.cart.length === 0) return null;
+    return cashTender(this.received.value, this.amountDue(vm));
+  }
+
+  quickAmounts(vm: SalesVm): number[] {
+    return vm.form.paymentMethod === 'CASH' ? quickCashAmounts(this.amountDue(vm)) : [];
+  }
+
+  /** Montant au format français (espace des milliers), sans décimale : 7 300. */
+  fcfa(value: number | null | undefined): string {
+    return Math.round(Number(value) || 0).toLocaleString('fr-FR');
+  }
+
+  setReceived(amount: number): void {
+    this.received.setValue(amount);
   }
 
   /** Aperçu du reste dû en paiement partiel (le backend calcule la part à crédit). */
@@ -275,11 +320,40 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    // Espèces : le montant reçu doit couvrir le montant à payer (sinon : paiement partiel / à crédit).
+    const tender = this.tender(this.vmSnapshot as SalesVm);
+    if (tender && tender.missing > 0) {
+      this.snackbar.open(
+        `Montant reçu insuffisant : il manque ${tender.missing.toLocaleString('fr-FR')} FCFA. ` +
+          'Complétez le montant ou cochez « Paiement partiel / à crédit ».',
+        'OK',
+        { duration: 5000 }
+      );
+      return;
+    }
+    const received = tender ? tender.received : null;
+
     this.facade
-      .createSale()
+      .createSale(received)
       .pipe(take(1))
       .subscribe({
-        next: (sale) => this.snackbar.open(`Vente ${sale.number ?? ''} enregistrée`, 'OK', { duration: 2500 }),
+        next: (sale) => {
+          this.received.setValue(null);
+          // Monnaie calculée sur le montant réellement encaissé par le serveur.
+          // Monnaie conservée et calculée par le serveur (sur le montant réellement encaissé).
+          const change =
+            sale.changeGiven != null
+              ? Number(sale.changeGiven)
+              : received !== null
+                ? Math.max(0, received - Number(sale.paidAmount ?? 0))
+                : null;
+          this.snackbar.open(
+            `Vente ${sale.number ?? ''} enregistrée` +
+              (change !== null ? ` · Monnaie à rendre : ${change.toLocaleString('fr-FR')} FCFA` : ''),
+            'OK',
+            { duration: change ? 8000 : 2500 }
+          );
+        },
         error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
       });
   }

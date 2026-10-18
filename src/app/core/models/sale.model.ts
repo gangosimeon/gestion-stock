@@ -40,4 +40,8 @@ export interface Sale {
   discountTotal?: number;
   /** Part vendue à crédit (dette du client), calculée par le backend. */
   creditAmount?: number;
+  /** Espèces remises par le client (vente en espèces, si saisi à la caisse). */
+  cashReceived?: number | null;
+  /** Monnaie rendue = montant reçu − montant payé (calculée par le serveur). */
+  changeGiven?: number | null;
 }

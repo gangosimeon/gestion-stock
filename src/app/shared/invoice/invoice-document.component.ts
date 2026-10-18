@@ -112,6 +112,9 @@ export class InvoiceDocumentComponent {
     () => 'gsi-lines--head-' + (this.appearance().tableHeaderAlignment || 'CENTER').toLowerCase()
   );
 
+  /** Montant reçu et monnaie rendue (configuration ; affichés si la configuration est antérieure). */
+  readonly showCashTender = computed(() => this.appearance().showCashTender !== false);
+
   readonly showSkuColumn = computed(() => this.appearance().showSku && this.data().lines.some((l) => !!l.sku));
 
   readonly footerBlocks = computed<FooterBlock[]>(() => {

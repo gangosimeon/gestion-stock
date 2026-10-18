@@ -162,7 +162,8 @@ export class InvoiceSettingsPageComponent implements OnInit {
       pageFooterText: ['', Validators.maxLength(200)],
       showPageFooterText: true,
       tableHeaderAlignment: this.fb.control<InvoiceSettings['appearance']['tableHeaderAlignment']>('CENTER'),
-      fontFamily: this.fb.control<InvoiceSettings['appearance']['fontFamily']>('MODEL')
+      fontFamily: this.fb.control<InvoiceSettings['appearance']['fontFamily']>('MODEL'),
+      showCashTender: true
     })
   });
 

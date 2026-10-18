@@ -173,6 +173,10 @@
     @if ((d.creditAmount ?? 0) > 0) {
       <div class="gsi-totals__row"><span>Reste à payer (compte client)</span><span>{{ money(d.creditAmount) }}</span></div>
     }
+    @if (showCashTender() && d.cashReceived != null) {
+      <div class="gsi-totals__row"><span>Montant reçu</span><span>{{ money(d.cashReceived) }}</span></div>
+      <div class="gsi-totals__row"><span>Monnaie rendue</span><span>{{ money(d.changeGiven) }}</span></div>
+    }
   </section>
 
   @if (a.showAmountInWords) {

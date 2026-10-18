@@ -285,8 +285,11 @@ export class SalesFacade {
   /**
    * Enregistre la vente. Aucun prix ni coût envoyé ; paiement de la totalité : `paidAmount`
    * absent (le backend encaisse son propre total) ; paiement partiel : montant saisi.
+   *
+   * @param cashReceived espèces remises par le client (vérification) : le serveur conserve ce
+   *                     montant et calcule la monnaie rendue
    */
-  createSale(): Observable<Sale> {
+  createSale(cashReceived: number | null = null): Observable<Sale> {
     const form = this.formSubject.value;
     const cart = this.cartSubject.value;
 
@@ -301,6 +304,7 @@ export class SalesFacade {
         : undefined,
       paymentMethod: form.paymentMethod,
       paidAmount: form.partialPayment ? form.paidAmount : undefined,
+      cashReceived: cashReceived ?? undefined,
       items: toSaleItems(cart)
     };
 

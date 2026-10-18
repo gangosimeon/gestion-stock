@@ -104,6 +104,11 @@
               <td mat-cell *matCellDef="let v" class="right">
                 {{ v.paidAmount | number: '1.0-0' }}
                 <div class="sub">{{ paymentLabel(v.paymentMethod) }}</div>
+                @if (v.cashReceived != null) {
+                  <div class="sub" title="Montant reçu du client et monnaie rendue">
+                    Reçu {{ v.cashReceived | number: '1.0-0' }} · Rendu {{ v.changeGiven | number: '1.0-0' }}
+                  </div>
+                }
               </td>
             </ng-container>
 

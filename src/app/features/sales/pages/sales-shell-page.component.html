@@ -13,12 +13,6 @@
         <mat-icon>delete</mat-icon>
         Vider
       </button>
-      @if ((vm$ | async)?.canSell) {
-        <button mat-flat-button color="primary" type="button" (click)="checkout()">
-          <mat-icon>shopping_cart_checkout</mat-icon>
-          Encaisser
-        </button>
-      }
     </header>
 
     @if (vm$ | async; as vm) {
@@ -57,195 +51,264 @@
         </div>
       }
 
-      <div class="content">
-        <mat-card class="panel">
-          <div class="panel__title">Écran vente</div>
-
-          <div class="grid">
-            <mat-form-field appearance="outline" class="span2">
-              <mat-label>Ajouter un produit</mat-label>
-              <input
-                matInput
-                [formControl]="productSearch"
-                [matAutocomplete]="auto"
-                placeholder="SKU ou nom..."
-              />
-              <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectProduct($event.option.value)">
-                @for (p of filteredProducts$ | async; track p.id) {
-                  <mat-option [value]="p.id">
-                    <div class="option">
-                      <div class="name">{{ p.sku }} — {{ p.name }}</div>
-                      <div class="meta">Stock: {{ p.stockQuantity }}</div>
-                    </div>
-                  </mat-option>
-                }
-              </mat-autocomplete>
-            </mat-form-field>
-
-            <div class="customer">
-              @if (!vm.form.newCustomer) {
-                <div class="customer__row">
-                  <mat-form-field appearance="outline" class="customer__select">
-                    <mat-label>Client</mat-label>
-                    <mat-select [formControl]="customerId">
-                      <app-select-search />
-                      <mat-option [value]="null">Comptoir</mat-option>
-                      @for (c of vm.customers; track c.id) {
-                        <mat-option [value]="c.id">{{ c.name }}@if (c.phone) { · {{ c.phone }} }</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                  @if (vm.canCreateCustomer) {
-                    <button mat-stroked-button type="button" class="customer__add" (click)="startNewCustomer()">
-                      <mat-icon>person_add</mat-icon>
-                      Nouveau client
-                    </button>
-                  }
-                </div>
-              } @else {
-                <div class="customer__row" [formGroup]="newCustomerForm">
-                  <mat-form-field appearance="outline" class="customer__name">
-                    <mat-label>Nom du nouveau client</mat-label>
-                    <input matInput formControlName="name" autocomplete="off" />
-                    @if (newCustomerForm.controls.name.hasError('required')) {
-                      <mat-error>Nom obligatoire</mat-error>
-                    }
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="customer__phone">
-                    <mat-label>Téléphone</mat-label>
-                    <input matInput formControlName="phone" inputmode="tel" autocomplete="off" />
-                    @if (newCustomerForm.controls.phone.hasError('pattern')) {
-                      <mat-error>Chiffres, espaces, + ( ) . - uniquement</mat-error>
-                    }
-                  </mat-form-field>
-                  <button mat-icon-button type="button" (click)="cancelNewCustomer()"
-                          aria-label="Revenir à la liste des clients">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-
-                @let matches = matchingCustomers(vm.customers, vm.form.newCustomer);
-                @if (matches.length > 0) {
-                  <div class="customer__matches">
-                    <span class="customer__hint">Déjà enregistré ? Choisissez-le :</span>
-                    @for (c of matches; track c.id) {
-                      <button mat-stroked-button type="button" (click)="chooseExisting(c.id)">
-                        <mat-icon>person</mat-icon>
-                        {{ c.name }}@if (c.phone) { · {{ c.phone }} }
-                      </button>
-                    }
-                  </div>
-                } @else {
-                  <div class="customer__hint">Le client sera enregistré avec la vente.</div>
-                }
-              }
-            </div>
-
-            <div class="type">
-              <div class="label">Type vente</div>
-              <mat-radio-group [value]="vm.form.type" (change)="onTypeChange($event.value)">
-                <mat-radio-button value="RETAIL">Détail</mat-radio-button>
-                <mat-radio-button value="WHOLESALE">Gros</mat-radio-button>
-              </mat-radio-group>
-            </div>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Paiement</mat-label>
-              <mat-select [value]="vm.form.paymentMethod" (valueChange)="onPaymentChange($event)">
-                <app-select-search />
-                <mat-option value="CASH">Cash</mat-option>
-                <mat-option value="MOBILE_MONEY">Mobile Money</mat-option>
-                <mat-option value="BANK_TRANSFER">Virement</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-checkbox [checked]="vm.form.partialPayment" (change)="onPartialChange($event.checked)">
-              Paiement partiel / à crédit (client obligatoire)
-            </mat-checkbox>
-
-            @if (vm.form.partialPayment) {
-              <mat-form-field appearance="outline">
-                <mat-label>Montant payé maintenant</mat-label>
-                <input matInput type="number" [formControl]="paidAmount" />
-                <mat-hint>Le reste est porté au compte du client (plafond contrôlé par le serveur).</mat-hint>
-              </mat-form-field>
-            }
+      <div class="content pos">
+        <!-- Panier -->
+        <section class="pos__cart card">
+          <div class="card__head">
+            <mat-icon aria-hidden="true">shopping_cart</mat-icon>
+            <h2 class="card__title">Panier</h2>
+            <span class="card__count">{{ vm.totals.itemsCount }} article(s)</span>
           </div>
+
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>Ajouter un produit</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input
+              matInput
+              [formControl]="productSearch"
+              [matAutocomplete]="auto"
+              placeholder="Référence ou nom du produit"
+            />
+            <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectProduct($event.option.value)">
+              @for (p of filteredProducts$ | async; track p.id) {
+                <mat-option [value]="p.id">
+                  <div class="option">
+                    <div class="name">{{ p.sku }} — {{ p.name }}</div>
+                    <div class="meta">Stock : {{ p.stockQuantity }}</div>
+                  </div>
+                </mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
 
           @if (vm.errorMessage) {
             <div class="error" role="alert">{{ vm.errorMessage }}</div>
           }
 
-          <div class="data-table">
-            <table mat-table [dataSource]="dataSource">
-              <ng-container matColumnDef="product">
-                <th mat-header-cell *matHeaderCellDef>Produit</th>
-                <td mat-cell *matCellDef="let r">
-                  <div class="productCell">
-                    <div class="name">{{ r.name }}</div>
-                    <div class="sku">{{ r.sku }} · Stock: {{ r.stockQuantity }}</div>
-                  </div>
-                </td>
-              </ng-container>
+          @if (vm.cart.length === 0) {
+            <div class="empty">
+              <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
+              <p>Le panier est vide : recherchez un produit pour commencer la vente.</p>
+            </div>
+          } @else {
+            <div class="data-table">
+              <table mat-table [dataSource]="dataSource">
+                <ng-container matColumnDef="product">
+                  <th mat-header-cell *matHeaderCellDef>Produit</th>
+                  <td mat-cell *matCellDef="let r">
+                    <div class="productCell">
+                      <div class="name">{{ r.name }}</div>
+                      <div class="sku">{{ r.sku }} · Stock : {{ r.stockQuantity }}</div>
+                    </div>
+                  </td>
+                </ng-container>
 
-              <ng-container matColumnDef="qty">
-                <th mat-header-cell *matHeaderCellDef>Qté</th>
-                <td mat-cell *matCellDef="let r" class="qty">
-                  <button mat-icon-button type="button" (click)="dec(r)" aria-label="-">
-                    <mat-icon>remove</mat-icon>
-                  </button>
-                  <input class="qtyInput" [value]="r.quantity" (change)="setQty(r, $any($event.target).value)" />
-                  <button mat-icon-button type="button" (click)="inc(r)" aria-label="+">
-                    <mat-icon>add</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
+                <ng-container matColumnDef="qty">
+                  <th mat-header-cell *matHeaderCellDef class="center">Quantité</th>
+                  <td mat-cell *matCellDef="let r">
+                    <div class="qty">
+                      <button mat-icon-button type="button" (click)="dec(r)" aria-label="Diminuer la quantité">
+                        <mat-icon>remove</mat-icon>
+                      </button>
+                      <input class="qtyInput" inputmode="numeric" [value]="r.quantity" (change)="setQty(r, $any($event.target).value)"
+                             [attr.aria-label]="'Quantité de ' + r.name" />
+                      <button mat-icon-button type="button" (click)="inc(r)" aria-label="Augmenter la quantité">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </ng-container>
 
-              <ng-container matColumnDef="unit">
-                <th mat-header-cell *matHeaderCellDef>PU</th>
-                <td mat-cell *matCellDef="let r" class="right">{{ r.unitPrice | number: '1.0-0' }}</td>
-              </ng-container>
+                <ng-container matColumnDef="unit">
+                  <th mat-header-cell *matHeaderCellDef class="right">Prix unitaire</th>
+                  <td mat-cell *matCellDef="let r" class="right">{{ fcfa(r.unitPrice) }}</td>
+                </ng-container>
 
-              <ng-container matColumnDef="total">
-                <th mat-header-cell *matHeaderCellDef>Total</th>
-                <td mat-cell *matCellDef="let r" class="right">{{ r.lineTotal | number: '1.0-0' }}</td>
-              </ng-container>
+                <ng-container matColumnDef="total">
+                  <th mat-header-cell *matHeaderCellDef class="right">Total</th>
+                  <td mat-cell *matCellDef="let r" class="right"><strong>{{ fcfa(r.lineTotal) }}</strong></td>
+                </ng-container>
 
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let r" class="right">
-                  <button mat-icon-button color="warn" type="button" (click)="remove(r)" aria-label="Supprimer">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let r" class="right">
+                    <button mat-icon-button color="warn" type="button" (click)="remove(r)" [attr.aria-label]="'Retirer ' + r.name">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-            </table>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              </table>
+            </div>
+          }
+        </section>
+
+        <!-- Encaissement -->
+        <aside class="pos__checkout card" aria-label="Encaissement">
+          <div class="card__head">
+            <mat-icon aria-hidden="true">point_of_sale</mat-icon>
+            <h2 class="card__title">Encaissement</h2>
           </div>
 
-          <mat-divider />
+          <div class="customer">
+            @if (!vm.form.newCustomer) {
+              <div class="customer__row">
+                <mat-form-field appearance="outline" class="customer__select" subscriptSizing="dynamic">
+                  <mat-label>Client</mat-label>
+                  <mat-select [formControl]="customerId">
+                    <app-select-search />
+                    <mat-option [value]="null">Comptoir</mat-option>
+                    @for (c of vm.customers; track c.id) {
+                      <mat-option [value]="c.id">{{ c.name }}@if (c.phone) { · {{ c.phone }} }</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                @if (vm.canCreateCustomer) {
+                  <button mat-stroked-button type="button" class="customer__add" (click)="startNewCustomer()">
+                    <mat-icon>person_add</mat-icon>
+                    Nouveau client
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="customer__row" [formGroup]="newCustomerForm">
+                <mat-form-field appearance="outline" class="customer__name">
+                  <mat-label>Nom du nouveau client</mat-label>
+                  <input matInput formControlName="name" autocomplete="off" />
+                  @if (newCustomerForm.controls.name.hasError('required')) {
+                    <mat-error>Nom obligatoire</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="customer__phone">
+                  <mat-label>Téléphone</mat-label>
+                  <input matInput formControlName="phone" inputmode="tel" autocomplete="off" />
+                  @if (newCustomerForm.controls.phone.hasError('pattern')) {
+                    <mat-error>Chiffres, espaces, + ( ) . - uniquement</mat-error>
+                  }
+                </mat-form-field>
+                <button mat-icon-button type="button" (click)="cancelNewCustomer()"
+                        aria-label="Revenir à la liste des clients">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
 
-          <div class="summary">
-            <div class="kpi">
-              <div class="label">Articles</div>
-              <div class="value">{{ vm.totals.itemsCount }}</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Total estimé</div>
-              <div class="value">{{ vm.totals.total | number: '1.0-0' }}</div>
-            </div>
+              @let matches = matchingCustomers(vm.customers, vm.form.newCustomer);
+              @if (matches.length > 0) {
+                <div class="customer__matches">
+                  <span class="customer__hint">Déjà enregistré ? Choisissez-le :</span>
+                  @for (c of matches; track c.id) {
+                    <button mat-stroked-button type="button" (click)="chooseExisting(c.id)">
+                      <mat-icon>person</mat-icon>
+                      {{ c.name }}@if (c.phone) { · {{ c.phone }} }
+                    </button>
+                  }
+                </div>
+              } @else {
+                <div class="customer__hint">Le client sera enregistré avec la vente.</div>
+              }
+            }
+          </div>
 
+          <div class="field">
+            <span class="field__label">Type de vente</span>
+            <mat-button-toggle-group hideSingleSelectionIndicator [value]="vm.form.type" (change)="onTypeChange($event.value)" aria-label="Type de vente" class="toggles">
+              <mat-button-toggle value="RETAIL">Détail</mat-button-toggle>
+              <mat-button-toggle value="WHOLESALE">Gros</mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+
+          <div class="field">
+            <span class="field__label">Moyen de paiement</span>
+            <mat-button-toggle-group hideSingleSelectionIndicator [value]="vm.form.paymentMethod" (change)="onPaymentChange($event.value)"
+                                     aria-label="Moyen de paiement" class="toggles toggles--pay">
+              @for (o of paymentOptions; track o.value) {
+                <mat-button-toggle [value]="o.value">
+                  <span class="pay-option"><mat-icon>{{ o.icon }}</mat-icon>{{ o.label }}</span>
+                </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
+
+          <mat-checkbox [checked]="vm.form.partialPayment" (change)="onPartialChange($event.checked)">
+            Paiement partiel / à crédit (client obligatoire)
+          </mat-checkbox>
+
+          @if (vm.form.partialPayment) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Montant payé maintenant</mat-label>
+              <input matInput type="number" min="0" [formControl]="paidAmount" />
+              <span matTextSuffix>FCFA</span>
+              <mat-hint>Le reste est porté au compte du client (plafond contrôlé par le serveur).</mat-hint>
+            </mat-form-field>
+          }
+
+          <!-- Total -->
+          <div class="total">
+            <div class="total__row">
+              <span>Total à payer</span>
+              <strong class="total__amount">{{ fcfa(vm.totals.total) }} <small>FCFA</small></strong>
+            </div>
             @if (vm.form.partialPayment) {
-              <div class="kpi">
-                <div class="label">Reste dû estimé</div>
-                <div class="value due">{{ dueAmount() | number: '1.0-0' }}</div>
+              <div class="total__row total__row--sub">
+                <span>Payé maintenant</span><span>{{ fcfa(amountDue(vm)) }} FCFA</span>
+              </div>
+              <div class="total__row total__row--sub total__row--due">
+                <span>Reste au compte du client</span><span>{{ fcfa(dueAmount()) }} FCFA</span>
               </div>
             }
-            <div class="hint">Prix, remises et total définitifs calculés par le serveur à l'enregistrement.</div>
           </div>
-        </mat-card>
+
+          <!-- Espèces : montant reçu et monnaie à rendre -->
+          @if (vm.form.paymentMethod === 'CASH' && vm.cart.length > 0) {
+            <div class="cash">
+              <mat-form-field appearance="outline" class="cash__input" subscriptSizing="dynamic">
+                <mat-label>Montant reçu du client</mat-label>
+                <mat-icon matPrefix>payments</mat-icon>
+                <input matInput type="number" min="0" inputmode="numeric" [formControl]="received" placeholder="0" />
+                <span matTextSuffix>FCFA</span>
+                @if (received.value !== null) {
+                  <button mat-icon-button matSuffix type="button" (click)="received.setValue(null)" aria-label="Effacer le montant reçu">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </mat-form-field>
+
+              <div class="cash__quick" role="group" aria-label="Montants rapides">
+                @for (amount of quickAmounts(vm); track amount; let first = $first) {
+                  <button mat-stroked-button type="button" (click)="setReceived(amount)"
+                          [class.is-selected]="received.value === amount">
+                    {{ first ? 'Compte juste' : fcfa(amount) }}
+                  </button>
+                }
+              </div>
+
+              @if (tender(vm); as t) {
+                @if (t.missing > 0) {
+                  <div class="change change--missing" role="status">
+                    <span class="change__label"><mat-icon>error</mat-icon>Montant insuffisant</span>
+                    <strong class="change__amount">− {{ fcfa(t.missing) }} <small>FCFA</small></strong>
+                  </div>
+                } @else {
+                  <div class="change" role="status" aria-live="polite">
+                    <span class="change__label"><mat-icon>savings</mat-icon>Monnaie à rendre</span>
+                    <strong class="change__amount">{{ fcfa(t.change) }} <small>FCFA</small></strong>
+                  </div>
+                }
+              }
+            </div>
+          }
+
+          @if (vm.canSell) {
+            <button mat-flat-button color="primary" type="button" class="checkout" (click)="checkout()"
+                    [disabled]="vm.isLoading || vm.cart.length === 0 || (tender(vm)?.missing ?? 0) > 0">
+              <mat-icon>shopping_cart_checkout</mat-icon>
+              @if (amountDue(vm) > 0) { Encaisser {{ fcfa(amountDue(vm)) }} FCFA } @else { Enregistrer la vente }
+            </button>
+          }
+          <p class="hint">Prix, remises et total définitifs calculés par le serveur à l’enregistrement.</p>
+        </aside>
       </div>
     }
   </mat-drawer-content>

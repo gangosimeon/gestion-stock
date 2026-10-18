@@ -91,6 +91,8 @@ export interface InvoiceAppearance {
   tableHeaderAlignment: TableHeaderAlignment;
   /** Police de tout le document (écran, impression, PDF). */
   fontFamily: InvoiceFont;
+  /** Montant reçu du client et monnaie rendue sur la facture (ventes en espèces). */
+  showCashTender: boolean;
 }
 
 export interface InvoiceSettings {
@@ -188,7 +190,8 @@ export function defaultInvoiceSettings(): InvoiceSettings {
       pageFooterText: '',
       showPageFooterText: true,
       tableHeaderAlignment: 'CENTER',
-      fontFamily: 'MODEL'
+      fontFamily: 'MODEL',
+      showCashTender: true
     }
   };
 }

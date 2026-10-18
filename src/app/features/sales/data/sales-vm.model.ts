@@ -115,3 +115,44 @@ export function matchingCustomers(customers: readonly Customer[], draft: NewCust
     })
     .slice(0, 5);
 }
+
+// --- Encaissement en espèces : montant reçu et monnaie à rendre -------------------------------
+
+/**
+ * Remise d'espèces : monnaie à rendre (`change` ≥ 0) ou somme manquante (`missing` > 0).
+ * Calcul d'écran seulement : le serveur n'enregistre que le montant payé (jamais plus que le total).
+ */
+export interface CashTender {
+  received: number;
+  due: number;
+  change: number;
+  missing: number;
+}
+
+export function cashTender(received: number | null | undefined, due: number): CashTender | null {
+  const amount = Number(received);
+  if (received === null || received === undefined || !Number.isFinite(amount) || amount < 0) return null;
+  const owed = Math.max(0, Number(due) || 0);
+  return {
+    received: amount,
+    due: owed,
+    change: Math.max(0, amount - owed),
+    missing: Math.max(0, owed - amount)
+  };
+}
+
+/**
+ * Montants proposés en un clic pour un montant dû : le compte juste, puis les montants ronds
+ * supérieurs les plus courants (arrondis au millier, aux 5 000, 10 000…) ; 5 au plus, croissants.
+ */
+export function quickCashAmounts(due: number): number[] {
+  const owed = Math.ceil(Math.max(0, Number(due) || 0));
+  if (owed === 0) return [];
+  const steps = [500, 1000, 2000, 5000, 10000, 20000, 50000];
+  const amounts = new Set<number>([owed]);
+  for (const step of steps) {
+    const rounded = Math.ceil(owed / step) * step;
+    if (rounded > owed) amounts.add(rounded);
+  }
+  return [...amounts].sort((a, b) => a - b).slice(0, 5);
+}

@@ -242,4 +242,19 @@ describe('InvoiceDocumentComponent (rendu des factures)', () => {
     ).root;
     expect(hidden.querySelector('.gsi-signature')).toBeNull();
   });
+
+  it('vente en espèces : montant reçu et monnaie rendue sur la facture, selon la configuration', () => {
+    const withTender = saleToInvoiceData({ ...SALE, cashReceived: 20000, changeGiven: 2000 }, { paymentMethodLabel: 'Espèces' });
+    const shown = render(configured(), withTender);
+    expect(shown.text()).toContain('Montant reçu20 000 FCFA');
+    expect(shown.text()).toContain('Monnaie rendue2 000 FCFA');
+    TestBed.resetTestingModule();
+
+    const hidden = render(configured((s) => (s.appearance.showCashTender = false)), withTender);
+    expect(hidden.text()).not.toContain('Montant reçu');
+    TestBed.resetTestingModule();
+
+    // Montant non saisi à la caisse : rien n'est affiché.
+    expect(render(configured()).text()).not.toContain('Montant reçu');
+  });
 });

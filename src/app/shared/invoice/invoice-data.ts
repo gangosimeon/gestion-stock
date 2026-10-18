@@ -59,6 +59,9 @@ export interface InvoiceData {
   /** Montants réglés (vente) ; absents pour un devis. */
   paidAmount?: number | null;
   creditAmount?: number | null;
+  /** Espèces remises par le client et monnaie rendue (vente en espèces, si saisies). */
+  cashReceived?: number | null;
+  changeGiven?: number | null;
   cancelled?: { at?: string | null; reason?: string | null } | null;
   returns?: CustomerReturn[];
 }
@@ -96,6 +99,8 @@ export function saleToInvoiceData(
     total: sale.total,
     paidAmount: sale.paidAmount,
     creditAmount: Number(sale.creditAmount ?? 0),
+    cashReceived: sale.cashReceived ?? null,
+    changeGiven: sale.changeGiven ?? null,
     cancelled: sale.status === 'CANCELLED' ? { at: sale.cancelledAt, reason: sale.cancellationReason } : null,
     returns: options.returns ?? []
   };

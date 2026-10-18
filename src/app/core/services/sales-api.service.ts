@@ -39,6 +39,8 @@ export interface CreateSaleRequest {
   newCustomer?: { name: string; phone?: string };
   paymentMethod: PaymentMethod;
   paidAmount?: number;
+  /** Espèces remises par le client : le serveur calcule et conserve la monnaie rendue. */
+  cashReceived?: number;
   note?: string;
   items: CreateSaleItem[];
 }
