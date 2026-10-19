@@ -4,6 +4,7 @@ import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { StockMovement, StockMovementType } from '../models/stock-movement.model';
+import { StockTransfer, StockTransferDirection, StockTransferStatus } from '../models/stock-transfer.model';
 import { PageRequest, pageParams } from './page-params';
 import { PaginatedResult } from './products-api.service';
 
@@ -68,4 +69,43 @@ export class StockApiService {
       .post<StockMovement>(`${environment.apiUrl}/stock/movements`, payload)
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
+
+  /**
+   * Historique des transferts envoyés par le dépôt courant ou reçus par lui : recherche (numéro,
+   * produit, note), sens, statut, période (jours `AAAA-MM-JJ` inclus) et tri côté serveur.
+   */
+  findTransfersPage(page: PageRequest, filters: StockTransfersQuery = {}): Observable<PaginatedResult<StockTransfer>> {
+    const params = pageParams(page, {
+      direction: filters.direction,
+      status: filters.status,
+      from: filters.from,
+      to: filters.to,
+      allWarehouses: filters.allWarehouses ? true : null
+    });
+    return this.http
+      .get<PaginatedResult<StockTransfer>>(`${environment.apiUrl}/stock/transfers`, { params })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  getTransfer(id: string): Observable<StockTransfer> {
+    return this.http
+      .get<StockTransfer>(`${environment.apiUrl}/stock/transfers/${id}`)
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
+  /** Retour au dépôt d'origine, en totalité et une seule fois (stock:transfer, depuis l'un des deux dépôts). */
+  returnTransfer(id: string, reason?: string | null): Observable<StockTransfer> {
+    return this.http
+      .post<StockTransfer>(`${environment.apiUrl}/stock/transfers/${id}/return`, { reason: reason || null })
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+}
+
+export interface StockTransfersQuery {
+  direction?: StockTransferDirection | null;
+  status?: StockTransferStatus | null;
+  /** Jour `AAAA-MM-JJ` inclus. */
+  from?: string | null;
+  to?: string | null;
+  allWarehouses?: boolean;
 }

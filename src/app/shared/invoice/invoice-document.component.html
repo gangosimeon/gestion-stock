@@ -10,7 +10,7 @@
   [class.gsi--modern]="a.template === 'MODERN'"
   [class.gsi--compact]="a.template === 'COMPACT'"
   [style]="cssVars()"
-  [attr.aria-label]="'Facture ' + d.number"
+  [attr.aria-label]="(d.title ?? 'Facture') + ' ' + d.number"
 >
   @if (preview()) {
     <div class="gsi-sample" aria-hidden="true">Aperçu — données d'exemple</div>
@@ -18,7 +18,7 @@
 
   @if (d.cancelled) {
     <div class="gsi-cancelled" role="note">
-      <strong>VENTE ANNULÉE</strong>
+      <strong>{{ d.cancelled.label ?? 'VENTE ANNULÉE' }}</strong>
       @if (d.cancelled.at) { le {{ date(d.cancelled.at) }} à {{ time(d.cancelled.at) }} }
       @if (d.cancelled.reason) { — {{ d.cancelled.reason }} }
     </div>
@@ -92,17 +92,27 @@
   </section>
 
   <section class="gsi-parties">
-    <div class="gsi-party">
-      <div class="gsi-party__title">Client / Organisme commanditaire</div>
-      <div class="gsi-party__name">{{ d.customerName }}</div>
-      @if (d.customerPhone) { <div>Téléphone : {{ d.customerPhone }}</div> }
-    </div>
-    @if (d.paymentMethodLabel) {
-      <div class="gsi-party gsi-party--right">
-        <div class="gsi-party__title">Règlement</div>
-        @if (d.saleTypeLabel) { <div>{{ d.saleTypeLabel }}</div> }
-        <div>{{ d.paymentMethodLabel }}</div>
+    @if (d.parties?.length) {
+      @for (party of d.parties; track $index; let last = $last) {
+        <div class="gsi-party" [class.gsi-party--right]="last && !$first">
+          <div class="gsi-party__title">{{ party.title }}</div>
+          <div class="gsi-party__name">{{ party.name }}</div>
+          @for (line of party.lines ?? []; track $index) { <div>{{ line }}</div> }
+        </div>
+      }
+    } @else {
+      <div class="gsi-party">
+        <div class="gsi-party__title">Client / Organisme commanditaire</div>
+        <div class="gsi-party__name">{{ d.customerName }}</div>
+        @if (d.customerPhone) { <div>Téléphone : {{ d.customerPhone }}</div> }
       </div>
+      @if (d.paymentMethodLabel) {
+        <div class="gsi-party gsi-party--right">
+          <div class="gsi-party__title">Règlement</div>
+          @if (d.saleTypeLabel) { <div>{{ d.saleTypeLabel }}</div> }
+          <div>{{ d.paymentMethodLabel }}</div>
+        </div>
+      }
     }
   </section>
 
@@ -132,9 +142,11 @@
         } @else {
           <th class="gsi-right">Quantité</th>
         }
-        <th class="gsi-right">Prix unitaire</th>
-        @if (showDiscountColumn()) { <th class="gsi-right">Remise</th> }
-        <th class="gsi-right">Total ({{ a.currencyLabel }})</th>
+        @if (priced()) {
+          <th class="gsi-right">Prix unitaire</th>
+          @if (showDiscountColumn()) { <th class="gsi-right">Remise</th> }
+          <th class="gsi-right">Total ({{ a.currencyLabel }})</th>
+        }
       </tr>
     </thead>
     <tbody>
@@ -147,17 +159,24 @@
             <td class="gsi-right">{{ line.quantityPerBeneficiary ?? '' }}</td>
           }
           <td class="gsi-right">{{ line.quantity }}</td>
-          <td class="gsi-right">{{ amount(line.unitPrice) }}</td>
-          @if (showDiscountColumn()) {
-            <td class="gsi-right">{{ line.discountPercent ? line.discountPercent + ' %' : '' }}</td>
+          @if (priced()) {
+            <td class="gsi-right">{{ amount(line.unitPrice) }}</td>
+            @if (showDiscountColumn()) {
+              <td class="gsi-right">{{ line.discountPercent ? line.discountPercent + ' %' : '' }}</td>
+            }
+            <td class="gsi-right">{{ amount(line.lineTotal) }}</td>
           }
-          <td class="gsi-right">{{ amount(line.lineTotal) }}</td>
         </tr>
       }
     </tbody>
   </table>
   </div>
 
+  @if (!priced()) {
+    <section class="gsi-totals">
+      <div class="gsi-totals__row gsi-totals__grand"><span>Quantité totale</span><span>{{ totalQuantity() }}</span></div>
+    </section>
+  } @else {
   <!-- Totaux : uniquement ceux de la vente (le modèle de vente n'a pas de taxe). -->
   <section class="gsi-totals">
     @if (d.discountTotal > 0 && d.subtotal != null) {
@@ -184,6 +203,7 @@
       <span class="gsi-label">{{ d.kind === 'quote' ? 'Arrêté le présent devis à la somme de' : 'Arrêtée la présente facture à la somme de' }} :</span>
       {{ words(d.total) }}
     </p>
+  }
   }
 
   @if ((d.sections ?? []).length > 0) {

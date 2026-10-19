@@ -3,6 +3,16 @@
     <header class="page-header page-header--bar">
       <h1 class="page-header__title">Stock</h1>
       <div class="page-header__spacer"></div>
+      <a mat-stroked-button [routerLink]="['/stock/transfers']">
+        <mat-icon>history</mat-icon>
+        Transferts
+      </a>
+      @if (canTransfer) {
+        <a mat-stroked-button color="primary" [routerLink]="['/stock/transfer']">
+          <mat-icon>swap_horiz</mat-icon>
+          Transférer
+        </a>
+      }
       @if ((vm$ | async)?.canAdjust) {
         <button mat-flat-button color="primary" type="button" (click)="openCreate()">
           <mat-icon>add</mat-icon>

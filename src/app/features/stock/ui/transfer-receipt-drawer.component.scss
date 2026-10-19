@@ -1,0 +1,93 @@
+// Même présentation que la facture d'une vente : feuille A4 de 794 px (voir .gsi), sans dépasser l'écran.
+$invoice-width: 794px;
+
+// Hauteur du tiroir : l'en-tête reste visible, seule la facture défile.
+:host {
+  display: block;
+  height: 100%;
+}
+
+.invoice {
+  width: fit-content;
+  max-width: 100vw;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.invoice__header {
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.invoice__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.invoice__meta {
+  font-size: 12px;
+  opacity: 0.8;
+  display: grid;
+  gap: 2px;
+}
+
+.invoice__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  mat-spinner {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+}
+
+.invoice__body {
+  padding: 16px;
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  background: var(--color-surface-muted);
+  flex: 1;
+  // Sans cela, un élément flex ne descend pas sous la hauteur de son contenu : pas de défilement.
+  min-height: 0;
+  align-content: start;
+}
+
+// Feuille blanche, même en thème sombre : la facture est un document à imprimer.
+.invoice__paper {
+  width: $invoice-width;
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+  overflow: hidden;
+}
+
+// Même largeur pendant le chargement : le tiroir ne change pas de taille à l'arrivée de la facture.
+.invoice__loading {
+  width: $invoice-width;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 600px) {
+  .invoice {
+    width: 100vw;
+  }
+
+  .invoice__body {
+    padding: 8px;
+  }
+}

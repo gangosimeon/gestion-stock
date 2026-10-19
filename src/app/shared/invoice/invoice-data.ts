@@ -19,6 +19,13 @@ export interface DocumentDetail {
   value: string;
 }
 
+/** Partie du document (titre, nom, lignes complémentaires renseignées). */
+export interface DocumentParty {
+  title: string;
+  name: string;
+  lines?: string[];
+}
+
 /** Section de texte libre (conditions, observations) : transmise seulement si renseignée. */
 export interface DocumentSection {
   title: string;
@@ -33,8 +40,13 @@ export interface DocumentSection {
 export interface InvoiceData {
   /** Titre du document : FACTURE par défaut, DEVIS pour un devis. */
   title?: string;
-  /** Formule du montant en lettres ; facture par défaut. */
-  kind?: 'invoice' | 'quote';
+  /**
+   * Formule du montant en lettres ; facture par défaut. Un bon de transfert (`transfer`) n'est
+   * pas chiffré : ni prix, ni totaux, ni conditions de vente.
+   */
+  kind?: 'invoice' | 'quote' | 'transfer';
+  /** Parties affichées à la place du client et du règlement (ex. dépôts d'origine et de destination). */
+  parties?: DocumentParty[];
   number: string;
   date: string;
   /** Date de fin de validité (devis). */
@@ -62,7 +74,8 @@ export interface InvoiceData {
   /** Espèces remises par le client et monnaie rendue (vente en espèces, si saisies). */
   cashReceived?: number | null;
   changeGiven?: number | null;
-  cancelled?: { at?: string | null; reason?: string | null } | null;
+  /** Bandeau d'annulation ; `label` remplace « VENTE ANNULÉE » (ex. transfert retourné). */
+  cancelled?: { at?: string | null; reason?: string | null; label?: string } | null;
   returns?: CustomerReturn[];
 }
 

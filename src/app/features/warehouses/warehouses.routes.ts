@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 
 import { WarehousesListPageComponent } from './pages/warehouses-list-page.component';
-import { WarehouseTransferPageComponent } from './pages/warehouse-transfer-page.component';
 
 export const WAREHOUSES_ROUTES: Routes = [
   {
@@ -10,7 +9,8 @@ export const WAREHOUSES_ROUTES: Routes = [
     component: WarehousesListPageComponent
   },
   {
+    // Ancienne adresse du transfert : il se fait désormais depuis l'écran Stock.
     path: 'transfer',
-    component: WarehouseTransferPageComponent
+    redirectTo: '/stock/transfer'
   }
 ];

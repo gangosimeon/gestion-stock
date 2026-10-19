@@ -117,7 +117,15 @@ export class InvoiceDocumentComponent {
 
   readonly showSkuColumn = computed(() => this.appearance().showSku && this.data().lines.some((l) => !!l.sku));
 
+  /** Document chiffré (facture, devis) ; un bon de transfert n'a ni prix ni totaux. */
+  readonly priced = computed(() => this.data().kind !== 'transfer');
+
+  /** Quantité totale (bon de transfert). */
+  readonly totalQuantity = computed(() => this.data().lines.reduce((sum, l) => sum + l.quantity, 0));
+
   readonly footerBlocks = computed<FooterBlock[]>(() => {
+    // Conditions de vente, de paiement, promotions : sans objet pour un bon de transfert.
+    if (!this.priced()) return [];
     const f = this.settings().footer;
     const blocks: FooterBlock[] = [];
     const add = (show: boolean, text: string, title: string | null, kind: FooterBlock['kind']) => {
@@ -134,7 +142,7 @@ export class InvoiceDocumentComponent {
 
   readonly thankYou = computed(() => {
     const f = this.settings().footer;
-    return f.showThankYou ? f.thankYouMessage : '';
+    return f.showThankYou && this.priced() ? f.thankYouMessage : '';
   });
 
   readonly signature = computed(() => {

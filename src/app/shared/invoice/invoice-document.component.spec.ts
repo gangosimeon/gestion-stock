@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { InvoiceSettings, defaultInvoiceSettings } from '../../core/models/invoice-settings.model';
 import { Sale } from '../../core/models/sale.model';
+import { StockTransfer } from '../../core/models/stock-transfer.model';
+import { transferToDocumentData } from './transfer-document';
 import { InvoiceData, saleToInvoiceData, sampleInvoiceData } from './invoice-data';
 import { InvoiceDocumentComponent } from './invoice-document.component';
 
@@ -256,5 +258,49 @@ describe('InvoiceDocumentComponent (rendu des factures)', () => {
 
     // Montant non saisi à la caisse : rien n'est affiché.
     expect(render(configured()).text()).not.toContain('Montant reçu');
+  });
+
+  it('bon de transfert : dépôts, produit et quantité, sans prix ni conditions de vente', () => {
+    const transfer: StockTransfer = {
+      id: 't1',
+      number: 'TRF-2026-000007',
+      fromWarehouseId: 'w1',
+      fromWarehouseName: 'Magasin centre',
+      toWarehouseId: 'w2',
+      toWarehouseName: 'Dépôt nord',
+      lines: [
+        { lineNumber: 1, productId: 'p1', productSku: 'CIM', productName: 'Ciment', quantity: 12 },
+        { lineNumber: 2, productId: 'p2', productSku: 'FER', productName: 'Fer à béton', quantity: 5 }
+      ],
+      totalQuantity: 17,
+      note: 'Réassort',
+      status: 'COMPLETED',
+      createdAt: '2026-10-15T10:30:00Z',
+      createdByUsername: 'marie.k'
+    };
+    const settings = configured((s) => {
+      s.footer.salesTerms = 'Marchandise vendue non reprise';
+      s.footer.showSalesTerms = true;
+    });
+    const { root, text } = render(settings, transferToDocumentData(transfer));
+    expect(text()).toContain('BON DE TRANSFERT');
+    expect(text()).toContain('TRF-2026-000007');
+    expect(text()).toContain('Dépôt d’origineMagasin centre');
+    expect(text()).toContain('Dépôt de destinationDépôt nord');
+    expect(text()).toContain('Fer à béton');
+    expect(text()).toContain('Quantité totale17');
+    expect(text()).toContain('Réassort');
+    expect(text()).not.toContain('Prix unitaire');
+    expect(text()).not.toContain('Arrêtée');
+    expect(text()).not.toContain('Marchandise vendue non reprise');
+    expect(root.querySelector('.gsi-cancelled')).toBeNull();
+    TestBed.resetTestingModule();
+
+    const returned = render(
+      settings,
+      transferToDocumentData({ ...transfer, status: 'RETURNED', returnedAt: '2026-10-16T08:00:00Z', returnReason: 'Erreur' })
+    );
+    expect(returned.text()).toContain('TRANSFERT RETOURNÉ AU DÉPÔT D’ORIGINE');
+    expect(returned.text()).toContain('Erreur');
   });
 });

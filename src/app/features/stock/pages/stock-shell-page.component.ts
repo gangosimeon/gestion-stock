@@ -15,6 +15,9 @@ import { MatTableModule } from '@angular/material/table';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { Subject, takeUntil } from 'rxjs';
 
+import { RouterLink } from '@angular/router';
+
+import { AuthService } from '../../../auth/services/auth.service';
 import { StockMovementType } from '../../../core/models/stock-movement.model';
 import { FilterResetComponent } from '../../../shared/table/filter-reset.component';
 import { ServerTable } from '../../../shared/table/server-table';
@@ -28,6 +31,7 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
   selector: 'app-stock-shell-page',
   standalone: true,
   imports: [
+    RouterLink,
     FilterResetComponent,
     SelectSearchComponent,
     MatSelectModule,
@@ -54,6 +58,9 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
 export class StockShellPageComponent implements AfterViewInit, OnDestroy {
   private readonly facade = inject(StockFacade);
   private readonly destroy$ = new Subject<void>();
+
+  /** Bouton « Transférer » : interface seulement, le backend exige stock:transfer. */
+  readonly canTransfer = inject(AuthService).hasPermission('stock:transfer');
 
   @ViewChild('drawer') drawer!: MatSidenav;
 

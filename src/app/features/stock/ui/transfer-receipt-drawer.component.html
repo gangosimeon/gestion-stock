@@ -1,0 +1,47 @@
+<div class="invoice">
+  <div class="invoice__header">
+    <div>
+      <div class="invoice__title">Bon de transfert</div>
+      <div class="invoice__meta">
+        <div><strong>N° :</strong> {{ transfer.number }}</div>
+      </div>
+    </div>
+
+    <div class="invoice__actions">
+      <button mat-stroked-button type="button" (click)="print()" [disabled]="!settings() || busy() !== null">
+        @if (busy() === 'print') { <mat-spinner diameter="16" /> } @else { <mat-icon>print</mat-icon> }
+        Imprimer
+      </button>
+      <button mat-stroked-button type="button" (click)="exportPdf()" [disabled]="!settings() || busy() !== null">
+        @if (busy() === 'pdf') { <mat-spinner diameter="16" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
+        Exporter PDF
+      </button>
+      <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <mat-divider />
+
+  <div class="invoice__body">
+    @if (settingsUnavailable()) {
+      <div class="error" role="alert">
+        Configuration de la facture indisponible : le reçu est présenté sans les informations de l'entreprise.
+      </div>
+    }
+
+    @if (settings(); as s) {
+      @if (data(); as d) {
+        <div class="invoice__paper">
+          <app-invoice-document [settings]="s" [data]="d" [logoUrl]="logoUrl()" />
+        </div>
+      }
+    } @else {
+      <div class="invoice__loading" aria-live="polite">
+        <mat-spinner diameter="28" />
+        Préparation du reçu…
+      </div>
+    }
+  </div>
+</div>

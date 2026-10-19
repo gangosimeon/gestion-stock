@@ -1,0 +1,181 @@
+<mat-drawer-container class="container" autosize>
+  <mat-drawer-content>
+    @if (table.state$ | async; as s) {
+      @if (s.loading) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+
+      <div class="page">
+        <div class="page-header">
+          <a mat-icon-button [routerLink]="['/stock']" aria-label="Retour au stock" matTooltip="Retour au stock">
+            <mat-icon>arrow_back</mat-icon>
+          </a>
+          <h1 class="page-header__title">Historique des transferts</h1>
+          <div class="page-header__spacer"></div>
+          @if (canTransfer) {
+            <a mat-flat-button color="primary" [routerLink]="['/stock/transfer']"><mat-icon>swap_horiz</mat-icon>Nouveau transfert</a>
+          }
+        </div>
+
+        @if (s.error) {
+          <div class="error" role="alert">{{ s.error }}</div>
+        }
+
+        <div class="data-table-toolbar" [formGroup]="table.filters">
+          <mat-form-field appearance="outline" class="search filter-bar__wide" subscriptSizing="dynamic">
+            <mat-label>Rechercher</mat-label>
+            <input matInput [formControl]="table.search" placeholder="N° de transfert, produit, note" />
+            @if (table.search.value) {
+              <button mat-icon-button matSuffix type="button" (click)="table.search.setValue('')" aria-label="Vider">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Sens</mat-label>
+            <mat-select formControlName="direction">
+              <mat-option [value]="null">Envoyés et reçus</mat-option>
+              @for (o of directionOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="status">
+              <mat-option [value]="null">Tous</mat-option>
+              @for (o of statusOptions; track o.value) {
+                <mat-option [value]="o.value">{{ o.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Du</mat-label>
+            <input matInput type="date" formControlName="from" appDatePicker #fromPicker="datePicker" />
+            <button mat-icon-button matSuffix type="button" (click)="fromPicker.open()" aria-label="Choisir dans le calendrier">
+              <mat-icon>calendar_month</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Au</mat-label>
+            <input matInput type="date" formControlName="to" appDatePicker #toPicker="datePicker" />
+            <button mat-icon-button matSuffix type="button" (click)="toPicker.open()" aria-label="Choisir dans le calendrier">
+              <mat-icon>calendar_month</mat-icon>
+            </button>
+          </mat-form-field>
+
+          @if (canSeeAllWarehouses) {
+            <mat-checkbox formControlName="allWarehouses">Tous les dépôts</mat-checkbox>
+          }
+
+          <app-filter-reset [table]="table" />
+        </div>
+
+        <div class="data-table">
+          <table mat-table [dataSource]="s.rows" matSort matSortActive="createdAt" matSortDirection="desc" (matSortChange)="table.onSort($event)">
+            <ng-container matColumnDef="createdAt">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+              <td mat-cell *matCellDef="let t">{{ t.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="number">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>N°</th>
+              <td mat-cell *matCellDef="let t">{{ t.number }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="direction">
+              <th mat-header-cell *matHeaderCellDef>Sens</th>
+              <td mat-cell *matCellDef="let t">
+                <span class="badge" [class.badge--warning]="direction(t) === 'SENT'" [class.badge--info]="direction(t) === 'RECEIVED'"
+                      [class.badge--neutral]="!direction(t)">
+                  {{ directionLabel(t) }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="route">
+              <th mat-header-cell *matHeaderCellDef>Origine → Destination</th>
+              <td mat-cell *matCellDef="let t">
+                <span class="route">{{ t.fromWarehouseName }} <mat-icon inline>arrow_forward</mat-icon> {{ t.toWarehouseName }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="product">
+              <th mat-header-cell *matHeaderCellDef>Produits</th>
+              <td mat-cell *matCellDef="let t" [matTooltip]="linesTooltip(t)">
+                <div>{{ productsSummary(t) }}</div>
+                @if (t.lines.length > 1) {
+                  <div class="sub">{{ t.lines.length }} produits</div>
+                } @else {
+                  <div class="sub">{{ t.lines[0]?.productSku }}</div>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="quantity">
+              <th mat-header-cell *matHeaderCellDef class="right">Quantité</th>
+              <td mat-cell *matCellDef="let t" class="right"><strong>{{ t.totalQuantity }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Statut</th>
+              <td mat-cell *matCellDef="let t">
+                <span class="badge" [class.badge--success]="t.status === 'COMPLETED'" [class.badge--danger]="t.status === 'RETURNED'"
+                      [matTooltip]="t.status === 'RETURNED' ? (t.returnReason ?? '') : ''">
+                  {{ statusLabel(t) }}
+                </span>
+                @if (t.returnedAt) {
+                  <div class="sub">le {{ t.returnedAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="user">
+              <th mat-header-cell *matHeaderCellDef>Utilisateur</th>
+              <td mat-cell *matCellDef="let t">{{ t.createdByUsername ?? '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="right">Actions</th>
+              <td mat-cell *matCellDef="let t" class="right actions">
+                <button mat-icon-button type="button" (click)="openReceipt(t)" matTooltip="Voir le reçu" aria-label="Voir le reçu">
+                  <mat-icon>receipt_long</mat-icon>
+                </button>
+                @if (canReturn(t)) {
+                  <button mat-icon-button color="warn" type="button" (click)="returnTransfer(t)"
+                          matTooltip="Retourner le stock au dépôt d'origine" aria-label="Retourner le stock au dépôt d'origine">
+                    <mat-icon>undo</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.returned]="row.status === 'RETURNED'"></tr>
+          </table>
+          @if (!s.loading && s.rows.length === 0) {
+            <div class="data-table-empty">Aucun transfert.</div>
+          }
+          <mat-paginator
+            [length]="s.total"
+            [pageIndex]="table.pageIndex"
+            [pageSize]="table.pageSize"
+            [pageSizeOptions]="table.pageSizeOptions"
+            (page)="table.onPage($event)"
+            showFirstLastButtons
+          />
+        </div>
+      </div>
+    }
+  </mat-drawer-content>
+
+  <mat-drawer #receiptDrawer class="invoice-drawer" position="end" mode="over">
+    @if (selected(); as transfer) {
+      <app-transfer-receipt-drawer [transfer]="transfer" (close)="closeReceipt()" />
+    }
+  </mat-drawer>
+</mat-drawer-container>

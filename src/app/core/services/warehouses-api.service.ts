@@ -4,6 +4,7 @@ import { Observable, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { StockMovement } from '../models/stock-movement.model';
+import { StockTransfer } from '../models/stock-transfer.model';
 import { Warehouse } from '../models/warehouse.model';
 import { PageRequest, pageParams } from './page-params';
 import { ActiveStatusFilter, PaginatedResult } from './products-api.service';
@@ -21,21 +22,27 @@ function toApiError(err: unknown): Error {
   return new Error('Une erreur est survenue.');
 }
 
-/** Transfert entre deux dépôts : sortie et entrée liées, dans une seule transaction backend. */
+/**
+ * Transfert d'un ou plusieurs produits entre deux dépôts : sorties et entrées liées, dans une
+ * seule transaction backend (un produit insuffisant annule tout). Un produit au plus une fois.
+ */
 export interface TransferStockRequest {
   fromWarehouseId: string;
   toWarehouseId: string;
-  productId: string;
-  quantity: number;
+  items: { productId: string; quantity: number }[];
   note?: string;
 }
 
 export interface TransferStockResponse {
   ok: boolean;
   transferId: string;
-  /** Mouvement de sortie (dépôt source) et d'entrée (dépôt destination). */
+  /** Sortie et entrée de la première ligne (contrat d'origine). */
   out: StockMovement;
   in: StockMovement;
+  /** Tous les mouvements, par ligne : sortie puis entrée. */
+  movements: StockMovement[];
+  /** Pièce enregistrée (numéro TRF-…) : contenu du reçu. */
+  transfer: StockTransfer;
 }
 
 /** POST /api/warehouses : seul le nom est obligatoire (code généré par le backend s'il manque). */
