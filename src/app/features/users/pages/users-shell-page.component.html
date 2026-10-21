@@ -100,6 +100,10 @@
                 <button mat-icon-button type="button" (click)="openEdit(u)" [disabled]="!vm.canManage">
                   <mat-icon>edit</mat-icon>
                 </button>
+                <button mat-icon-button type="button" (click)="sendAccessLink(u)" [disabled]="!vm.canManage"
+                        aria-label="Lien de définition du mot de passe" title="Lien de définition du mot de passe">
+                  <mat-icon>key</mat-icon>
+                </button>
                 <button mat-icon-button color="warn" type="button" (click)="confirmDelete(u)" [disabled]="!vm.canManage">
                   <mat-icon>delete</mat-icon>
                 </button>

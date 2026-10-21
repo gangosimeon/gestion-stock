@@ -18,12 +18,19 @@ import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
 import { AuthResponse } from '../models/auth-response.model';
 import { WarehouseContextService } from '../../core/services/warehouse-context.service';
+import { BrandingService } from '../../core/branding/branding.service';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const USER_KEY = 'current_user';
 const EXPIRY_KEY = 'token_expiry';
 const REMEMBER_KEY = 'remember_me';
+const COMPANY_KEY = 'company_code';
+/** Dernier code entreprise saisi (pré-remplissage de la connexion ; ce n'est pas un secret). */
+const LAST_COMPANY_KEY = 'last_company';
+
+/** Code d'erreur du backend : entreprise suspendue. */
+export const COMPANY_SUSPENDED = 'COMPANY_SUSPENDED';
 
 /**
  * Session utilisateur adossée au backend Spring Boot (/api/auth).
@@ -39,6 +46,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly warehouseCtx = inject(WarehouseContextService);
+  private readonly branding = inject(BrandingService);
 
   private readonly currentUserSubject = new BehaviorSubject<User | null>(this.loadUserFromStorage());
   readonly currentUser$ = this.currentUserSubject.asObservable();
@@ -59,7 +67,7 @@ export class AuthService {
     }
   }
 
-  private saveSession(res: AuthResponse, remember: boolean): void {
+  private saveSession(res: AuthResponse, remember: boolean, companyHint?: string | null): void {
     // Aucune trace d'une session précédente dans l'autre stockage : les getters lisent
     // localStorage en premier.
     this.clearSession();
@@ -69,6 +77,11 @@ export class AuthService {
     store.setItem(REFRESH_TOKEN_KEY, res.refreshToken);
     store.setItem(USER_KEY, JSON.stringify(res.user));
     store.setItem(EXPIRY_KEY, String(Date.now() + res.expiresIn * 1000));
+    const company = res.user?.company?.code ?? companyHint ?? null;
+    if (company) {
+      store.setItem(COMPANY_KEY, company);
+      localStorage.setItem(LAST_COMPANY_KEY, company);
+    }
   }
 
   private saveUser(user: User): void {
@@ -83,11 +96,22 @@ export class AuthService {
       s.removeItem(REFRESH_TOKEN_KEY);
       s.removeItem(USER_KEY);
       s.removeItem(EXPIRY_KEY);
+      s.removeItem(COMPANY_KEY);
     });
     localStorage.removeItem(REMEMBER_KEY);
   }
 
   // ─── Tokens ───────────────────────────────────────────────────────
+
+  /** Code de l'entreprise de la session (renvoyé au renouvellement et à la déconnexion). */
+  get companyCode(): string | null {
+    return localStorage.getItem(COMPANY_KEY) ?? sessionStorage.getItem(COMPANY_KEY);
+  }
+
+  /** Dernier code entreprise utilisé sur ce navigateur (pré-remplissage). */
+  get lastCompanyCode(): string | null {
+    return localStorage.getItem(LAST_COMPANY_KEY);
+  }
 
   get accessToken(): string | null {
     return (
@@ -152,15 +176,19 @@ export class AuthService {
     return permissions.some((p) => this.hasPermission(p));
   }
 
-  login(username: string, password: string, remember = false): Observable<AuthResponse> {
+  login(username: string, password: string, remember = false, company?: string | null): Observable<AuthResponse> {
+    const code = company?.trim().toLowerCase() || undefined;
     return this.http
-      .post<AuthResponse>(`${environment.apiUrl}/auth/login`, { username, password })
+      .post<AuthResponse>(`${environment.apiUrl}/auth/login`, { company: code, username, password })
       .pipe(
         tap((res) => {
           // Nouvel utilisateur : le magasin choisi par le précédent n'est peut-être pas autorisé.
           this.warehouseCtx.reset();
-          this.saveSession(res, remember);
+          // Aucune trace du thème d'une autre entreprise.
+          this.branding.clear();
+          this.saveSession(res, remember, code);
           this.currentUserSubject.next(res.user);
+          // Thème de la nouvelle entreprise : chargé par le layout à l’ouverture de l’application.
         }),
         // Le backend renvoie déjà les permissions (schéma Me) ; /auth/me seulement si absentes.
         switchMap((res) =>
@@ -203,11 +231,12 @@ export class AuthService {
    */
   logout(): Observable<boolean> {
     const refreshToken = this.refreshTokenValue;
+    const company = this.companyCode ?? undefined;
     this.endSession();
     if (!refreshToken) return of(false);
 
     const revoked$ = this.http
-      .post<void>(`${environment.apiUrl}/auth/logout`, { refreshToken })
+      .post<void>(`${environment.apiUrl}/auth/logout`, { refreshToken, company })
       .pipe(
         map(() => true),
         catchError(() => {
@@ -224,12 +253,18 @@ export class AuthService {
    * Ferme la session locale sans appel serveur (session expirée ou refusée par le backend)
    * et renvoie vers l'écran de connexion.
    */
-  endSession(): void {
+  endSession(reason?: 'suspended'): void {
+    const company = this.companyCode;
     this.clearSession();
     this.warehouseCtx.reset();
+    this.branding.clear();
     this.refreshInFlight$ = null;
     this.meInFlight$ = null;
     this.currentUserSubject.next(null);
+    if (reason === 'suspended') {
+      void this.router.navigate(['/company-suspended'], { queryParams: company ? { company } : {} });
+      return;
+    }
     if (!this.router.url.startsWith('/login')) {
       void this.router.navigateByUrl('/login');
     }
@@ -249,17 +284,18 @@ export class AuthService {
       return throwError(() => new Error('Session expirée. Veuillez vous reconnecter.'));
     }
 
+    const company = this.companyCode ?? undefined;
     this.refreshInFlight$ = this.http
-      .post<AuthResponse>(`${environment.apiUrl}/auth/refresh`, { refreshToken: token })
+      .post<AuthResponse>(`${environment.apiUrl}/auth/refresh`, { refreshToken: token, company })
       .pipe(
         tap((res) => {
           const remember = localStorage.getItem(REMEMBER_KEY) === '1';
-          this.saveSession(res, remember);
+          this.saveSession(res, remember, company);
           this.currentUserSubject.next(res.user);
         }),
         catchError((err: unknown) => {
           if (err instanceof HttpErrorResponse && err.status >= 400 && err.status < 500) {
-            this.endSession();
+            this.endSession(isCompanySuspended(err) ? 'suspended' : undefined);
           }
           return throwError(() => err);
         }),
@@ -269,11 +305,20 @@ export class AuthService {
     return this.refreshInFlight$;
   }
 
-  forgotPassword(email: string): Observable<void> {
-    return this.http.post<void>(
-      `${environment.apiUrl}/auth/forgot-password`,
-      { email }
-    );
+  forgotPassword(email: string, company?: string | null): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/forgot-password`, {
+      email,
+      company: company?.trim().toLowerCase() || undefined
+    });
+  }
+
+  /** Définit le mot de passe avec un lien d'accès (activation du compte ou réinitialisation). */
+  activate(company: string, token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/activate`, {
+      company: company.trim().toLowerCase(),
+      token,
+      newPassword
+    });
   }
 
   /** Message à afficher pour un échec de connexion (codes ApiError du backend). */
@@ -286,4 +331,9 @@ export class AuthService {
     }
     return 'Connexion impossible. Veuillez réessayer.';
   }
+}
+
+/** Réponse du backend signalant une entreprise suspendue (403 COMPANY_SUSPENDED). */
+export function isCompanySuspended(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && err.status === 403 && err.error?.code === COMPANY_SUSPENDED;
 }

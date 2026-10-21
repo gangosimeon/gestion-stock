@@ -29,6 +29,8 @@ export const ROUTE_PERMISSIONS = {
   appointments: ['appointment:read'],
   'audit-logs': ['audit:read'],
   users: ['user:manage'],
+  // Profil et identité visuelle de l'entreprise : administrateur de l'entreprise.
+  company: ['company:manage'],
   // Configuration de la facture et informations de l'entreprise : administrateur.
   settings: ['settings:manage']
 } as const satisfies Record<string, readonly string[]>;

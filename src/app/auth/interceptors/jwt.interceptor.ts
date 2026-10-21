@@ -2,10 +2,10 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/comm
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 
-import { AuthService } from '../services/auth.service';
+import { AuthService, isCompanySuspended } from '../services/auth.service';
 
 // Pas de jeton sur ces appels ; /auth/refresh évite aussi une boucle de renouvellement sur 401.
-const PUBLIC_URLS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/forgot-password'];
+const PUBLIC_URLS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/activate', '/public/'];
 
 function addBearer(req: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
   return req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
@@ -14,7 +14,8 @@ function addBearer(req: HttpRequest<unknown>, token: string): HttpRequest<unknow
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
 
-  const isPublic = PUBLIC_URLS.some((u) => req.url.includes(u));
+  // Espace Super Admin : jeton plateforme (platformInterceptor), jamais celui d'une entreprise.
+  const isPublic = PUBLIC_URLS.some((u) => req.url.includes(u)) || req.url.includes('/platform/');
   if (isPublic) return next(req);
 
   const token = auth.accessToken;
@@ -22,6 +23,11 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(outgoing).pipe(
     catchError((err) => {
+      // Entreprise suspendue en cours de session : écran explicatif, pas de demande de reconnexion.
+      if (token && isCompanySuspended(err)) {
+        auth.endSession('suspended');
+        return throwError(() => err);
+      }
       if (!(err instanceof HttpErrorResponse) || err.status !== 401 || !token) {
         return throwError(() => err);
       }

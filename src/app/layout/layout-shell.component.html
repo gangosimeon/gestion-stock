@@ -6,14 +6,30 @@
                (closedStart)="mobileMenuOpen = false">
     <div class="sidebar-inner">
       <div class="sidebar__brand">
-        <span class="sidebar__logo-box" aria-hidden="true">
-          <mat-icon class="sidebar__logo">inventory_2</mat-icon>
-        </span>
-        @if (!collapsed || isMobile) {
-          <span class="sidebar__brand-text">
-            <span class="sidebar__title">GestStock</span>
-            <span class="sidebar__subtitle">Gestion de stock</span>
+        @if (branding$ | async; as brand) {
+          @if (logoSrc(brand); as logo) {
+            <img class="sidebar__company-logo" [src]="logo" [alt]="'Logo ' + brand.companyName" />
+          } @else {
+            <span class="sidebar__logo-box" aria-hidden="true">
+              <span class="sidebar__initial">{{ brand.companyName.charAt(0) }}</span>
+            </span>
+          }
+          @if (!collapsed || isMobile) {
+            <span class="sidebar__brand-text">
+              <span class="sidebar__title" [title]="brand.companyName">{{ brand.companyName }}</span>
+              <span class="sidebar__subtitle">GestStock</span>
+            </span>
+          }
+        } @else {
+          <span class="sidebar__logo-box" aria-hidden="true">
+            <mat-icon class="sidebar__logo">inventory_2</mat-icon>
           </span>
+          @if (!collapsed || isMobile) {
+            <span class="sidebar__brand-text">
+              <span class="sidebar__title">GestStock</span>
+              <span class="sidebar__subtitle">Gestion de stock</span>
+            </span>
+          }
         }
       </div>
 

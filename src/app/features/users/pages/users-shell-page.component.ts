@@ -26,6 +26,9 @@ import { UsersFacade } from '../data/users.facade';
 import { UsersVm, roleLabels } from '../data/users-vm.model';
 import { ConfirmDeleteUserDialogComponent } from '../ui/confirm-delete-user-dialog.component';
 import { UserDrawerComponent } from '../ui/user-drawer.component';
+import { AccessLinkDialogComponent } from '../ui/access-link-dialog.component';
+import { UsersApiService } from '../../../core/services/users-api.service';
+import { AuthService } from '../../../auth/services/auth.service';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 @Component({
@@ -57,6 +60,8 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
   readonly facade = inject(UsersFacade);
   private readonly dialog = inject(MatDialog);
+  private readonly usersApi = inject(UsersApiService);
+  private readonly auth = inject(AuthService);
   private readonly snackbar = inject(MatSnackBar);
   private readonly warehousesApi = inject(WarehousesApiService);
   private readonly destroy$ = new Subject<void>();
@@ -158,6 +163,21 @@ export class UsersShellPageComponent implements AfterViewInit, OnDestroy {
           this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 });
         }
       });
+  }
+
+  /** Lien de définition du mot de passe, affiché une seule fois. */
+  sendAccessLink(u: User): void {
+    if (!this.vmSnapshot?.canManage) return;
+    this.usersApi.accessLink(u.id).subscribe({
+      next: (link) => {
+        const params = new URLSearchParams({ company: this.auth.companyCode ?? '', token: link.token });
+        this.dialog.open(AccessLinkDialogComponent, {
+          data: { username: u.username, url: `${window.location.origin}/activate?${params.toString()}`, expiresAt: link.expiresAt },
+          width: '560px'
+        });
+      },
+      error: (e: unknown) => this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK', { duration: 3500 })
+    });
   }
 
   confirmDelete(u: User): void {

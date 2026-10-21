@@ -73,6 +73,19 @@ app-layout-shell .mat-drawer {
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
+.sidebar__company-logo {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.sidebar__initial {
+  color: #fff;
+  font-weight: 700;
+}
+
 .sidebar__logo {
   color: #fff;
   font-size: 20px;
@@ -90,7 +103,10 @@ app-layout-shell .mat-drawer {
 .sidebar__title {
   font-size: 17px;
   font-weight: 700;
-  color: #fff;
+  color: var(--company-sidebar-title, #fff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   letter-spacing: -0.02em;
 }
 
@@ -242,7 +258,8 @@ $tab-radius: 22px;
 .shell-header {
   height: var(--header-height);
   min-height: var(--header-height);
-  background: var(--color-surface);
+  background: var(--color-header);
+  color: var(--color-header-text);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;

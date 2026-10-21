@@ -1,0 +1,160 @@
+@if (loading) {
+  <mat-progress-bar mode="indeterminate" />
+}
+@if (error) {
+  <div class="error" role="alert">{{ error }}</div>
+}
+
+@if (company; as c) {
+  <div class="page-header">
+    <a mat-icon-button routerLink="/platform/companies" aria-label="Retour à la liste"><mat-icon>arrow_back</mat-icon></a>
+    <div>
+      <h1 class="page-header__title">{{ c.tradeName }}</h1>
+      <p class="page-header__subtitle">
+        N° {{ c.number }} · code <strong>{{ c.code }}</strong> · {{ plans[c.plan] ?? c.plan }}
+        @if (c.subscriptionEndsOn) { · abonnement jusqu'au {{ c.subscriptionEndsOn | date: 'dd/MM/yyyy' }} }
+      </p>
+    </div>
+    <div class="page-header__spacer"></div>
+    <span class="badge" [class.badge--success]="c.status === 'ACTIVE'" [class.badge--danger]="c.status === 'FAILED'"
+          [class.badge--neutral]="c.status === 'SUSPENDED'" [class.badge--info]="creating">
+      {{ statusLabels[c.status] }}
+    </span>
+  </div>
+
+  @if (c.status === 'SUSPENDED' && c.statusReason) {
+    <div class="detail-notice"><mat-icon>pause_circle</mat-icon> Suspendue : {{ c.statusReason }}</div>
+  }
+
+  <mat-tab-group animationDuration="0ms" [(selectedIndex)]="selectedTab">
+    <!-- Base et accès -->
+    <mat-tab label="Création et accès">
+      <div class="detail-grid">
+        <section class="card detail-card">
+          <h2 class="section-title">Création de la base</h2>
+          @if (creating) {
+            <mat-progress-bar mode="indeterminate" />
+            <p>Création en cours : base dédiée, schéma, administrateur…</p>
+          }
+          @if (c.database; as db) {
+            <p>Base : <code>{{ db.name }}</code> ({{ db.mode === 'LEGACY' ? 'base historique' : 'base dédiée' }})</p>
+          }
+          @if (c.provisioning; as p) {
+            <p>Tentatives : {{ p.attempts }}
+              @if (p.finishedAt) { · terminé le {{ p.finishedAt | date: 'dd/MM/yyyy HH:mm' }} }
+            </p>
+            @if (p.lastError) {
+              <div class="error" role="alert">{{ p.lastError }}</div>
+            }
+            <ol class="steps">
+              @for (s of p.steps; track $index) {
+                <li [class]="'steps__item steps__item--' + s.status.toLowerCase()">
+                  <mat-icon>{{ s.status === 'FAILED' ? 'error' : s.status === 'SKIPPED' ? 'redo' : 'check_circle' }}</mat-icon>
+                  <span>
+                    <strong>{{ stepLabels[s.step] ?? s.step }}</strong>
+                    <span class="steps__meta">tentative {{ s.attempt }} · {{ s.occurredAt | date: 'dd/MM HH:mm:ss' }}</span>
+                    @if (s.message) { <span class="steps__message">{{ s.message }}</span> }
+                  </span>
+                </li>
+              } @empty {
+                <li class="steps__empty">Aucune étape enregistrée.</li>
+              }
+            </ol>
+          }
+          @if (c.status === 'FAILED') {
+            <button mat-flat-button color="primary" type="button" (click)="retry()" [disabled]="busy">
+              <mat-icon>replay</mat-icon>
+              Relancer la création
+            </button>
+          }
+        </section>
+
+        <section class="card detail-card">
+          <h2 class="section-title">Administrateur de l'entreprise</h2>
+          <p>Identifiant : <strong>{{ c.adminUsername }}</strong></p>
+          <p class="detail-help">
+            L'administrateur choisit son mot de passe avec un lien à usage unique (7 jours). Générer un lien invalide le
+            précédent. Le lien n'est affiché qu'une fois : transmettez-le directement à son destinataire.
+          </p>
+          <button mat-stroked-button type="button" (click)="generateLink()" [disabled]="busy || c.status !== 'ACTIVE'">
+            <mat-icon>key</mat-icon>
+            Générer un lien d'activation
+          </button>
+          @if (activationUrl; as url) {
+            <div class="link-box">
+              <input class="link-box__url" [value]="url" readonly aria-label="Lien d'activation" (focus)="$any($event.target).select()" />
+              <button mat-icon-button type="button" (click)="copyLink()" aria-label="Copier le lien"><mat-icon>content_copy</mat-icon></button>
+              <span class="link-box__hint">Valable jusqu'au {{ activationLink!.expiresAt | date: 'dd/MM/yyyy HH:mm' }} — ne sera plus affiché.</span>
+            </div>
+          }
+        </section>
+
+        <section class="card detail-card">
+          <h2 class="section-title">Accès de l'entreprise</h2>
+          @if (c.status === 'ACTIVE') {
+            <p class="detail-help">La suspension coupe immédiatement l'accès et ferme les sessions. Aucune donnée n'est supprimée.</p>
+            @if (!confirmSuspend) {
+              <button mat-stroked-button color="warn" type="button" (click)="confirmSuspend = true" [disabled]="busy">
+                <mat-icon>pause_circle</mat-icon>
+                Suspendre…
+              </button>
+            } @else {
+              <mat-form-field appearance="outline" class="detail-reason">
+                <mat-label>Motif (visible dans le journal)</mat-label>
+                <input matInput [formControl]="suspendReason" maxlength="300" />
+              </mat-form-field>
+              <div class="detail-actions">
+                <button mat-button type="button" (click)="confirmSuspend = false">Annuler</button>
+                <button mat-flat-button color="warn" type="button" (click)="suspend()" [disabled]="busy || suspendReason.invalid">
+                  Confirmer la suspension
+                </button>
+              </div>
+            }
+          } @else if (c.status === 'SUSPENDED') {
+            @if (!confirmReactivate) {
+              <button mat-flat-button color="primary" type="button" (click)="confirmReactivate = true" [disabled]="busy">
+                <mat-icon>play_circle</mat-icon>
+                Réactiver…
+              </button>
+            } @else {
+              <p>Rétablir l'accès de {{ c.tradeName }} ?</p>
+              <div class="detail-actions">
+                <button mat-button type="button" (click)="confirmReactivate = false">Annuler</button>
+                <button mat-flat-button color="primary" type="button" (click)="reactivate()" [disabled]="busy">Confirmer</button>
+              </div>
+            }
+          } @else {
+            <p class="detail-help">Disponible une fois l'entreprise créée.</p>
+          }
+        </section>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Informations">
+      <div class="detail-tab">
+        <app-company-form [company]="c" [busy]="busy" (submitted)="update($event)" />
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Personnalisation">
+      <div class="detail-tab">
+        <app-branding-editor
+          [branding]="branding"
+          [logoSrc]="logoSrc"
+          [busy]="busy"
+          [showPermission]="true"
+          (save)="saveBranding($event)"
+          (uploadLogo)="uploadLogo($event)"
+          (deleteLogo)="deleteLogo()"
+          (permissionChange)="setPermission($event)"
+        />
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Journal">
+      <div class="detail-tab">
+        <app-platform-audit [companyId]="c.id" />
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+}

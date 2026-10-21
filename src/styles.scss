@@ -6,15 +6,15 @@
 // ═══════════════════════════════════════════════════════════════════
 
 $app-primary-palette: (
-  50: #eff6ff, 100: #dbeafe, 200: #bfdbfe, 300: #93c5fd, 400: #60a5fa,
-  500: #3B82F6, 600: #2563eb, 700: #1d4ed8, 800: #12345A, 900: #0B1F3A,
+  50: #eff6ff, 100: #dbeafe, 200: #bfdbfe, 300: #93c5fd, 400: var(--company-primary-light, #60a5fa),
+  500: #3B82F6, 600: var(--company-primary, #2563eb), 700: #1d4ed8, 800: var(--company-primary-dark, #12345A), 900: #0B1F3A,
   contrast: (50: #111827, 100: #111827, 200: #111827, 300: #111827, 400: #fff,
              500: #fff, 600: #fff, 700: #fff, 800: #fff, 900: #fff)
 );
 
 $app-accent-palette: (
   50: #f0fdf4, 100: #dcfce7, 200: #bbf7d0, 300: #86efac, 400: #4ade80,
-  500: #16A34A, 600: #16a34a, 700: #15803d, 800: #166534, 900: #14532d,
+  500: var(--company-accent, #16A34A), 600: #16a34a, 700: #15803d, 800: #166534, 900: #14532d,
   contrast: (50: #111827, 100: #111827, 200: #111827, 300: #111827, 400: #111827,
              500: #fff, 600: #fff, 700: #fff, 800: #fff, 900: #fff)
 );
@@ -47,6 +47,14 @@ $app-theme: mat.m2-define-light-theme((
 ));
 
 @include mat.all-component-themes($app-theme);
+
+// Boutons principaux : couleur propre à l'entreprise (repli : couleur primaire). Même spécificité que
+// les règles Material, déclarée après elles.
+.mat-mdc-unelevated-button.mat-primary,
+.mat-mdc-raised-button.mat-primary {
+  --mat-button-filled-container-color: var(--company-button, var(--company-primary, #2563eb));
+  --mat-button-protected-container-color: var(--company-button, var(--company-primary, #2563eb));
+}
 @include mat.typography-hierarchy($app-typography);
 
 // ═══════════════════════════════════════════════════════════════════
@@ -55,13 +63,18 @@ $app-theme: mat.m2-define-light-theme((
 
 :root {
   // Charte
-  --color-navy: #0B1F3A;            // bleu nuit
-  --color-navy-2: #12345A;          // bleu profond
-  --color-primary: #2563EB;         // bleu principal
-  --color-primary-hover: #1D4ED8;
-  --color-primary-soft: #EFF6FF;    // bleu clair
-  --color-secondary: #7C3AED;       // violet secondaire
-  --color-secondary-soft: #F5F3FF;
+  // Personnalisation par entreprise : variables --company-* posées sur <html> par BrandingService
+  // (couleurs validées #RRGGBB par le backend et le front). Sans entreprise : charte GestStock.
+  --color-navy: var(--company-sidebar, #0B1F3A);            // bleu nuit
+  --color-navy-2: var(--company-sidebar-2, #12345A);        // bleu profond
+  --color-primary: var(--company-primary, #2563EB);         // bleu principal
+  --color-primary-hover: var(--company-primary-hover, #1D4ED8);
+  --color-primary-soft: var(--company-primary-soft, #EFF6FF);    // bleu clair
+  --color-secondary: var(--company-secondary, #7C3AED);     // violet secondaire
+  --color-secondary-soft: var(--company-secondary-soft, #F5F3FF);
+  --color-link: var(--company-link, var(--company-primary, #2563EB));
+  --color-header: var(--company-header, #FFFFFF);
+  --color-header-text: var(--company-header-text, #172B4D);
   --color-success: #16A34A;
   --color-success-soft: #ECFDF3;
   --color-danger: #DC2626;
@@ -80,12 +93,12 @@ $app-theme: mat.m2-define-light-theme((
   --color-text-secondary: #64748B;  // texte secondaire
   --color-text-muted: #94A3B8;
 
-  --color-sidebar: #0B1F3A;
-  --color-sidebar-hover: #12345A;
-  --color-sidebar-text: #B8C4D6;
+  --color-sidebar: var(--company-sidebar, #0B1F3A);
+  --color-sidebar-hover: var(--company-sidebar-2, #12345A);
+  --color-sidebar-text: var(--company-sidebar-text, #B8C4D6);
   --color-sidebar-text-active: #FFFFFF;
-  --color-sidebar-active: #2563EB;
-  --color-sidebar-active-bg: #2563EB;
+  --color-sidebar-active: var(--company-primary, #2563EB);
+  --color-sidebar-active-bg: var(--company-primary, #2563EB);
 
   // Contrôles : hauteur commune des champs et boutons, rayon commun.
   --control-height: 40px;
@@ -132,6 +145,70 @@ $app-theme: mat.m2-define-light-theme((
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
+}
+
+// ─── Mode sombre et contraste renforcé (préférences de l'entreprise) ─────────────
+// Appliqués par BrandingService via data-theme / data-contrast sur <html>. Le mode sombre couvre les
+// jetons de l'application et les surfaces Material les plus visibles (cartes, tableaux, champs,
+// menus, dialogues) ; les couleurs d'état (succès, danger) restent inchangées.
+html[data-theme='dark'] {
+  --color-bg: #0F172A;
+  --color-surface: #111C2E;
+  --color-surface-hover: #172338;
+  --color-surface-muted: #152033;
+  --color-border: #263449;
+  --color-border-light: #1E2A3D;
+  --color-text: #E2E8F0;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-primary-soft: #1E293B;
+  --color-secondary-soft: #241B3A;
+  --color-header: var(--company-header-dark, #111C2E);
+  --color-header-text: #E2E8F0;
+  --mat-table-background-color: var(--color-surface);
+  --mat-table-header-headline-color: var(--color-text-secondary);
+  --mat-table-row-item-label-text-color: var(--color-text);
+  --mat-table-row-item-outline-color: var(--color-border);
+  --mat-paginator-container-background-color: var(--color-surface);
+  --mat-paginator-container-text-color: var(--color-text-secondary);
+  --mat-card-elevated-container-color: var(--color-surface);
+  --mat-card-outlined-container-color: var(--color-surface);
+  --mat-dialog-container-color: var(--color-surface);
+  --mat-dialog-subhead-color: var(--color-text);
+  --mat-dialog-supporting-text-color: var(--color-text-secondary);
+  --mat-menu-container-color: var(--color-surface);
+  --mat-menu-item-label-text-color: var(--color-text);
+  --mat-select-panel-background-color: var(--color-surface);
+  --mat-select-enabled-trigger-text-color: var(--color-text);
+  --mat-option-label-text-color: var(--color-text);
+  --mat-autocomplete-background-color: var(--color-surface);
+  --mat-form-field-outlined-outline-color: var(--color-border);
+  --mat-form-field-outlined-label-text-color: var(--color-text-secondary);
+  --mat-form-field-outlined-input-text-color: var(--color-text);
+  --mat-form-field-container-text-color: var(--color-text);
+  --mat-expansion-container-background-color: var(--color-surface);
+  --mat-sidenav-content-background-color: var(--color-bg);
+  --mat-datepicker-calendar-container-background-color: var(--color-surface);
+  color-scheme: dark;
+}
+
+html[data-contrast='high'] {
+  --color-text: #0B1220;
+  --color-text-secondary: #1F2A3C;
+  --color-border: #64748B;
+  --color-border-light: #94A3B8;
+  --mat-form-field-outlined-outline-color: #475569;
+
+  :focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+html[data-theme='dark'][data-contrast='high'] {
+  --color-text: #FFFFFF;
+  --color-text-secondary: #CBD5E1;
+  --color-border: #94A3B8;
 }
 
 // Marges de page plus serrées sur petit écran.
@@ -181,7 +258,7 @@ button:not(.mat-mdc-button-base):focus-visible,
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--color-link);
   text-decoration: none;
   transition: color var(--duration-fast) var(--ease-in-out);
 

@@ -270,3 +270,38 @@
 
   strong { font-weight: 600; }
 }
+
+// Marque de l'entreprise saisie (aperçu, sans valeur d'authentification).
+.company-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--preview-color, var(--color-primary));
+  border-radius: 10px;
+  background: var(--color-surface);
+
+  &__logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+
+  &__initial {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: #fff;
+    background: var(--preview-color, var(--color-primary));
+  }
+
+  &__name {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+}

@@ -1,0 +1,76 @@
+<div class="forgot-layout">
+  <div class="forgot-panel">
+
+    <a routerLink="/login" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Retour à la connexion
+    </a>
+
+    @if (!linkIsComplete) {
+      <div class="forgot-content">
+        <div class="forgot-icon"><mat-icon>link_off</mat-icon></div>
+        <h1>Lien incomplet</h1>
+        <p class="forgot-desc">
+          Ce lien d'accès est incomplet. Utilisez le lien exact transmis par votre administrateur ou par GestStock.
+        </p>
+      </div>
+    } @else if (done) {
+      <div class="forgot-content">
+        <div class="forgot-icon"><mat-icon>verified_user</mat-icon></div>
+        <h1>Mot de passe enregistré</h1>
+        <p class="forgot-desc">Vous pouvez maintenant vous connecter avec votre identifiant et ce mot de passe.</p>
+        <button mat-flat-button color="primary" class="form__submit" type="button" (click)="goToLogin()">
+          <mat-icon>login</mat-icon>
+          <span>Se connecter</span>
+        </button>
+      </div>
+    } @else {
+      <div class="forgot-content">
+        <div class="forgot-icon"><mat-icon>key</mat-icon></div>
+        <h1>Choisir votre mot de passe</h1>
+        <p class="forgot-desc">
+          Entreprise <strong>{{ company }}</strong>. Au moins 8 caractères, avec une lettre et un chiffre.
+          Ce lien ne sert qu'une fois.
+        </p>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Nouveau mot de passe</mat-label>
+            <mat-icon matPrefix>lock</mat-icon>
+            <input matInput [type]="showPwd ? 'text' : 'password'" formControlName="password" autocomplete="new-password" />
+            <button mat-icon-button matSuffix type="button" (click)="showPwd = !showPwd"
+                    [attr.aria-label]="showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
+              <mat-icon>{{ showPwd ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            @if (form.controls.password.hasError('minlength')) {
+              <mat-error>8 caractères au moins</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Confirmer le mot de passe</mat-label>
+            <mat-icon matPrefix>lock</mat-icon>
+            <input matInput [type]="showPwd ? 'text' : 'password'" formControlName="confirm" autocomplete="new-password" />
+          </mat-form-field>
+
+          @if (form.hasError('mismatch')) {
+            <div class="error" role="alert">Les deux mots de passe sont différents.</div>
+          }
+          @if (errorMessage) {
+            <div class="error" role="alert">{{ errorMessage }}</div>
+          }
+
+          <button mat-flat-button color="primary" class="form__submit" type="submit" [disabled]="form.invalid || isLoading">
+            @if (isLoading) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>check</mat-icon>
+            }
+            <span>{{ isLoading ? 'Enregistrement…' : 'Enregistrer' }}</span>
+          </button>
+        </form>
+      </div>
+    }
+
+  </div>
+</div>

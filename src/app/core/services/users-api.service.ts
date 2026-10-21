@@ -93,6 +93,15 @@ export class UsersApiService {
       .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
   }
 
+  /**
+   * Lien à usage unique (48 h) pour que l'utilisateur choisisse son mot de passe ; renvoyé une seule fois.
+   */
+  accessLink(id: string): Observable<{ token: string; expiresAt: string }> {
+    return this.http
+      .post<{ token: string; expiresAt: string }>(`${environment.apiUrl}/users/${id}/access-link`, {})
+      .pipe(catchError((e: unknown) => throwError(() => toApiError(e))));
+  }
+
   /** Côté backend, « supprimer » désactive le compte : l'historique garde son auteur. */
   delete(id: string): Observable<{ ok: true } | { ok: boolean }> {
     return this.http

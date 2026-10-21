@@ -26,4 +26,12 @@ export interface User {
   warehouseIds?: string[];
   magasin?: string;
   avatar?: string;
+  /** Entreprise de l'utilisateur (code à renvoyer au renouvellement de session, nom affiché). */
+  company?: CompanySummary | null;
+}
+
+/** Entreprise de la session. */
+export interface CompanySummary {
+  code: string;
+  name: string;
 }

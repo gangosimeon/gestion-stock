@@ -16,6 +16,8 @@ import { MatListModule } from '@angular/material/list';
 import { AuthService as CoreAuthService } from '../core/services/auth.service';
 import { AuthService } from '../auth/services/auth.service';
 import { WarehouseContextService } from '../core/services/warehouse-context.service';
+import { CompanyBranding } from '../core/branding/branding.model';
+import { BrandingService } from '../core/branding/branding.service';
 import { WarehousesApiService } from '../core/services/warehouses-api.service';
 import { Warehouse } from '../core/models/warehouse.model';
 import { SelectSearchComponent } from '../shared/select/select-search.component';
@@ -59,6 +61,10 @@ export class LayoutShellComponent {
   private readonly warehousesApi = inject(WarehousesApiService);
   private readonly warehouseCtx = inject(WarehouseContextService);
   private readonly cashRegister = inject(CashRegisterFacade);
+  private readonly brandingService = inject(BrandingService);
+
+  /** Marque de l'entreprise connectée (logo et nom dans la barre latérale). */
+  readonly branding$ = this.brandingService.branding$;
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
@@ -150,6 +156,7 @@ export class LayoutShellComponent {
       { label: 'RDV', icon: 'event', section: 'appointments' },
       { label: 'Audit', icon: 'history', section: 'audit-logs' },
       { label: 'Utilisateurs', icon: 'admin_panel_settings', section: 'users' },
+      { label: 'Mon entreprise', icon: 'business', section: 'company' },
       { label: 'Paramètres', icon: 'settings', section: 'settings' }
     ] satisfies { label: string; icon: string; section: AppSection }[]
   ).map(({ label, icon, section }) => ({
@@ -171,6 +178,8 @@ export class LayoutShellComponent {
   constructor() {
     // Session ouverte avant cette version (sans permissions en cache) : un seul GET /auth/me.
     this.auth.ensureCurrentUser().subscribe();
+    // Thème à jour (le cache appliqué au démarrage peut dater d'une modification par GestStock).
+    this.brandingService.load().subscribe();
 
     inject(BreakpointObserver)
       .observe('(max-width: 959.98px)')
@@ -180,6 +189,10 @@ export class LayoutShellComponent {
         // Changement de taille d'écran : menu superposé refermé.
         this.mobileMenuOpen = false;
       });
+  }
+
+  logoSrc(branding: CompanyBranding): string | null {
+    return this.brandingService.logoSrc(branding);
   }
 
   logout(): void {

@@ -45,11 +45,37 @@
           <mat-icon>inventory</mat-icon>
           <span>GestStock</span>
         </div>
+        @if (preview) {
+          <div class="company-preview" [style.--preview-color]="preview.primaryColor">
+            @if (previewLogo) {
+              <img class="company-preview__logo" [src]="previewLogo" [alt]="'Logo ' + preview.companyName" />
+            } @else {
+              <span class="company-preview__initial" aria-hidden="true">{{ preview.companyName.charAt(0) }}</span>
+            }
+            <span class="company-preview__name">{{ preview.companyName }}</span>
+          </div>
+        }
         <h1>Connexion</h1>
-        <p>Entrez vos identifiants pour accéder à votre espace</p>
+        <p>Entrez le code de votre entreprise et vos identifiants</p>
       </div>
 
       <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="on">
+
+        <!-- Entreprise -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Code entreprise</mat-label>
+          <mat-icon matPrefix>business</mat-icon>
+          <input
+            matInput
+            formControlName="company"
+            autocomplete="organization"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="ex: quincaillerie-akwaba" />
+          @if (f['company'].invalid && f['company'].touched) {
+            <mat-error>Minuscules, chiffres et tirets uniquement</mat-error>
+          }
+        </mat-form-field>
 
         <!-- Nom d'utilisateur -->
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -119,7 +145,8 @@
         </button>
       </form>
 
-      <!-- Hint demo -->
+      <!-- Comptes de démonstration (hors production) -->
+      @if (showDemoHint) {
       <div class="form-panel__hint">
         <mat-icon>info_outline</mat-icon>
         <span>
@@ -129,6 +156,7 @@
           <strong>pierre_d</strong> (Caissier)
         </span>
       </div>
+      }
 
     </div>
   </div>

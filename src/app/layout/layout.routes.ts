@@ -114,6 +114,13 @@ export const LAYOUT_ROUTES: Routes = [
         loadChildren: () => import('../features/users/users.routes').then((m) => m.USERS_ROUTES)
       },
       {
+        path: 'company',
+        canMatch: [permissionGuard],
+        data: { permissions: ROUTE_PERMISSIONS['company'] },
+        loadComponent: () =>
+          import('../features/company/company-profile-page.component').then((m) => m.CompanyProfilePageComponent)
+      },
+      {
         path: 'settings',
         canMatch: [permissionGuard],
         data: { permissions: ROUTE_PERMISSIONS['settings'] },
