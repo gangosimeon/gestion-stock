@@ -119,7 +119,7 @@ const CHART = {
   violet: '#7C3AED',
   navy: '#0B1F3A',
   text: '#64748B',
-  grid: 'rgba(226, 232, 240, 0.8)'
+  grid: 'rgba(148, 163, 184, 0.2)'
 };
 
 /** Montants et quantités au format français (séparateur de milliers), présentation seule. */

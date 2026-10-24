@@ -11,7 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 
-import { environment } from '../../../../environments/environment.prod';
+import { environment } from '../../../../environments/environment';
 import { CompanyBranding } from '../../../core/branding/branding.model';
 import { BrandingService } from '../../../core/branding/branding.service';
 import { AuthService, isCompanySuspended } from '../../services/auth.service';

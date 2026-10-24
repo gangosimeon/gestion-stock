@@ -48,6 +48,14 @@ $app-theme: mat.m2-define-light-theme((
 
 @include mat.all-component-themes($app-theme);
 
+// Variante sombre (mode sombre d'une entreprise) : mêmes palettes, couleurs Material sombres pour tous
+// les composants (boutons contour et texte, cases, onglets, puces…). Les surfaces sont ensuite
+// réalignées sur les jetons de l'application dans html[data-theme='dark'] plus bas.
+$app-dark-theme: mat.m2-define-dark-theme((
+  color: (primary: $app-primary, accent: $app-accent, warn: $app-warn),
+));
+mat.$theme-ignore-duplication-warnings: true;
+
 // Boutons principaux : couleur propre à l'entreprise (repli : couleur primaire). Même spécificité que
 // les règles Material, déclarée après elles.
 .mat-mdc-unelevated-button.mat-primary,
@@ -82,8 +90,17 @@ $app-theme: mat.m2-define-light-theme((
   // Pas d'orange : un avertissement s'affiche en violet (indicateur contextuel).
   --color-warning: #7C3AED;
   --color-warning-soft: #F5F3FF;
+  --color-neutral-soft: #F1F5F9;
+  // Textes et bordures posés sur les fonds « soft » (redéfinis en mode sombre).
+  --color-success-text: #15803D;
+  --color-danger-text: #B91C1C;
+  --color-warning-text: #6D28D9;
+  --color-info-text: #1D4ED8;
+  --color-neutral-text: #475569;
+  --color-success-border: #BBF7D0;
+  --color-danger-border: #FECACA;
 
-  --color-bg: #F5F8FC;              // fond général
+  --color-bg: #F5F8FC;             // fond général
   --color-surface: #FFFFFF;         // cartes
   --color-surface-hover: #F5F9FF;
   --color-surface-muted: #F8FAFD;   // en-têtes de tableau, zones secondaires
@@ -152,6 +169,8 @@ $app-theme: mat.m2-define-light-theme((
 // jetons de l'application et les surfaces Material les plus visibles (cartes, tableaux, champs,
 // menus, dialogues) ; les couleurs d'état (succès, danger) restent inchangées.
 html[data-theme='dark'] {
+  @include mat.all-component-colors($app-dark-theme);
+
   --color-bg: #0F172A;
   --color-surface: #111C2E;
   --color-surface-hover: #172338;
@@ -189,7 +208,46 @@ html[data-theme='dark'] {
   --mat-expansion-container-background-color: var(--color-surface);
   --mat-sidenav-content-background-color: var(--color-bg);
   --mat-datepicker-calendar-container-background-color: var(--color-surface);
+  --mat-datepicker-calendar-container-text-color: var(--color-text);
+  --mat-timepicker-container-background-color: var(--color-surface);
+  --mat-sidenav-container-background-color: var(--color-surface);
+  --mat-sidenav-container-text-color: var(--color-text);
+  --mat-bottom-sheet-container-background-color: var(--color-surface);
+  --mat-bottom-sheet-container-text-color: var(--color-text);
+  --mat-stepper-container-color: var(--color-surface);
+  --mat-button-toggle-background-color: var(--color-surface);
+  --mat-button-toggle-selected-state-background-color: var(--color-primary-soft);
+  --mat-button-toggle-divider-color: var(--color-border);
+  --mat-chip-elevated-container-color: var(--color-surface-muted);
+  --mat-expansion-header-text-color: var(--color-text);
+  --mat-expansion-container-text-color: var(--color-text);
+  --mat-form-field-filled-container-color: var(--color-surface-muted);
+  --mat-button-outlined-outline-color: var(--color-border);
+  --mat-divider-color: var(--color-border);
+
+  // Couleurs d'état : fonds sombres teintés, textes clairs (lisibles sur fond sombre).
+  --color-success-soft: #0F2E21;
+  --color-danger-soft: #3A1418;
+  --color-warning-soft: #241B3A;
+  --color-neutral-soft: #1E293B;
+  --color-success-text: #4ADE80;
+  --color-danger-text: #FCA5A5;
+  --color-warning-text: #C4B5FD;
+  --color-info-text: #93C5FD;
+  --color-neutral-text: #CBD5E1;
+  --color-success-border: #166534;
+  --color-danger-border: #7F1D1D;
+  // Onglet actif du menu : dessiné sur le fond de page, donc texte clair (et non couleur de la barre).
+  --color-nav-active-text: var(--color-text);
   color-scheme: dark;
+}
+
+// Boutons principaux en mode sombre : le thème sombre redéfinit ces couleurs avec une spécificité plus
+// forte ; la couleur de l'entreprise reste prioritaire.
+html[data-theme='dark'] .mat-mdc-unelevated-button.mat-primary,
+html[data-theme='dark'] .mat-mdc-raised-button.mat-primary {
+  --mat-button-filled-container-color: var(--company-button, var(--company-primary, #2563eb));
+  --mat-button-protected-container-color: var(--company-button, var(--company-primary, #2563eb));
 }
 
 html[data-contrast='high'] {
@@ -513,11 +571,11 @@ a {
   line-height: 1.7;
   letter-spacing: -0.01em;
 
-  &--success { background: var(--color-success-soft); color: #15803D; }
-  &--warning { background: var(--color-warning-soft); color: #6D28D9; }
-  &--danger  { background: var(--color-danger-soft); color: #B91C1C; }
-  &--info    { background: var(--color-primary-soft); color: #1D4ED8; }
-  &--neutral { background: #F1F5F9; color: #475569; }
+  &--success { background: var(--color-success-soft); color: var(--color-success-text); }
+  &--warning { background: var(--color-warning-soft); color: var(--color-warning-text); }
+  &--danger  { background: var(--color-danger-soft); color: var(--color-danger-text); }
+  &--info    { background: var(--color-primary-soft); color: var(--color-info-text); }
+  &--neutral { background: var(--color-neutral-soft); color: var(--color-neutral-text); }
 }
 
 // En-tête de page : titre, sous-titre existant, actions alignées à droite.
@@ -600,8 +658,8 @@ a {
   padding: 10px 14px;
   border-radius: var(--radius-md);
   background: var(--color-danger-soft);
-  border: 1px solid #FECACA;
-  color: #B91C1C;
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
   font-size: 13px;
   font-weight: 500;
 }
@@ -613,8 +671,8 @@ a {
   padding: 10px 14px;
   border-radius: var(--radius-md);
   background: var(--color-success-soft);
-  border: 1px solid #BBF7D0;
-  color: #15803D;
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
   font-size: 13px;
   font-weight: 500;
 }
@@ -623,7 +681,7 @@ a {
   padding: 10px 14px;
   border-radius: var(--radius-md);
   background: var(--color-primary-soft);
-  color: #1E40AF;
+  color: var(--color-info-text);
   font-size: 13px;
 }
 
@@ -660,10 +718,10 @@ a {
   gap: 10px;
   padding: 10px 14px;
   background: var(--color-danger-soft);
-  border: 1px solid #FECACA;
+  border: 1px solid var(--color-danger-border);
   border-left: 4px solid var(--color-danger);
   border-radius: var(--radius-md);
-  color: #B91C1C;
+  color: var(--color-danger-text);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.45;

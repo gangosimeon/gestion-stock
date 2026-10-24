@@ -69,7 +69,7 @@ export type AuditLogDetailsDialogData = {
     }
     .old-value {
       background: var(--color-danger-soft);
-      color: #B91C1C;
+      color: var(--color-danger-text);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: monospace;
@@ -77,7 +77,7 @@ export type AuditLogDetailsDialogData = {
     }
     .new-value {
       background: var(--color-success-soft);
-      color: #15803D;
+      color: var(--color-success-text);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: monospace;
@@ -90,8 +90,8 @@ export type AuditLogDetailsDialogData = {
       font-size: 11px;
       font-weight: 500;
     }
-    .status-badge--success { background: var(--color-success-soft); color: #15803D; }
-    .status-badge--failure { background: var(--color-danger-soft); color: #B91C1C; }
+    .status-badge--success { background: var(--color-success-soft); color: var(--color-success-text); }
+    .status-badge--failure { background: var(--color-danger-soft); color: var(--color-danger-text); }
   `]
 })
 export class AuditLogDetailsDialogComponent {

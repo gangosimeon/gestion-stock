@@ -195,7 +195,7 @@ $tab-radius: 22px;
   &--active,
   &--active:hover {
     background: var(--color-bg);
-    color: var(--color-sidebar);
+    color: var(--color-nav-active-text, var(--color-sidebar));
     font-weight: 600;
     // Au premier plan : sans cela, l'onglet suivant (dessiné après lui) recouvre le coin
     // inversé du bas lorsqu'il est survolé ; celui du haut est déjà au-dessus de l'onglet
@@ -208,7 +208,7 @@ $tab-radius: 22px;
     }
 
     .nav-item__icon {
-      color: var(--color-sidebar);
+      color: var(--color-nav-active-text, var(--color-sidebar));
       opacity: 1;
     }
   }
