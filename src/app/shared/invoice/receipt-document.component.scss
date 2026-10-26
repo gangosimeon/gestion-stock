@@ -1,0 +1,123 @@
+// Ticket de caisse 80 mm. Styles globaux préfixés `gsr-` (recopiés dans la fenêtre d'impression).
+// Zone imprimable d'un rouleau de 80 mm : environ 72 mm. Noir sur blanc, sans aplat de couleur :
+// les imprimantes thermiques n'impriment que du noir et les fonds gris sortent tramés.
+
+.gsr {
+  box-sizing: border-box;
+  width: 72mm;
+  padding: 3mm 0;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+.gsr-header {
+  text-align: center;
+  display: grid;
+  gap: 1px;
+}
+
+.gsr-logo {
+  display: block;
+  max-width: 40mm;
+  max-height: 20mm;
+  margin: 0 auto 2mm;
+  object-fit: contain;
+  // Rendu fidèle sur papier thermique (pas de dégradés de couleur).
+  filter: grayscale(1);
+}
+
+.gsr-company {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.gsr-contact {
+  font-size: 11px;
+}
+
+.gsr-rule {
+  border-top: 1px dashed #000;
+  margin: 2mm 0;
+}
+
+.gsr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2mm;
+
+  > span:first-child {
+    min-width: 0;
+  }
+}
+
+.gsr-amount {
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gsr-meta,
+.gsr-lines,
+.gsr-totals,
+.gsr-returns {
+  display: grid;
+  gap: 1px;
+}
+
+.gsr-lines {
+  gap: 1.5mm;
+}
+
+.gsr-line__name {
+  font-weight: 700;
+}
+
+.gsr-discount {
+  font-size: 11px;
+}
+
+.gsr-total {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 1mm 0;
+}
+
+.gsr-strong {
+  font-weight: 700;
+}
+
+.gsr-cancelled {
+  margin-top: 2mm;
+  padding: 1.5mm;
+  border: 2px solid #000;
+  text-align: center;
+  font-size: 11px;
+}
+
+.gsr-footer {
+  text-align: center;
+  display: grid;
+  gap: 1mm;
+}
+
+.gsr-thanks {
+  font-weight: 700;
+}
+
+.gsr-note {
+  font-size: 11px;
+  white-space: pre-line;
+}

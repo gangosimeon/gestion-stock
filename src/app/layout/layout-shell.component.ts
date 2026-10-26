@@ -140,8 +140,8 @@ export class LayoutShellComponent {
   readonly navItems: NavItem[] = (
     [
       { label: 'Dashboard', icon: 'dashboard', section: 'dashboard' },
-      { label: 'Produits', icon: 'inventory_2', section: 'products' },
       { label: 'Catégories', icon: 'category', section: 'categories' },
+      { label: 'Produits', icon: 'inventory_2', section: 'products' },
       { label: 'Stock', icon: 'warehouse', section: 'stock' },
       { label: 'Ventes', icon: 'point_of_sale', section: 'sales' },
       { label: 'Devis', icon: 'request_quote', section: 'quotes' },

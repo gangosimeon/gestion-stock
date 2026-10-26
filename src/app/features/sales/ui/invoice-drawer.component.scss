@@ -70,6 +70,18 @@ $invoice-width: 794px;
   overflow: hidden;
 }
 
+// Ticket 80 mm : rouleau étroit centré dans la même largeur de tiroir (pas de saut de taille au changement de format).
+.invoice__paper--receipt {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  background: #fff;
+}
+
+.invoice__format {
+  --mat-button-toggle-height: 36px;
+}
+
 // Même largeur pendant le chargement : le tiroir ne change pas de taille à l'arrivée de la facture.
 .invoice__loading {
   width: $invoice-width;

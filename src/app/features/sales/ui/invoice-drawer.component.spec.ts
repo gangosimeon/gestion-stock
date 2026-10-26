@@ -6,7 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { environment } from '../../../../environments/environment';
 import { defaultInvoiceSettings } from '../../../core/models/invoice-settings.model';
 import { Sale } from '../../../core/models/sale.model';
-import { InvoiceDrawerComponent } from './invoice-drawer.component';
+import { DOCUMENT_FORMAT_KEY, InvoiceDrawerComponent } from './invoice-drawer.component';
 
 const URL = `${environment.apiUrl}/settings/invoice`;
 
@@ -33,6 +33,7 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
 
   function setup() {
     sessionStorage.clear();
+    localStorage.removeItem(DOCUMENT_FORMAT_KEY);
     TestBed.configureTestingModule({
       imports: [InvoiceDrawerComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()]
@@ -116,6 +117,7 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
 
   it('caisse : devis transmis dès le rattachement, facture définitive sans attendre le serveur', () => {
     sessionStorage.clear();
+    localStorage.removeItem(DOCUMENT_FORMAT_KEY);
     TestBed.configureTestingModule({
       imports: [InvoiceDrawerComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()]
@@ -139,5 +141,52 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
     expect(text).toContain('ObjetMatériels de latrine');
     expect(text).toContain('Lot2');
     expect(text).toContain('Nombre de bénéficiaires20');
+  });
+
+  it('ticket 80 mm : même vente, présentation étroite ; la facture A4 reste le format par défaut', () => {
+    const { fixture, text } = setup();
+    const settings = defaultInvoiceSettings();
+    settings.company.companyName = 'Quincaillerie Moderne';
+    http.expectOne(URL).flush({ ...settings, logo: null, updatedAt: '2026-10-16T08:00:00Z' });
+    noQuote();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.gsi')).not.toBeNull();
+    expect(el.querySelector('.gsr')).toBeNull();
+
+    fixture.componentInstance.setFormat('RECEIPT');
+    fixture.detectChanges();
+
+    expect(el.querySelector('.gsi')).toBeNull();
+    expect(el.querySelector('.gsr')).not.toBeNull();
+    expect(text()).toContain('Ticket de caisse');
+    expect(text()).toContain('VTE-2026-000007');
+    expect(text()).toContain('Quincaillerie Moderne');
+    expect(text()).toContain('30 000 FCFA');
+    // Le PDF concerne la facture A4 seulement.
+    expect(text()).not.toContain('Exporter PDF');
+  });
+
+  it('le format choisi est mémorisé sur l’appareil pour les ventes suivantes', () => {
+    const first = setup();
+    first.fixture.componentInstance.setFormat('RECEIPT');
+    expect(localStorage.getItem(DOCUMENT_FORMAT_KEY)).toBe('RECEIPT');
+    http.expectOne(URL).flush({ ...defaultInvoiceSettings(), logo: null, updatedAt: '' });
+    noQuote();
+    TestBed.resetTestingModule();
+
+    TestBed.configureTestingModule({
+      imports: [InvoiceDrawerComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()]
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(InvoiceDrawerComponent);
+    fixture.componentRef.setInput('sale', SALE);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.format()).toBe('RECEIPT');
+    http.expectOne(URL).flush({ ...defaultInvoiceSettings(), logo: null, updatedAt: '' });
+    noQuote();
+    localStorage.removeItem(DOCUMENT_FORMAT_KEY);
   });
 });

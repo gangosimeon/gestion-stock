@@ -1,21 +1,33 @@
 <div class="invoice">
   <div class="invoice__header">
     <div>
-      <div class="invoice__title">Facture</div>
+      <div class="invoice__title">{{ format() === 'RECEIPT' ? 'Ticket de caisse' : 'Facture' }}</div>
       <div class="invoice__meta">
         <div><strong>N° :</strong> {{ sale.number ?? sale.id }}</div>
       </div>
     </div>
 
     <div class="invoice__actions">
+      <mat-button-toggle-group
+        class="invoice__format"
+        [value]="format()"
+        (change)="setFormat($event.value)"
+        aria-label="Format du document"
+        hideSingleSelectionIndicator
+      >
+        <mat-button-toggle value="A4">Facture A4</mat-button-toggle>
+        <mat-button-toggle value="RECEIPT">Ticket 80 mm</mat-button-toggle>
+      </mat-button-toggle-group>
       <button mat-stroked-button type="button" (click)="print()" [disabled]="!settings() || busy() !== null">
-        @if (busy() === 'print') { <mat-spinner diameter="16" /> } @else { <mat-icon>print</mat-icon> }
-        Imprimer
+        @if (busy() === 'print') { <mat-spinner diameter="16" /> } @else { <mat-icon>{{ format() === 'RECEIPT' ? 'receipt_long' : 'print' }}</mat-icon> }
+        {{ format() === 'RECEIPT' ? 'Imprimer le ticket' : 'Imprimer' }}
       </button>
-      <button mat-stroked-button type="button" (click)="exportPdf()" [disabled]="!settings() || busy() !== null">
-        @if (busy() === 'pdf') { <mat-spinner diameter="16" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
-        Exporter PDF
-      </button>
+      @if (format() === 'A4') {
+        <button mat-stroked-button type="button" (click)="exportPdf()" [disabled]="!settings() || busy() !== null">
+          @if (busy() === 'pdf') { <mat-spinner diameter="16" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
+          Exporter PDF
+        </button>
+      }
       <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer">
         <mat-icon>close</mat-icon>
       </button>
@@ -33,9 +45,15 @@
 
     @if (settings(); as s) {
       @if (data(); as d) {
-        <div class="invoice__paper">
-          <app-invoice-document [settings]="s" [data]="d" [logoUrl]="logoUrl()" />
-        </div>
+        @if (format() === 'RECEIPT') {
+          <div class="invoice__paper invoice__paper--receipt">
+            <app-receipt-document [settings]="s" [data]="d" [logoUrl]="logoUrl()" />
+          </div>
+        } @else {
+          <div class="invoice__paper">
+            <app-invoice-document [settings]="s" [data]="d" [logoUrl]="logoUrl()" />
+          </div>
+        }
       }
     } @else {
       <div class="invoice__loading" aria-live="polite">

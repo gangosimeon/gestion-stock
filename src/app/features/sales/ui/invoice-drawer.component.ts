@@ -1,6 +1,7 @@
 import { Component, DestroyRef, EventEmitter, Input, OnChanges, Output, ViewChild, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -19,19 +20,43 @@ import { QuoteReference } from '../../../core/models/quote.model';
 import { WarehouseContextService } from '../../../core/services/warehouse-context.service';
 import { InvoiceData, saleToInvoiceData } from '../../../shared/invoice/invoice-data';
 import { InvoiceDocumentComponent } from '../../../shared/invoice/invoice-document.component';
-import { exportInvoicePdf, printInvoice } from '../../../shared/invoice/invoice-output';
+import { exportInvoicePdf, printInvoice, printReceipt } from '../../../shared/invoice/invoice-output';
 import { withQuoteReference } from '../../../shared/invoice/quote-document';
+import { ReceiptDocumentComponent } from '../../../shared/invoice/receipt-document.component';
 import { paymentMethodLabels } from '../data/sales-vm.model';
 
+/** Format du document : facture A4 (défaut) ou ticket de caisse 80 mm (imprimante thermique). */
+export type SaleDocumentFormat = 'A4' | 'RECEIPT';
+
+/** Dernier format choisi sur cet appareil (un poste de caisse équipé d'une imprimante thermique garde le ticket). */
+export const DOCUMENT_FORMAT_KEY = 'geststock.saleDocumentFormat';
+
+function storedFormat(): SaleDocumentFormat {
+  try {
+    return localStorage.getItem(DOCUMENT_FORMAT_KEY) === 'RECEIPT' ? 'RECEIPT' : 'A4';
+  } catch {
+    return 'A4';
+  }
+}
+
 /**
- * Facture d'une vente, mise en page selon la configuration de la facture (Paramètres). Les
- * montants sont ceux de la vente enregistrée ; la configuration ne change que la présentation,
- * y compris pour la réimpression d'une vente passée.
+ * Facture d'une vente, mise en page selon la configuration de la facture (Paramètres), ou ticket
+ * de caisse 80 mm construit à partir des mêmes données et de la même configuration. Les montants
+ * sont ceux de la vente enregistrée ; la configuration ne change que la présentation, y compris
+ * pour la réimpression d'une vente passée.
  */
 @Component({
   selector: 'app-invoice-drawer',
   standalone: true,
-  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatProgressSpinnerModule, InvoiceDocumentComponent],
+  imports: [
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatDividerModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    InvoiceDocumentComponent,
+    ReceiptDocumentComponent
+  ],
   templateUrl: './invoice-drawer.component.html',
   styleUrl: './invoice-drawer.component.scss'
 })
@@ -52,6 +77,7 @@ export class InvoiceDrawerComponent implements OnChanges {
   @Output() readonly close = new EventEmitter<void>();
 
   @ViewChild(InvoiceDocumentComponent) private document?: InvoiceDocumentComponent;
+  @ViewChild(ReceiptDocumentComponent) private receipt?: ReceiptDocumentComponent;
 
   private readonly store = inject(InvoiceSettingsStore);
   private readonly customers = inject(CustomersApiService);
@@ -67,6 +93,7 @@ export class InvoiceDrawerComponent implements OnChanges {
   readonly settingsUnavailable = signal(false);
   readonly data = signal<InvoiceData | null>(null);
   readonly busy = signal<'print' | 'pdf' | null>(null);
+  readonly format = signal<SaleDocumentFormat>(storedFormat());
 
   private customerPhone: string | null = null;
   /** Devis dont la vente est la facture : objet, lot… repris sur la facture définitive. */
@@ -100,13 +127,26 @@ export class InvoiceDrawerComponent implements OnChanges {
     this.close.emit();
   }
 
+  setFormat(format: SaleDocumentFormat): void {
+    this.format.set(format);
+    try {
+      localStorage.setItem(DOCUMENT_FORMAT_KEY, format);
+    } catch {
+      // Stockage indisponible (navigation privée) : le choix vaut pour cette fenêtre seulement.
+    }
+  }
+
   async print(): Promise<void> {
-    const root = this.document?.root();
+    const receipt = this.format() === 'RECEIPT';
+    const root = receipt ? this.receipt?.root() : this.document?.root();
     const settings = this.settings();
     if (!root || !settings || this.busy()) return;
     this.busy.set('print');
+    const number = this.data()?.number ?? '';
     try {
-      await printInvoice(root, settings.appearance, `Facture ${this.data()?.number ?? ''}`);
+      await (receipt
+        ? printReceipt(root, `Ticket ${number}`)
+        : printInvoice(root, settings.appearance, `Facture ${number}`));
     } catch (e) {
       this.snackbar.open(e instanceof Error ? e.message : 'Impression impossible.', 'OK', { duration: 4000 });
     } finally {
@@ -114,10 +154,11 @@ export class InvoiceDrawerComponent implements OnChanges {
     }
   }
 
+  /** PDF de la facture A4 (le ticket s'imprime directement sur l'imprimante thermique). */
   async exportPdf(): Promise<void> {
     const root = this.document?.root();
     const settings = this.settings();
-    if (!root || !settings || this.busy()) return;
+    if (!root || !settings || this.busy() || this.format() !== 'A4') return;
     this.busy.set('pdf');
     try {
       await exportInvoicePdf(root, settings.appearance, `facture_${this.sale.number ?? this.sale.id}.pdf`);

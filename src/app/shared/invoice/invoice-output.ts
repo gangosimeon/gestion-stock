@@ -33,10 +33,35 @@ function pageRules(appearance: InvoiceAppearance): string {
 }
 
 /**
+ * Règles de page du ticket 80 mm : aucune marge imposée par le navigateur. Le format du papier
+ * n'est pas forcé (`size: 80mm auto` n'est pas une valeur CSS valide et serait ignorée ; une hauteur
+ * fixe ferait avancer le rouleau à vide) : c'est le pilote de l'imprimante thermique qui fournit
+ * le rouleau de 80 mm. La largeur imprimable (72 mm) est fixée par le ticket lui-même.
+ */
+export const RECEIPT_PAGE_RULES = `@page { margin: 0; }
+    html, body { margin: 0; background: #fff; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .gsr { padding: 3mm 0 6mm; }`;
+
+/**
  * Imprime la facture seule, dans une fenêtre d'impression dédiée (cadre invisible) : le reste
  * de l'application n'est pas imprimé. Se résout quand la boîte d'impression est fermée.
  */
 export function printInvoice(element: HTMLElement, appearance: InvoiceAppearance, title: string): Promise<void> {
+  return printElement(element, pageRules(appearance), title);
+}
+
+/**
+ * Imprime le ticket de caisse 80 mm (imprimante thermique), dans la même fenêtre d'impression
+ * dédiée que la facture. Choisir l'imprimante du ticket et une marge « Aucune » si le navigateur
+ * le demande.
+ */
+export function printReceipt(element: HTMLElement, title: string): Promise<void> {
+  return printElement(element, RECEIPT_PAGE_RULES, title);
+}
+
+/** Fenêtre d'impression dédiée (cadre invisible) contenant le seul élément, avec ses règles de page. */
+function printElement(element: HTMLElement, pageCss: string, title: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
@@ -54,7 +79,7 @@ export function printInvoice(element: HTMLElement, appearance: InvoiceAppearance
     const safeTitle = title.replace(/[<>&"]/g, '');
     doc.open();
     doc.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${safeTitle}</title>
-      ${documentStyles()}<style>${pageRules(appearance)}</style></head>
+      ${documentStyles()}<style>${pageCss}</style></head>
       <body>${element.outerHTML}</body></html>`);
     doc.close();
 

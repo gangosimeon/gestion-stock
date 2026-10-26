@@ -1,0 +1,95 @@
+@let d = data();
+@let c = company();
+<article class="gsr" aria-label="Ticket de caisse">
+  <header class="gsr-header">
+    @if (showLogo()) {
+      <img class="gsr-logo" [src]="logoUrl()" alt="Logo" />
+    }
+    @if (header().showCompanyName && c.companyName) {
+      <div class="gsr-company">{{ c.companyName }}</div>
+    }
+    @for (row of contacts(); track $index) {
+      <div class="gsr-contact">{{ row }}</div>
+    }
+  </header>
+
+  <div class="gsr-rule"></div>
+
+  <section class="gsr-meta">
+    <div class="gsr-row"><span>Ticket</span><strong>{{ d.number }}</strong></div>
+    <div class="gsr-row"><span>Date</span><span>{{ date(d.date) }} {{ time(d.date) }}</span></div>
+    @if (header().showWarehouse && d.warehouseName) {
+      <div class="gsr-row"><span>Dépôt</span><span>{{ d.warehouseName }}</span></div>
+    }
+    @if (namedCustomer()) {
+      <div class="gsr-row"><span>Client</span><span>{{ namedCustomer() }}</span></div>
+    }
+    @if (d.customerPhone && namedCustomer()) {
+      <div class="gsr-row"><span>Tél. client</span><span>{{ d.customerPhone }}</span></div>
+    }
+  </section>
+
+  @if (d.cancelled) {
+    <div class="gsr-cancelled" role="note">
+      <strong>{{ d.cancelled.label ?? 'VENTE ANNULÉE' }}</strong>
+      @if (d.cancelled.reason) { <div>{{ d.cancelled.reason }}</div> }
+    </div>
+  }
+
+  <div class="gsr-rule"></div>
+
+  <section class="gsr-lines" aria-label="Articles">
+    @for (line of d.lines; track $index) {
+      <div class="gsr-line">
+        <div class="gsr-line__name">{{ line.name }}</div>
+        <div class="gsr-row">
+          <span>
+            {{ amount(line.quantity) }} x {{ amount(line.unitPrice) }}
+            @if ((line.discountPercent ?? 0) > 0) { <span class="gsr-discount">(-{{ line.discountPercent }} %)</span> }
+          </span>
+          <span class="gsr-amount">{{ amount(line.lineTotal) }}</span>
+        </div>
+      </div>
+    }
+  </section>
+
+  <div class="gsr-rule"></div>
+
+  <section class="gsr-totals">
+    @if (hasDiscount() && d.subtotal != null) {
+      <div class="gsr-row"><span>Sous-total</span><span class="gsr-amount">{{ money(d.subtotal) }}</span></div>
+      <div class="gsr-row"><span>Remise</span><span class="gsr-amount">-{{ money(d.discountTotal) }}</span></div>
+    }
+    <div class="gsr-row gsr-total"><span>TOTAL</span><span class="gsr-amount">{{ money(d.total) }}</span></div>
+    @if (d.paymentMethodLabel && d.paidAmount != null) {
+      <div class="gsr-row"><span>Payé ({{ d.paymentMethodLabel }})</span><span class="gsr-amount">{{ money(d.paidAmount) }}</span></div>
+    }
+    @if ((d.creditAmount ?? 0) > 0) {
+      <div class="gsr-row gsr-strong"><span>Reste à payer</span><span class="gsr-amount">{{ money(d.creditAmount) }}</span></div>
+    }
+    @if (showCashTender() && d.cashReceived != null) {
+      <div class="gsr-row"><span>Montant reçu</span><span class="gsr-amount">{{ money(d.cashReceived) }}</span></div>
+      <div class="gsr-row"><span>Monnaie rendue</span><span class="gsr-amount">{{ money(d.changeGiven) }}</span></div>
+    }
+  </section>
+
+  @if ((d.returns ?? []).length > 0) {
+    <div class="gsr-rule"></div>
+    <section class="gsr-returns">
+      <div class="gsr-row gsr-strong"><span>Retours ({{ d.returns!.length }})</span><span class="gsr-amount">{{ money(returnedTotal()) }}</span></div>
+      @for (r of d.returns!; track r.id) {
+        <div class="gsr-contact">{{ r.number }} · {{ date(r.createdAt) }} · {{ settlementLabels[r.settlement] }}</div>
+      }
+    </section>
+  }
+
+  @if (thankYou() || footerNotes().length > 0) {
+    <div class="gsr-rule"></div>
+    <footer class="gsr-footer">
+      @if (thankYou()) { <div class="gsr-thanks">{{ thankYou() }}</div> }
+      @for (note of footerNotes(); track $index) {
+        <div class="gsr-note">{{ note }}</div>
+      }
+    </footer>
+  }
+</article>
