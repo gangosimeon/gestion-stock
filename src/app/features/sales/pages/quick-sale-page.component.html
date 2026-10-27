@@ -1,0 +1,204 @@
+<mat-drawer-container class="qs-container" autosize>
+  <mat-drawer-content>
+    @if (vm(); as vm) {
+      <div class="qs">
+        <header class="qs-bar">
+          <h1 class="qs-bar__title">Caisse rapide</h1>
+          <span class="qs-bar__spacer"></span>
+          <a mat-button routerLink="/sales/new" class="qs-bar__link">
+            <mat-icon>tune</mat-icon>
+            Mode complet
+          </a>
+          @if (vm.cart.length > 0) {
+            <button mat-button type="button" (click)="clear()" aria-label="Vider le panier">
+              <mat-icon>delete_sweep</mat-icon>
+              Vider
+            </button>
+          }
+        </header>
+
+        @if (vm.isLoading) { <mat-progress-bar mode="indeterminate" /> }
+        @if (vm.errorMessage) { <div class="error" role="alert">{{ vm.errorMessage }}</div> }
+
+        <div class="qs-layout">
+          <!-- Articles : recherche (ou lecteur de codes-barres) et favoris -->
+          <section class="qs-products" aria-label="Articles">
+            <div class="qs-search">
+              <mat-icon aria-hidden="true">search</mat-icon>
+              <input
+                #searchInput
+                type="search"
+                class="qs-search__input"
+                placeholder="Rechercher ou scanner (F2)"
+                aria-label="Rechercher un article"
+                autocomplete="off"
+                enterkeyhint="search"
+                [value]="search()"
+                (input)="onSearch($any($event.target).value)"
+                (keydown.enter)="onSearchEnter()"
+              />
+              @if (search()) {
+                <button mat-icon-button type="button" (click)="onSearch('')" aria-label="Effacer la recherche">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </div>
+
+            @let tiles = search() ? results() : favorites();
+            @if (!search() && tiles.length > 0) {
+              <p class="qs-hint">Articles fréquents</p>
+            }
+            <div class="qs-tiles" role="list">
+              @for (p of tiles; track p.id) {
+                <button
+                  type="button"
+                  class="qs-tile"
+                  role="listitem"
+                  [class.qs-tile--empty]="p.stockQuantity <= 0"
+                  (click)="add(p)"
+                  [attr.aria-label]="p.name + ', ' + fcfa(vm.form.type === 'WHOLESALE' ? p.wholesalePrice : p.retailPrice) + ' FCFA, stock ' + p.stockQuantity"
+                >
+                  <span class="qs-tile__name">{{ p.name }}</span>
+                  <span class="qs-tile__price">{{ fcfa(vm.form.type === 'WHOLESALE' ? p.wholesalePrice : p.retailPrice) }}</span>
+                  <span class="qs-tile__stock">Stock {{ p.stockQuantity }}</span>
+                  @if (inCart(p.id); as qty) { <span class="qs-tile__badge">{{ qty }}</span> }
+                </button>
+              } @empty {
+                <p class="qs-empty">
+                  @if (search()) { Aucun article pour « {{ search() }} ». } @else { Aucun article disponible. }
+                </p>
+              }
+            </div>
+          </section>
+
+          <!-- Panier et encaissement : bas d'écran sur téléphone, colonne de droite sur ordinateur -->
+          <section class="qs-checkout" aria-label="Panier et encaissement">
+            @if (vm.cart.length > 0) {
+              <ul class="qs-cart">
+                @for (row of vm.cart; track row.productId) {
+                  <li class="qs-line">
+                    <div class="qs-line__info">
+                      <span class="qs-line__name">{{ row.name }}</span>
+                      <span class="qs-line__detail">{{ row.quantity }} × {{ fcfa(row.unitPrice) }} = <strong>{{ fcfa(row.lineTotal) }}</strong></span>
+                    </div>
+                    <div class="qs-line__qty">
+                      <button mat-icon-button type="button" (click)="dec(row)" [attr.aria-label]="'Retirer un ' + row.name">
+                        <mat-icon>{{ row.quantity > 1 ? 'remove' : 'delete' }}</mat-icon>
+                      </button>
+                      <span class="qs-line__count" aria-live="polite">{{ row.quantity }}</span>
+                      <button mat-icon-button type="button" (click)="inc(row)" [attr.aria-label]="'Ajouter un ' + row.name">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="qs-empty qs-empty--cart">Touchez un article pour commencer la vente.</p>
+            }
+
+            <div class="qs-total" aria-live="polite">
+              <span>TOTAL</span>
+              <strong>{{ fcfa(vm.totals.total) }} FCFA</strong>
+            </div>
+
+            <mat-button-toggle-group
+              class="qs-pay"
+              [value]="vm.form.paymentMethod"
+              (change)="setPayment($event.value)"
+              aria-label="Moyen de paiement"
+              hideSingleSelectionIndicator
+            >
+              @for (o of paymentOptions; track o.value) {
+                <mat-button-toggle [value]="o.value"><mat-icon>{{ o.icon }}</mat-icon>{{ o.label }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+
+            @if (vm.form.paymentMethod === 'CASH' && vm.cart.length > 0) {
+              <div class="qs-cash">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="qs-cash__field">
+                  <mat-label>Montant reçu</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    [value]="received() ?? ''"
+                    (input)="setReceived($any($event.target).value)"
+                  />
+                  <span matTextSuffix>FCFA</span>
+                </mat-form-field>
+                <div class="qs-cash__amounts">
+                  @for (a of quickAmounts(); track a) {
+                    <button mat-stroked-button type="button" (click)="setReceived(a)">{{ fcfa(a) }}</button>
+                  }
+                </div>
+                @if (tender(); as t) {
+                  @if (t.missing > 0) {
+                    <div class="qs-change qs-change--missing" role="status">Il manque {{ fcfa(t.missing) }} FCFA</div>
+                  } @else {
+                    <div class="qs-change" role="status">Monnaie à rendre : <strong>{{ fcfa(t.change) }} FCFA</strong></div>
+                  }
+                }
+              </div>
+            }
+
+            <button mat-button type="button" class="qs-more" (click)="showOptions.set(!showOptions())" [attr.aria-expanded]="showOptions()">
+              <mat-icon>{{ showOptions() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              Plus d’options (client, prix de gros, crédit)
+            </button>
+            @if (showOptions()) {
+              <div class="qs-options">
+                <mat-button-toggle-group [value]="vm.form.type" (change)="setType($event.value)" aria-label="Type de prix" hideSingleSelectionIndicator>
+                  <mat-button-toggle value="RETAIL">Prix détail</mat-button-toggle>
+                  <mat-button-toggle value="WHOLESALE">Prix de gros</mat-button-toggle>
+                </mat-button-toggle-group>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Client</mat-label>
+                  <mat-select [value]="vm.form.customerId" (selectionChange)="setCustomer($event.value)">
+                    <app-select-search />
+                    <mat-option [value]="null">Comptoir</mat-option>
+                    @for (c of vm.customers; track c.id) {
+                      <mat-option [value]="c.id">{{ c.name }}@if (c.phone) { · {{ c.phone }} }</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-checkbox [checked]="vm.form.partialPayment" (change)="setPartial($event.checked)">
+                  Paiement partiel / à crédit
+                </mat-checkbox>
+                @if (vm.form.partialPayment) {
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Montant payé maintenant</mat-label>
+                    <input matInput type="number" inputmode="numeric" min="0" [value]="vm.form.paidAmount" (input)="setPaidAmount($any($event.target).value)" />
+                    <span matTextSuffix>FCFA</span>
+                  </mat-form-field>
+                }
+              </div>
+            }
+
+            @if (vm.canSell) {
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                class="qs-pay-button"
+                (click)="checkout()"
+                [disabled]="vm.isLoading || vm.cart.length === 0 || (tender()?.missing ?? 0) > 0"
+              >
+                <mat-icon>shopping_cart_checkout</mat-icon>
+                @if (amountDue() > 0) { Encaisser {{ fcfa(amountDue()) }} FCFA } @else { Enregistrer la vente }
+                <span class="qs-pay-button__key">F9</span>
+              </button>
+            }
+          </section>
+        </div>
+      </div>
+    }
+  </mat-drawer-content>
+
+  <mat-drawer #invoiceDrawer class="invoice-drawer" position="end" mode="over" (closed)="onInvoiceClosed()">
+    @if (vm()?.lastSale; as sale) {
+      <app-invoice-drawer [sale]="sale" [customer]="customerOf(vm()!, sale.customerId)" (close)="closeInvoice()" />
+    }
+  </mat-drawer>
+</mat-drawer-container>

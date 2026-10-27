@@ -3,6 +3,10 @@
     <header class="page-header page-header--bar">
       <h1 class="page-header__title">Vente</h1>
       <div class="page-header__spacer"></div>
+      <a mat-stroked-button routerLink="/sales/quick">
+        <mat-icon>bolt</mat-icon>
+        Caisse rapide
+      </a>
       @if (canSeeHistory) {
         <a mat-stroked-button [routerLink]="['/sales/history']">
           <mat-icon>history</mat-icon>

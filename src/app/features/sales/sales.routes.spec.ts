@@ -25,7 +25,22 @@ function route(path: string): Route | undefined {
 
 describe('SALES_ROUTES (vendre ou consulter)', () => {
   it("avec sale:create : l'onglet Ventes ouvre la caisse de vente", () => {
+    localStorage.removeItem('geststock.salesMode');
     expect(landingFor(['sale:create', 'sale:read'])).toBe('new');
+  });
+
+  it("dernier mode utilisé sur l'appareil : l'onglet rouvre la caisse rapide", () => {
+    localStorage.setItem('geststock.salesMode', 'quick');
+    try {
+      expect(landingFor(['sale:create', 'sale:read'])).toBe('quick');
+    } finally {
+      localStorage.removeItem('geststock.salesMode');
+    }
+  });
+
+  it('la caisse rapide exige sale:create', () => {
+    expect(route('quick')?.canMatch).toContain(permissionGuard);
+    expect(route('quick')?.data?.['permissions']).toEqual(['sale:create']);
   });
 
   it("avec seulement sale:read : l'onglet ouvre directement l'historique", () => {

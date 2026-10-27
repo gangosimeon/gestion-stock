@@ -35,6 +35,7 @@ import {
   quickCashAmounts,
   saleTypeLabels
 } from '../data/sales-vm.model';
+import { rememberSalesMode } from '../data/quick-sale.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
 
@@ -138,6 +139,7 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
   private shownSale: unknown = null;
 
   constructor() {
+    rememberSalesMode('full');
     this.facade.refresh();
     // Autre magasin : catalogue et stock rechargés (le panier a été vidé par la facade).
     this.warehouseCtx.warehouseChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => {

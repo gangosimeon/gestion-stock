@@ -94,12 +94,56 @@ $invoice-width: 794px;
   color: var(--color-text-secondary);
 }
 
+// Téléphone : pas de cadre à défilement interne (le ticket y était coupé). Le document s'affiche en
+// entier et c'est le panneau qui défile, d'un seul geste, comme une page ; les actions restent en haut.
+// Largeur 100 % (et non 100vw, qui inclut la barre de défilement) : aucun défilement horizontal.
 @media (max-width: 600px) {
-  .invoice {
-    width: 100vw;
+  :host {
+    height: auto;
   }
 
+  .invoice {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .invoice__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 12px;
+    background: var(--color-surface);
+  }
+
+  // Bloc simple (et non grille) : dans une grille dont la colonne suit le contenu, la feuille gardait
+  // sa largeur A4 (794 px) malgré max-width, et le ticket centré dedans sortait de l'écran.
   .invoice__body {
+    display: block;
     padding: 8px;
+    overflow: visible;
+    min-height: auto;
+
+    > * + * {
+      margin-top: 8px;
+    }
+  }
+
+  .invoice__paper,
+  .invoice__loading {
+    width: 100%;
+  }
+
+  // Facture A4 (page de 794 px) : défilement horizontal dans sa seule feuille ; le ticket tient
+  // dans la largeur de l'écran.
+  .invoice__paper:not(.invoice__paper--receipt) {
+    overflow-x: auto;
+  }
+
+  .invoice__paper--receipt {
+    padding: 12px 0;
+    box-shadow: none;
+    border-radius: 0;
   }
 }

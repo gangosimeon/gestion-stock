@@ -1,0 +1,364 @@
+// Caisse rapide : conçue d'abord pour le téléphone (une colonne, encaissement collé en bas d'écran,
+// zones tactiles d'au moins 44 px), deux colonnes à partir de 900 px.
+
+.qs-container {
+  height: 100%;
+}
+
+.mat-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.qs {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.qs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.qs-bar__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.qs-bar__spacer {
+  flex: 1;
+}
+
+.qs-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.qs-products {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.qs-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 12px;
+  min-height: 52px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+
+  &:focus-within {
+    border-color: var(--color-primary);
+  }
+}
+
+.qs-search__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 17px;
+  padding: 12px 0;
+}
+
+.qs-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qs-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.qs-tile {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 88px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.qs-tile--empty {
+  opacity: 0.55;
+}
+
+.qs-tile__name {
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.qs-tile__price {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.qs-tile__stock {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.qs-tile__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.qs-empty {
+  grid-column: 1 / -1;
+  margin: 8px 0;
+  color: var(--color-text-secondary);
+}
+
+// Encaissement : collé en bas sur téléphone (toujours atteignable au pouce).
+.qs-checkout {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 -4px 12px rgb(0 0 0 / 8%);
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.qs-cart {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 32vh;
+  overflow-y: auto;
+}
+
+.qs-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.qs-line__info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.qs-line__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.qs-line__detail {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.qs-line__qty {
+  display: flex;
+  align-items: center;
+}
+
+.qs-line__count {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.qs-empty--cart {
+  margin: 0;
+  text-align: center;
+}
+
+.qs-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+
+  strong {
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.qs-pay {
+  width: 100%;
+  --mat-button-toggle-height: 48px;
+
+  mat-button-toggle {
+    flex: 1;
+  }
+
+  mat-icon {
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+}
+
+.qs-cash {
+  display: grid;
+  gap: 8px;
+}
+
+.qs-cash__field {
+  width: 100%;
+}
+
+.qs-cash__amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  button {
+    min-height: 44px;
+  }
+}
+
+.qs-change {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+  color: var(--color-success-text);
+  font-size: 16px;
+
+  strong {
+    font-size: 20px;
+  }
+}
+
+.qs-change--missing {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-text);
+  font-weight: 600;
+}
+
+.qs-more {
+  justify-self: start;
+}
+
+.qs-options {
+  display: grid;
+  gap: 10px;
+}
+
+.qs-pay-button {
+  width: 100%;
+  min-height: 56px;
+  font-size: 17px;
+}
+
+.qs-pay-button__key {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+// Le ticket occupe tout l'écran d'un téléphone.
+.invoice-drawer {
+  max-width: 100vw;
+}
+
+// Ordinateur et tablette en paysage : articles à gauche, encaissement à droite.
+@media (min-width: 900px) {
+  .qs-layout {
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
+
+  .qs-products {
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .qs-checkout {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    align-self: start;
+    max-height: calc(100vh - 140px);
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+    box-shadow: none;
+  }
+
+  .qs-cart {
+    max-height: 40vh;
+  }
+}
+
+// Petits téléphones : raccourci clavier inutile, tuiles plus serrées.
+@media (max-width: 420px) {
+  .qs-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .qs-pay-button__key,
+  .qs-bar__link mat-icon {
+    display: none;
+  }
+}
