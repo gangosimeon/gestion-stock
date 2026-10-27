@@ -133,6 +133,37 @@ export interface PlatformStats {
   recent: CompanyListItem[];
 }
 
+/** État du schéma d'une base d'entreprise (mise à jour après un déploiement). */
+export type SchemaState = 'UPGRADING' | 'UP_TO_DATE' | 'FAILED';
+
+export const schemaStateLabels: Record<SchemaState, string> = {
+  UPGRADING: 'Mise à jour en cours',
+  UP_TO_DATE: 'À jour',
+  FAILED: 'En échec'
+};
+
+export interface SchemaUpgradeEntry {
+  companyId: string;
+  code: string;
+  state: SchemaState;
+  /** Migrations en attente détectées lors de la dernière vérification. */
+  pending: number;
+  /** Migrations appliquées lors de la dernière mise à jour. */
+  applied: number;
+  /** Cause d'un échec (sans secret). */
+  message: string | null;
+  updatedAt: string;
+}
+
+export interface SchemaUpgradeStatus {
+  running: boolean;
+  /** Mise à jour automatique en arrière-plan après chaque démarrage (hébergement à démarrage court). */
+  automatic: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  companies: SchemaUpgradeEntry[];
+}
+
 export interface PlatformAuditEntry {
   id: string;
   occurredAt: string;

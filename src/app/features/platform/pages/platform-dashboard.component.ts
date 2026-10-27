@@ -8,12 +8,13 @@ import { catchError, map, of, startWith } from 'rxjs';
 
 import { PlatformApiService } from '../data/platform-api.service';
 import { PlatformStats, companyStatusLabels } from '../data/platform.models';
+import { SchemaUpgradePanelComponent } from '../ui/schema-upgrade-panel.component';
 
 /** Tableau de bord global de la plateforme. */
 @Component({
   selector: 'app-platform-dashboard',
   standalone: true,
-  imports: [AsyncPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [AsyncPipe, DatePipe, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule, SchemaUpgradePanelComponent],
   template: `
     <div class="page-header">
       <div>
@@ -90,6 +91,8 @@ import { PlatformStats, companyStatusLabels } from '../data/platform.models';
         </div>
       }
     }
+
+    <app-schema-upgrade-panel />
   `,
   styles: [
     `

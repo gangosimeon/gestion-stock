@@ -14,7 +14,8 @@ import {
   CompanyRequest,
   CompanyStatus,
   PlatformAuditEntry,
-  PlatformStats
+  PlatformStats,
+  SchemaUpgradeStatus
 } from './platform.models';
 
 function toApiError(err: unknown): Error {
@@ -33,6 +34,20 @@ export class PlatformApiService {
 
   stats(): Observable<PlatformStats> {
     return this.http.get<PlatformStats>(`${this.base}/stats`).pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  /** État de la mise à jour des bases des entreprises (depuis le démarrage du serveur). */
+  schemaUpgrades(): Observable<SchemaUpgradeStatus> {
+    return this.http
+      .get<SchemaUpgradeStatus>(`${this.base}/schema-upgrades`)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  /** Relance la mise à jour de toutes les bases (409 si une mise à jour est déjà en cours). */
+  startSchemaUpgrade(): Observable<SchemaUpgradeStatus> {
+    return this.http
+      .post<SchemaUpgradeStatus>(`${this.base}/schema-upgrades`, null)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
   }
 
   companies(page: PageRequest, filters: { status?: CompanyStatus | null } = {}): Observable<PaginatedResult<CompanyListItem>> {
