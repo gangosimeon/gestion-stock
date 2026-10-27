@@ -61,7 +61,7 @@ describe('QuickSalePageComponent (caisse rapide)', { timeout: 20_000 }, () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const text = () => root.textContent?.replace(/\s+/g, ' ') ?? '';
-    const tiles = () => Array.from(root.querySelectorAll<HTMLButtonElement>('.qs-tile'));
+    const tiles = () => Array.from(root.querySelectorAll<HTMLButtonElement>('app-product-card button.card'));
     const payButton = () => root.querySelector<HTMLButtonElement>('.qs-pay-button')!;
     return { fixture, page: fixture.componentInstance, root, text, tiles, payButton };
   }
@@ -89,7 +89,7 @@ describe('QuickSalePageComponent (caisse rapide)', { timeout: 20_000 }, () => {
     tiles()[0].click();
     tiles()[0].click();
     fixture.detectChanges();
-    expect(root.querySelector('.qs-tile__badge')?.textContent).toBe('2');
+    expect(root.querySelector('.card__badge')?.textContent).toBe('2');
     expect(text()).toMatch(/TOTAL\s?14\s?600 FCFA/);
 
     page.dec(page.vm()!.cart[0]);

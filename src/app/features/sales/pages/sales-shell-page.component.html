@@ -64,26 +64,48 @@
             <span class="card__count">{{ vm.totals.itemsCount }} article(s)</span>
           </div>
 
-          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
-            <mat-label>Ajouter un produit</mat-label>
-            <mat-icon matPrefix>search</mat-icon>
-            <input
-              matInput
-              [formControl]="productSearch"
-              [matAutocomplete]="auto"
-              placeholder="Référence ou nom du produit"
-            />
-            <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectProduct($event.option.value)">
-              @for (p of filteredProducts$ | async; track p.id) {
-                <mat-option [value]="p.id">
-                  <div class="option">
-                    <div class="name">{{ p.sku }} — {{ p.name }}</div>
-                    <div class="meta">Stock : {{ p.stockQuantity }}</div>
-                  </div>
-                </mat-option>
+          @let catalog = filteredProducts$ | async;
+          <div class="search-row">
+            <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+              <mat-label>Ajouter un produit</mat-label>
+              <mat-icon matPrefix>search</mat-icon>
+              <input
+                matInput
+                [formControl]="productSearch"
+                [matAutocomplete]="auto"
+                [matAutocompleteDisabled]="productView() === 'cards'"
+                (keydown.enter)="onSearchEnter($event)"
+                placeholder="Nom, référence ou code-barres"
+              />
+              <mat-autocomplete #auto="matAutocomplete" class="product-options" (optionSelected)="selectProduct($event.option.value)">
+                @for (p of catalog; track p.id) {
+                  <mat-option [value]="p.id" class="product-option">
+                    <app-product-option [product]="p" [unitPrice]="priceOf(vm, p)" />
+                  </mat-option>
+                }
+              </mat-autocomplete>
+            </mat-form-field>
+            <mat-button-toggle-group
+              class="view-toggle"
+              [value]="productView()"
+              (change)="setProductView($event.value)"
+              aria-label="Affichage des produits"
+              hideSingleSelectionIndicator
+            >
+              <mat-button-toggle value="list" aria-label="Liste de recherche"><mat-icon>view_list</mat-icon></mat-button-toggle>
+              <mat-button-toggle value="cards" aria-label="Cartes produits"><mat-icon>grid_view</mat-icon></mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+
+          @if (productView() === 'cards') {
+            <div class="catalog" role="list" aria-label="Produits">
+              @for (p of catalog; track p.id) {
+                <app-product-card role="listitem" [product]="p" [unitPrice]="priceOf(vm, p)" [inCart]="inCart(vm, p.id)" (pick)="selectProduct($event.id)" />
+              } @empty {
+                <p class="catalog__empty">Aucun produit ne correspond à la recherche.</p>
               }
-            </mat-autocomplete>
-          </mat-form-field>
+            </div>
+          }
 
           @if (vm.errorMessage) {
             <div class="error" role="alert">{{ vm.errorMessage }}</div>
@@ -100,9 +122,12 @@
                 <ng-container matColumnDef="product">
                   <th mat-header-cell *matHeaderCellDef>Produit</th>
                   <td mat-cell *matCellDef="let r">
-                    <div class="productCell">
-                      <div class="name">{{ r.name }}</div>
-                      <div class="sku">{{ r.sku }} · Stock : {{ r.stockQuantity }}</div>
+                    <div class="productCell productCell--photo">
+                      <app-product-thumb [productId]="r.productId" [version]="r.imageVersion" [name]="r.name" [size]="40" />
+                      <div>
+                        <div class="name">{{ r.name }}</div>
+                        <div class="sku">{{ r.sku }} · Stock : {{ r.stockQuantity }}</div>
+                      </div>
                     </div>
                   </td>
                 </ng-container>

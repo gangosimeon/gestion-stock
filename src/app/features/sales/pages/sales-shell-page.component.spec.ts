@@ -117,6 +117,34 @@ describe('SalesShellPageComponent — encaissement en espèces', { timeout: 20_0
     expect(page.received.value).toBeNull();
   });
 
+  it('affichage en cartes (retenu sur l’appareil) : un toucher ajoute le produit au panier', () => {
+    const { fixture, page, root } = setup();
+    expect(root.querySelector('.catalog')).toBeNull();
+
+    page.setProductView('cards');
+    fixture.detectChanges();
+    expect(localStorage.getItem('geststock.sales.productView')).toBe('cards');
+    const card = root.querySelector<HTMLButtonElement>('.catalog app-product-card button.card')!;
+    expect(card.textContent).toContain('Sac de ciment');
+    // Déjà une fois au panier (setup) : le badge l'indique, un toucher en ajoute une.
+    expect(card.querySelector('.card__badge')?.textContent).toBe('1');
+    card.click();
+    fixture.detectChanges();
+    expect(page.vmSnapshot.cart[0].quantity).toBe(2);
+
+    page.setProductView('list');
+    fixture.detectChanges();
+    expect(root.querySelector('.catalog')).toBeNull();
+  });
+
+  it('lecteur de codes-barres : référence exacte + Entrée ajoute le produit', () => {
+    const { page } = setup();
+    page.productSearch.setValue('CIM-50');
+    page.onSearchEnter(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(page.vmSnapshot.cart[0].quantity).toBe(2);
+    expect(page.productSearch.value).toBe('');
+  });
+
   it('autre moyen de paiement : pas de saisie d’espèces', () => {
     const { fixture, page, root } = setup();
     page.onPaymentChange('MOBILE_MONEY');

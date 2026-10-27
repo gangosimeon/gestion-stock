@@ -1256,3 +1256,16 @@ a {
   font-size: 48px;
   color: var(--color-text-muted);
 }
+
+// Liste de recherche des produits (caisse) : lignes avec photo, nom, stock et prix.
+.product-options .mat-mdc-option.product-option {
+  min-height: 60px;
+
+  @media (max-width: 600px) {
+    min-height: 52px;
+  }
+
+  .mdc-list-item__primary-text {
+    width: 100%;
+  }
+}

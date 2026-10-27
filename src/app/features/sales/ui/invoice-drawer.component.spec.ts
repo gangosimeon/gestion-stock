@@ -6,7 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { environment } from '../../../../environments/environment';
 import { defaultInvoiceSettings } from '../../../core/models/invoice-settings.model';
 import { Sale } from '../../../core/models/sale.model';
-import { DOCUMENT_FORMAT_KEY, InvoiceDrawerComponent } from './invoice-drawer.component';
+import { DOCUMENT_FORMAT_KEY, InvoiceDrawerComponent, MOBILE_QUERY, initialFormat } from './invoice-drawer.component';
 
 const URL = `${environment.apiUrl}/settings/invoice`;
 
@@ -188,5 +188,39 @@ describe('InvoiceDrawerComponent (facture d’une vente réelle)', () => {
     http.expectOne(URL).flush({ ...defaultInvoiceSettings(), logo: null, updatedAt: '' });
     noQuote();
     localStorage.removeItem(DOCUMENT_FORMAT_KEY);
+  });
+
+  describe('format à l’ouverture : ticket sur téléphone, facture A4 sur ordinateur', () => {
+    const realMatchMedia = window.matchMedia;
+
+    function screen(mobile: boolean): void {
+      window.matchMedia = ((query: string) => ({ matches: mobile && query === MOBILE_QUERY })) as unknown as typeof window.matchMedia;
+    }
+
+    afterEach(() => {
+      window.matchMedia = realMatchMedia;
+      localStorage.removeItem(DOCUMENT_FORMAT_KEY);
+    });
+
+    it('téléphone, aucun choix sur l’appareil : ticket de caisse 80 mm', () => {
+      localStorage.removeItem(DOCUMENT_FORMAT_KEY);
+      screen(true);
+      expect(initialFormat()).toBe('RECEIPT');
+    });
+
+    it('ordinateur, aucun choix sur l’appareil : facture A4', () => {
+      localStorage.removeItem(DOCUMENT_FORMAT_KEY);
+      screen(false);
+      expect(initialFormat()).toBe('A4');
+    });
+
+    it('le choix fait sur l’appareil l’emporte toujours', () => {
+      screen(true);
+      localStorage.setItem(DOCUMENT_FORMAT_KEY, 'A4');
+      expect(initialFormat()).toBe('A4');
+      screen(false);
+      localStorage.setItem(DOCUMENT_FORMAT_KEY, 'RECEIPT');
+      expect(initialFormat()).toBe('RECEIPT');
+    });
   });
 });

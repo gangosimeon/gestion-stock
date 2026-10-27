@@ -31,12 +31,23 @@ export type SaleDocumentFormat = 'A4' | 'RECEIPT';
 /** Dernier format choisi sur cet appareil (un poste de caisse équipé d'une imprimante thermique garde le ticket). */
 export const DOCUMENT_FORMAT_KEY = 'geststock.saleDocumentFormat';
 
-function storedFormat(): SaleDocumentFormat {
+/** Téléphone : écran étroit, où le ticket de caisse est le document attendu au comptoir. */
+export const MOBILE_QUERY = '(max-width: 600px)';
+
+/**
+ * Format affiché à l'ouverture : celui choisi sur cet appareil ; à défaut, le ticket 80 mm sur
+ * téléphone et la facture A4 sur ordinateur.
+ */
+export function initialFormat(): SaleDocumentFormat {
+  let stored: string | null = null;
   try {
-    return localStorage.getItem(DOCUMENT_FORMAT_KEY) === 'RECEIPT' ? 'RECEIPT' : 'A4';
+    stored = localStorage.getItem(DOCUMENT_FORMAT_KEY);
   } catch {
-    return 'A4';
+    // Stockage indisponible (navigation privée) : format par défaut de l'appareil.
   }
+  if (stored === 'RECEIPT' || stored === 'A4') return stored;
+  const mobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(MOBILE_QUERY).matches;
+  return mobile ? 'RECEIPT' : 'A4';
 }
 
 /**
@@ -93,7 +104,7 @@ export class InvoiceDrawerComponent implements OnChanges {
   readonly settingsUnavailable = signal(false);
   readonly data = signal<InvoiceData | null>(null);
   readonly busy = signal<'print' | 'pdf' | null>(null);
-  readonly format = signal<SaleDocumentFormat>(storedFormat());
+  readonly format = signal<SaleDocumentFormat>(initialFormat());
 
   private customerPhone: string | null = null;
   /** Devis dont la vente est la facture : objet, lot… repris sur la facture définitive. */

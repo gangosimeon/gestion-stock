@@ -19,6 +19,15 @@
   }
 
   <form class="drawer__content" [formGroup]="form" (ngSubmit)="submit()">
+    @if (ctx.mode === 'create' || loadedProduct) {
+      <app-product-photo
+        class="drawer__photo"
+        [productId]="ctx.mode === 'create' ? null : ctx.productId"
+        [version]="loadedProduct?.imageVersion"
+        [editable]="photoEditable"
+        (changed)="onPhotoChanged()"
+      />
+    }
     <div class="grid">
       <mat-form-field appearance="outline">
         <mat-label>SKU</mat-label>

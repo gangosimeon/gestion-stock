@@ -50,19 +50,7 @@
             }
             <div class="qs-tiles" role="list">
               @for (p of tiles; track p.id) {
-                <button
-                  type="button"
-                  class="qs-tile"
-                  role="listitem"
-                  [class.qs-tile--empty]="p.stockQuantity <= 0"
-                  (click)="add(p)"
-                  [attr.aria-label]="p.name + ', ' + fcfa(vm.form.type === 'WHOLESALE' ? p.wholesalePrice : p.retailPrice) + ' FCFA, stock ' + p.stockQuantity"
-                >
-                  <span class="qs-tile__name">{{ p.name }}</span>
-                  <span class="qs-tile__price">{{ fcfa(vm.form.type === 'WHOLESALE' ? p.wholesalePrice : p.retailPrice) }}</span>
-                  <span class="qs-tile__stock">Stock {{ p.stockQuantity }}</span>
-                  @if (inCart(p.id); as qty) { <span class="qs-tile__badge">{{ qty }}</span> }
-                </button>
+                <app-product-card role="listitem" [product]="p" [unitPrice]="priceOf(p)" [inCart]="inCart(p.id)" (pick)="add($event)" />
               } @empty {
                 <p class="qs-empty">
                   @if (search()) { Aucun article pour « {{ search() }} ». } @else { Aucun article disponible. }
@@ -77,6 +65,7 @@
               <ul class="qs-cart">
                 @for (row of vm.cart; track row.productId) {
                   <li class="qs-line">
+                    <app-product-thumb [productId]="row.productId" [version]="row.imageVersion" [name]="row.name" [size]="40" />
                     <div class="qs-line__info">
                       <span class="qs-line__name">{{ row.name }}</span>
                       <span class="qs-line__detail">{{ row.quantity }} × {{ fcfa(row.unitPrice) }} = <strong>{{ fcfa(row.lineTotal) }}</strong></span>

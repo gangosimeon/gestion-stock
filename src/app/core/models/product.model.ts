@@ -21,4 +21,6 @@ export interface Product {
   unit?: ProductUnit | null;
   maxStockLevel?: number | null;
   active?: boolean;
+  /** Version de la photo (empreinte) ; absente sans photo. Image : GET /api/products/{id}/image. */
+  imageVersion?: string | null;
 }

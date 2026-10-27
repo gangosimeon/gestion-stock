@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS, MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +18,7 @@ import { Supplier } from '../../../core/models/supplier.model';
 import { ProductsFacade } from '../data/products.facade';
 import { ProductDrawerMode } from '../data/product-vm.model';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+import { ProductPhotoComponent } from './product-photo.component';
 
 export interface ProductDrawerContext {
   mode: ProductDrawerMode;
@@ -42,7 +43,8 @@ export interface ProductDrawerContext {
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    ProductPhotoComponent
   ],
   providers: [
     {
@@ -61,6 +63,8 @@ export class ProductDrawerComponent {
   @Input({ required: true }) ctx!: ProductDrawerContext;
   @Output() readonly close = new EventEmitter<void>();
   @Output() readonly saved = new EventEmitter<void>();
+
+  @ViewChild(ProductPhotoComponent) private photo?: ProductPhotoComponent;
 
   isLoading = false;
   loadError: string | null = null;
@@ -183,14 +187,28 @@ export class ProductDrawerComponent {
         })
       )
       .subscribe({
-        next: () => {
-          this.snackbar.open('Enregistré', 'OK');
-          this.saved.emit();
-        },
+        next: (product) => void this.afterSave(product),
         error: (e: unknown) => {
           this.snackbar.open(e instanceof Error ? e.message : 'Erreur', 'OK');
         }
       });
+  }
+
+  /** Nouveau produit : la photo choisie est envoyée une fois la fiche enregistrée. */
+  private async afterSave(product: Product): Promise<void> {
+    const photoSent = this.ctx.mode === 'create' && this.photo ? await this.photo.uploadPending(product.id) : true;
+    this.snackbar.open(photoSent ? 'Enregistré' : 'Produit enregistré, mais la photo n’a pas pu être envoyée.', 'OK');
+    if (photoSent) this.saved.emit();
+  }
+
+  /** Photo ajoutée, remplacée ou retirée : la liste des produits affiche la nouvelle vignette. */
+  onPhotoChanged(): void {
+    this.facade.refresh();
+  }
+
+  /** Changer la photo : droit de modifier le produit (ou de le créer, pour un nouveau produit). */
+  get photoEditable(): boolean {
+    return this.ctx.mode === 'create' || (this.ctx.mode === 'edit' && this.ctx.canUpdate !== false);
   }
 
   requestEdit(): void {

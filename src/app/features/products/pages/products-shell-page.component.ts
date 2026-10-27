@@ -27,6 +27,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { ProductsFacade } from '../data/products.facade';
 import { ConfirmDeleteDialogComponent } from '../ui/confirm-delete-dialog.component';
 import { ProductDrawerComponent } from '../ui/product-drawer.component';
+import { ProductThumbComponent } from '../../../shared/product-image/product-thumb.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -52,7 +53,8 @@ import { RouterLink } from '@angular/router';
     MatSidenavModule,
     MatSelectModule,
     SelectSearchComponent,
-    ProductDrawerComponent
+    ProductDrawerComponent,
+    ProductThumbComponent
   ],
   templateUrl: './products-shell-page.component.html',
   styleUrl: './products-shell-page.component.scss'

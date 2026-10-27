@@ -39,6 +39,8 @@ import {
   searchProducts
 } from '../data/quick-sale.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
+import { ProductCardComponent } from '../../../shared/product-image/product-card.component';
+import { ProductThumbComponent } from '../../../shared/product-image/product-thumb.component';
 
 /** Stockage des favoris et du mode (remplaçable dans les tests). */
 export const QUICK_SALE_STORE = { current: browserStore as KeyValueStore };
@@ -66,7 +68,9 @@ export const QUICK_SALE_STORE = { current: browserStore as KeyValueStore };
     MatSelectModule,
     MatSidenavModule,
     SelectSearchComponent,
-    InvoiceDrawerComponent
+    InvoiceDrawerComponent,
+    ProductCardComponent,
+    ProductThumbComponent
   ],
   templateUrl: './quick-sale-page.component.html',
   styleUrl: './quick-sale-page.component.scss'
@@ -193,7 +197,12 @@ export class QuickSalePageComponent {
     this.focusSearch();
   }
 
-  /** Quantité du panier pour un article (badge sur sa tuile). */
+  /** Prix de l'article pour la vente en cours (détail ou gros). */
+  priceOf(product: Product): number {
+    return this.vm()?.form.type === 'WHOLESALE' ? product.wholesalePrice : product.retailPrice;
+  }
+
+  /** Quantité du panier pour un article (badge sur sa carte). */
   inCart(productId: string): number {
     return this.vm()?.cart.find((r) => r.productId === productId)?.quantity ?? 0;
   }

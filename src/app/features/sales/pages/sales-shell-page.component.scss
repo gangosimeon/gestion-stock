@@ -68,6 +68,46 @@
   width: 100%;
 }
 
+// Recherche et choix de l'affichage (liste ou cartes).
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .search {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.view-toggle {
+  flex: none;
+  --mat-button-toggle-height: 48px;
+}
+
+// Catalogue en cartes : grille qui s'adapte à la largeur, défilement limité à la grille.
+.catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 2px 4px 4px 2px;
+}
+
+.catalog__empty {
+  grid-column: 1 / -1;
+  margin: 8px 0;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 480px) {
+  .catalog {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
 .empty {
   display: grid;
   justify-items: center;
@@ -296,6 +336,13 @@
   display: grid;
 }
 
+// Ligne du panier précédée de la photo du produit.
+.productCell--photo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .productCell .name {
   font-weight: 600;
 }
@@ -335,16 +382,6 @@
   text-align: center;
 }
 
-.option {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.option .meta {
-  font-size: 12px;
-  opacity: 0.75;
-}
 
 // Vente issue d'un devis (« Générer la facture »).
 .quote-banner {

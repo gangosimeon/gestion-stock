@@ -46,3 +46,10 @@
     min-height: auto;
   }
 }
+
+// Nom du produit précédé de sa photo (pictogramme sans photo).
+.product-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

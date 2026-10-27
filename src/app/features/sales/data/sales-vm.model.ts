@@ -8,6 +8,8 @@ export interface CartRow {
   productId: string;
   sku: string;
   name: string;
+  /** Version de la photo du produit (vignette), absente sans photo. */
+  imageVersion?: string | null;
   /** Stock du dépôt courant au chargement (indication ; le backend refuse une survente). */
   stockQuantity: number;
   quantity: number;

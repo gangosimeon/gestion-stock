@@ -141,6 +141,11 @@ $invoice-width: 794px;
     overflow-x: auto;
   }
 
+  // Ticket de caisse en premier : c'est le document attendu au comptoir.
+  .invoice__format mat-button-toggle[value='RECEIPT'] {
+    order: -1;
+  }
+
   .invoice__paper--receipt {
     padding: 12px 0;
     box-shadow: none;

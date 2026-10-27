@@ -89,75 +89,8 @@
 
 .qs-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.qs-tile {
-  position: relative;
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  min-height: 88px;
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-
-  &:hover {
-    border-color: var(--color-primary);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-
-  &:focus-visible {
-    outline: 3px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-}
-
-.qs-tile--empty {
-  opacity: 0.55;
-}
-
-.qs-tile__name {
-  font-weight: 600;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.qs-tile__price {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-.qs-tile__stock {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.qs-tile__badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: 12px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .qs-empty {
@@ -354,7 +287,8 @@
 // Petits téléphones : raccourci clavier inutile, tuiles plus serrées.
 @media (max-width: 420px) {
   .qs-tiles {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .qs-pay-button__key,

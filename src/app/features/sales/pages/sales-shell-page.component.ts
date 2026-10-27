@@ -1,5 +1,5 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { AfterViewInit, Component, OnDestroy, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -35,9 +35,15 @@ import {
   quickCashAmounts,
   saleTypeLabels
 } from '../data/sales-vm.model';
-import { rememberSalesMode } from '../data/quick-sale.model';
+import { browserStore, exactProduct, rememberSalesMode, searchProducts } from '../data/quick-sale.model';
 import { InvoiceDrawerComponent } from '../ui/invoice-drawer.component';
+import { ProductCardComponent } from '../../../shared/product-image/product-card.component';
+import { ProductOptionComponent } from '../../../shared/product-image/product-option.component';
+import { ProductThumbComponent } from '../../../shared/product-image/product-thumb.component';
 import { SelectSearchComponent } from '../../../shared/select/select-search.component';
+
+/** Affichage des produits mémorisé sur l'appareil (liste ou cartes). */
+const PRODUCT_VIEW_KEY = 'geststock.sales.productView';
 
 @Component({
   selector: 'app-sales-shell-page',
@@ -62,7 +68,10 @@ import { SelectSearchComponent } from '../../../shared/select/select-search.comp
     MatDividerModule,
     MatProgressBarModule,
     MatSidenavModule,
-    InvoiceDrawerComponent
+    InvoiceDrawerComponent,
+    ProductCardComponent,
+    ProductOptionComponent,
+    ProductThumbComponent
   ],
   templateUrl: './sales-shell-page.component.html',
   styleUrl: './sales-shell-page.component.scss'
@@ -122,18 +131,16 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
     switchMap((products) =>
       this.productSearch.valueChanges.pipe(
         startWith(this.productSearch.value),
-        map((term) => {
-          const t = term.trim().toLowerCase();
-          if (!t) return products.slice(0, 20);
-          return products
-            .filter((p) => `${p.sku} ${p.name}`.toLowerCase().includes(t))
-            .slice(0, 20);
-        })
+        // Recherche tolérante (accents, ordre des mots, code-barres), commune avec la caisse rapide.
+        map((term) => (term.trim() ? searchProducts(products, term, 24) : products.slice(0, 24)))
       )
     )
   );
 
   vmSnapshot: any = null;
+
+  /** Choix des produits : liste de recherche ou cartes (mémorisé sur l'appareil). */
+  readonly productView = signal<'list' | 'cards'>(browserStore.getItem(PRODUCT_VIEW_KEY) === 'cards' ? 'cards' : 'list');
 
   /** Vente dont le ticket a déjà été ouvert : le panneau ne s'ouvre qu'une fois par vente. */
   private shownSale: unknown = null;
@@ -219,6 +226,29 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   displayProduct(p: Product): string {
     return `${p.sku} — ${p.name}`;
+  }
+
+  setProductView(view: 'list' | 'cards'): void {
+    this.productView.set(view);
+    browserStore.setItem(PRODUCT_VIEW_KEY, view);
+  }
+
+  /** Prix de l'article pour la vente en cours (détail ou gros). */
+  priceOf(vm: SalesVm, product: Product): number {
+    return vm.form.type === 'WHOLESALE' ? product.wholesalePrice : product.retailPrice;
+  }
+
+  inCart(vm: SalesVm, productId: string): number {
+    return vm.cart.find((r) => r.productId === productId)?.quantity ?? 0;
+  }
+
+  /** Entrée (ou lecteur de codes-barres) : article identifié sans ambiguïté ajouté directement. */
+  onSearchEnter(event: Event): void {
+    const product = exactProduct(this.vmSnapshot?.products ?? [], this.productSearch.value);
+    if (product) {
+      event.preventDefault();
+      this.selectProduct(product.id);
+    }
   }
 
   selectProduct(productId: string): void {
