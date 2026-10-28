@@ -1,0 +1,16 @@
+# Lint du contrat integration/v1 (integration-v1.openapi.yaml).
+#
+#   npx --yes @redocly/cli@latest lint \
+#     --config docs/integration-jecreemaboutique/redocly.yaml \
+#     docs/integration-jecreemaboutique/integration-v1.openapi.yaml
+#
+# Règles recommandées, sans désactivation globale. Les deux exceptions sont ciblées sur leur
+# emplacement exact dans .redocly.lint-ignore.yaml (même dossier) : Redocly ne permet pas de cibler
+# un emplacement depuis ce fichier.
+#   - no-ambiguous-paths : orderId est contraint au format UUID (format + pattern), un segment
+#     littéral comme « external » ne peut pas être un orderId ; le conflit entre
+#     /online-orders/{orderId}/cancel et /online-orders/external/{externalOrderId} est impossible.
+#   - no-required-schema-properties-undefined (ChangeEventBase, then) : faux positif ; data est
+#     déclaré dans properties du même schéma, la règle examine le sous-schéma then isolément.
+extends:
+  - recommended

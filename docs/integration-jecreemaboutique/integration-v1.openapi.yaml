@@ -22,6 +22,7 @@ info:
   version: 1.0.0-draft
   license:
     name: Propriétaire — usage restreint
+    identifier: LicenseRef-Proprietary
   description: |
     API de service à service entre le backend GestStock (fournisseur) et le backend
     JeCréeMaBoutique (client). **Jamais appelée depuis un navigateur.**

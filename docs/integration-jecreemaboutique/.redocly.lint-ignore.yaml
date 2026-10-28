@@ -1,0 +1,11 @@
+# Exceptions ciblées du lint Redocly (lu avec redocly.yaml, même dossier).
+# Chaque entrée vise un emplacement précis ; les règles restent actives partout ailleurs.
+integration-v1.openapi.yaml:
+  # orderId contraint au format UUID (format + pattern) : « external » ne peut pas être un orderId,
+  # le conflit avec /online-orders/external/{externalOrderId} est impossible.
+  no-ambiguous-paths:
+    - '#/paths/~1online-orders~1{orderId}~1cancel'
+  # Faux positif : data est déclaré dans properties de ChangeEventBase ; la règle examine le
+  # sous-schéma then isolément.
+  no-required-schema-properties-undefined:
+    - '#/components/schemas/ChangeEventBase/then/required/0'
