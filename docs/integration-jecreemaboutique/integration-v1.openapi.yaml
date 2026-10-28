@@ -20,6 +20,8 @@ openapi: 3.1.0
 info:
   title: GestStock — API d'intégration boutique en ligne
   version: 1.0.0-draft
+  license:
+    name: Propriétaire — usage restreint
   description: |
     API de service à service entre le backend GestStock (fournisseur) et le backend
     JeCréeMaBoutique (client). **Jamais appelée depuis un navigateur.**
@@ -61,6 +63,10 @@ info:
         c3Validation: 'prononcée uniquement à la sortie du lot 1'
         feedConsumerLots: 'bloqués tant que C3 n''est pas validée (voir plan § 9)'
       stillOpen: ['C8 : durée de rétention et règle de purge, liaisons révoquées ou inactives comprises', 'encodage interne du pageToken (lot 1)']
+    v10:
+      date: '2026-10-28'
+      approved: [Q1, Q2, Q3, Q4, Q5, Q6, Q7]
+      lint: 'Redocly recommended : 0 erreur ; exception documentée no-ambiguous-paths (orderId contraint en UUID)'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: '[Hypothèse] Origine du backend GestStock non confirmée (décision D8).'
@@ -74,16 +80,24 @@ security:
 
 tags:
   - name: Autorisation
+    description: "Échange du code d'autorisation (PKCE) et obtention des jetons de liaison."
   - name: Liaison
+    description: "État et révocation de la liaison entre une entreprise GestStock et une boutique."
   - name: Catalogue
+    description: "Flux de changements, instantané, recherche et images du catalogue lié."
   - name: Prix
+    description: "Prix de référence, propositions et prix approuvés de la boutique."
   - name: Disponibilité
+    description: "Disponibilité indicative sur les dépôts associés à la liaison."
   - name: Commandes
+    description: "Transmission, consultation et annulation des commandes en ligne."
   - name: Réservations
+    description: "Réservation de stock créée avec une commande en ligne."
 
 paths:
   /oauth/token:
     post:
+      operationId: exchangeToken
       tags: [Autorisation]
       summary: Échange de code d'autorisation ou obtention d'un jeton de liaison
       description: |
@@ -126,6 +140,7 @@ paths:
 
   /link:
     get:
+      operationId: getLink
       tags: [Liaison]
       summary: Statut et périmètre de la liaison appelante
       responses:
@@ -139,6 +154,7 @@ paths:
 
   /link/revoke:
     post:
+      operationId: revokeLink
       tags: [Liaison]
       summary: Révocation définitive de la liaison à l'initiative de la boutique (décision C2)
       description: |
@@ -161,7 +177,7 @@ paths:
             schema:
               type: object
               properties:
-                reason: { type: string, maxLength: 500, description: Motif facultatif, inscrit au journal d'audit }
+                reason: { type: string, maxLength: 500, description: 'Motif facultatif, inscrit au journal d''audit' }
       responses:
         '200':
           description: Liaison révoquée (`status = REVOKED`, `revokedAt` renseigné)
@@ -172,6 +188,7 @@ paths:
 
   /catalog/changes:
     get:
+      operationId: listCatalogChanges
       tags: [Catalogue]
       summary: Flux ordonné des changements de catalogue, prix et disponibilité
       description: |
@@ -244,6 +261,7 @@ paths:
 
   /catalog/changes/ack:
     post:
+      operationId: acknowledgeCatalogChanges
       tags: [Catalogue]
       summary: Acquittement du curseur appliqué (condition de purge, D5)
       description: Idempotent par valeur ; un `seq` inférieur au dernier acquitté est ignoré (200).
@@ -276,6 +294,7 @@ paths:
 
   /catalog/snapshot:
     get:
+      operationId: getCatalogSnapshot
       tags: [Catalogue]
       summary: Instantané paginé du catalogue lié (réconciliation, reprise)
       description: |
@@ -325,6 +344,7 @@ paths:
 
   /catalog/products/search:
     get:
+      operationId: searchCatalogProducts
       tags: [Catalogue]
       summary: Recherche de produits GestStock pour le rapprochement assisté
       description: Aucune association n'est créée par cet appel ; le rapprochement est confirmé côté boutique.
@@ -353,6 +373,7 @@ paths:
 
   /catalog/products/{productId}/image:
     get:
+      operationId: getProductImage
       tags: [Catalogue]
       summary: Image principale d'un produit lié (JPEG)
       x-required-scopes: [catalog:read]
@@ -376,6 +397,7 @@ paths:
 
   /prices/proposals:
     post:
+      operationId: createPriceProposal
       tags: [Prix]
       summary: Proposer un prix de vente boutique (soumis à approbation, D2)
       description: |
@@ -421,6 +443,7 @@ paths:
 
   /prices:
     get:
+      operationId: listPrices
       tags: [Prix]
       summary: Prix de la boutique (référence, proposé, approuvé) par produit lié
       x-required-scopes: [catalog:read]
@@ -450,6 +473,7 @@ paths:
 
   /availability:
     get:
+      operationId: getAvailability
       tags: [Disponibilité]
       summary: Disponibilité indicative sur les seuls dépôts associés actifs
       description: |
@@ -484,6 +508,7 @@ paths:
 
   /online-orders:
     post:
+      operationId: createOnlineOrder
       tags: [Commandes, Réservations]
       summary: Transmettre une commande en ligne (et demander la réservation)
       description: |
@@ -524,6 +549,7 @@ paths:
 
   /online-orders/{orderId}:
     get:
+      operationId: getOnlineOrder
       tags: [Commandes]
       summary: État d'une commande transmise
       description: Portée `orders:read` (ou `orders:write`, qui l'implique).
@@ -542,6 +568,7 @@ paths:
 
   /online-orders/external/{externalOrderId}:
     get:
+      operationId: getOnlineOrderByExternalId
       tags: [Commandes]
       summary: Retrouver une commande par l'identifiant JeCréeMaBoutique (décision C4)
       description: |
@@ -570,6 +597,7 @@ paths:
 
   /online-orders/{orderId}/cancel:
     post:
+      operationId: cancelOnlineOrder
       tags: [Commandes, Réservations]
       summary: Annulation demandée par la boutique ou le client
       description: |
@@ -605,6 +633,7 @@ paths:
 webhooks:
   geststockChangesAvailable:
     post:
+      operationId: notifyChangesAvailable
       summary: Signal « changements disponibles » envoyé par GestStock à JeCréeMaBoutique
       description: |
         Ne transporte aucune donnée de catalogue : le récepteur relit `/catalog/changes`.
@@ -663,8 +692,15 @@ components:
       name: orderId
       in: path
       required: true
-      description: Identifiant GestStock de la commande en ligne
-      schema: { type: string, format: uuid }
+      description: |
+        Identifiant GestStock de la commande en ligne (UUID). Contraint par `pattern` : un segment
+        littéral comme `external` ne peut pas être un `orderId` valide, donc `/online-orders/{orderId}/…`
+        et `/online-orders/external/{externalOrderId}` ne peuvent jamais désigner la même ressource
+        (l'avertissement `no-ambiguous-paths` de Redocly est structurel et documenté comme exception).
+      schema:
+        type: string
+        format: uuid
+        pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
   responses:
     BadRequest:
@@ -837,6 +873,8 @@ components:
         version: { type: integer, format: int64, description: 'Version de l''objet ; un événement de version ≤ dernière appliquée pour le même (type, objectId) est ignoré' }
         operation: { type: string, enum: [UPSERT, ARCHIVE] }
         occurredAt: { type: string, format: date-time }
+        data:
+          description: 'État de l''objet ; son schéma est fixé par chaque variante (discriminée par type). Obligatoire pour UPSERT, facultatif pour ARCHIVE.'
       if:
         properties:
           operation: { const: UPSERT }

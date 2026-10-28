@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Version | 9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Version | 10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
 | Statut | **Proposition soumise à approbation.** Aucun lot d'implémentation n'est commencé. |
 | Code, bases, déploiements | **Aucune modification** du code, des migrations, de la production ni de l'hébergement. Documents : ce fichier et `integration-v1.openapi.yaml` (nouveau). Seule base créée : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
@@ -271,7 +271,7 @@ Aucun paiement en ligne dans le code audité. S'il est ajouté : notifications a
 - **Données personnelles** : les événements de catalogue n'en contiennent pas ; les événements de commande ne transportent que des identifiants (jamais nom, téléphone ou adresse du client). Durée de conservation des commandes en ligne et de leurs données client : **[Ouvert]**, à aligner sur la politique de données personnelles.
 - **Observabilité** : tâche de purge en mode simulation par défaut (comptage sans suppression), puis suppression par lots bornés ; métriques (événements en attente, purgés, plus ancien non acquitté) ; journal de chaque exécution.
 - **Réversibilité** : une suppression est définitive ; avant purge, export optionnel des lots (format JSON compressé) vers le stockage des sauvegardes ; sinon, recours à la sauvegarde nocturne et à la réconciliation.
-- **Volume (hypothèses à valider)** : ~0,5 Ko par événement avec index ; 2 000 événements/jour/entreprise ⇒ ~180 000 événements et ~90 Mo par entreprise sur 90 jours. Index : clé primaire `write_id`, index unique sur `seq`, index partiel `seq IS NULL`, index sur `created_at` (conception D, § 20 ; *v7 et antérieures : « clé primaire `seq` », incompatible avec un `seq` nul à l'écriture*). Coût de stockage Neon à vérifier selon l'offre.
+- **Volume (hypothèses à valider)** : ~0,5 Ko par événement avec index ; 2 000 événements/jour/entreprise ⇒ ~180 000 événements et ~90 Mo par entreprise sur 90 jours. Index : clé primaire `id` (`uuid`, UUID v7), index unique sur `write_id` (seule clé d'ordre), index unique sur `seq`, index partiel `seq IS NULL`, index sur `created_at` (Q1, § 22 ; *v8-v9 : « clé primaire `write_id` » — contraire à la convention « clé `uuid` » vérifiée par `SchemaConventionsIT` ; v7 et antérieures : « clé primaire `seq` », incompatible avec un `seq` nul à l'écriture*). Coût de stockage Neon à vérifier selon l'offre.
 - **Purge et conception D** : un événement sans `seq` n'est jamais purgé. **Repère de purge [Approuvé, v9-D1]** : GestStock conserve durablement le plus haut `seq` purgé (emplacement : détail d'implémentation du lot 1) ; un `after` strictement inférieur à ce repère reçoit `410 CURSOR_EXPIRED` et le consommateur repart d'un instantané complet (§ 12, § 21). Points **ouverts, rattachés à C8** (§ 20.5) : durée de rétention ; règle de purge, dont l'exclusion des liaisons révoquées et le traitement des liaisons inactives dans le calcul du plus petit curseur acquitté. *v8 : « erreur renvoyée pour un curseur antérieur à la purge » ouverte — tranchée dans son principe par v9-D1.*
 
 ---
@@ -374,10 +374,12 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 |---|---|
 | Objectif | Chaque changement de catégorie, produit, prix de référence, image et stock produit un événement durable, dans la transaction métier |
 | Périmètre | GestStock uniquement ; aucun appel vers JCMB |
-| Fichiers concernés | Existants : `category/CategoryService`, `product/ProductService`, `product/ProductImageService` (P6, P7), `stock/StockService` ; à créer : module `com.geststock.integration` — point d'entrée unique d'écriture (ex. `IntegrationEvents.publish`), composant séquenceur, purge |
-| Migrations | `V047__integration_outbox.sql` *(à créer)* : `integration_outbox` (`write_id` identity, clé primaire, jamais exposé ; `seq` **NULL à l'écriture, UNIQUE**, attribué à la lecture ; index partiel `seq IS NULL` ; type, identifiant d'objet, version, opération, charge minimale, `created_at`), `integration_feed_state` (une seule ligne : `id = 1`, `last_seq`), `product_image_generation` (P7) ; permissions `integration:manage`, `integration:price-approve` ; rollback `U047`. *v6 et antérieures : `seq` bigserial attribué à l'écriture — abandonné (risque d'événement sauté, § 19.2)* |
+| Fichiers concernés | Existants : `category/CategoryService`, `product/ProductService`, `product/ProductImageService` (P6, P7), `stock/StockService`, `persistence/SchemaConventionsIT` (liste des tables) ; à créer : module `com.geststock.integration` — point d'entrée unique d'écriture (ex. `IntegrationEvents.publish`), composant séquenceur, services de lecture du flux et d'instantané, purge |
+| Exposition HTTP (Q3) | **Aucune route HTTP au lot 1** : services testés directement (codes d'erreur vérifiés par la correspondance `ApiError`). Les routes arrivent aux lots 2-3, derrière l'authentification par liaison |
+| Ordre des étapes (§ 22.3) | Chaîne complète d'abord avec `CATEGORY` (migration du flux → publication → séquenceur → lecture), puis les autres producteurs |
+| Migrations | *(numéro attribué à l'implémentation)* (Q4) : `integration_outbox` (clé `id uuid` (UUID v7) ; `write_id` identity **UNIQUE**, seule clé d'ordre, jamais exposé ; `seq` **NULL à l'écriture, UNIQUE**, attribué à la lecture ; index partiel `seq IS NULL` ; type, identifiant d'objet, **`object_version`** (le JSON du contrat garde `version`), opération, charge minimale, `created_at`), `integration_feed_state` (clé `uuid` constante + `CHECK` de ligne unique, `last_seq`, repère de purge), `product_image_generation` (P7, remplie pour les images existantes, Q6) ; chaque script V a son script U. **Contraintes (§ 22.2)** : tables additives uniquement, migrations courtes, aucun déploiement avant la porte de sortie. *v9 : `V047__integration_outbox.sql`, clé `write_id`, `id = 1`, colonne `version`, permissions `integration:*` (passées au lot 2, Q2), rollback `U047`.* *v6 et antérieures : `seq` bigserial attribué à l'écriture — abandonné (risque d'événement sauté, § 19.2)* |
 | Versions | Conception D (§ 20.2) : `seq` attribué à la lecture, contigu, dans l'ordre de `write_id`, aux seuls événements validés ; ordre d'application par (`type`, `objectId`) (C7) ; origine de `version` par famille (P3, § 20.3). *v7 : point bloquant « version de `PRODUCT_IMAGE` » — résolu sur le plan documentaire par P7* |
-| Exigences d'implémentation (P0) | 1. Attribution dans une transaction **dédiée et courte** (`TransactionTemplate` ou `REQUIRES_NEW`), jamais incluse dans un `@Transactional` englobant la requête, jamais `readOnly = true` ; 2. `lock_timeout` et `statement_timeout` définis pour cette transaction (valeurs à fixer au lot 1) ; 3. attribution isolée dans un **composant séquenceur unique** et réutilisable (flux et instantané) ; 4. **point d'entrée unique** d'écriture d'événement appliquant R1 (flush, lecture de la version, insertion) ; aucun service métier n'insère directement dans l'outbox ; 5. le point de terminaison du flux **écrit en base** : ni réplica en lecture seule, ni cache ; 6. métriques : nombre d'événements sans `seq`, âge du plus ancien d'entre eux |
+| Exigences d'implémentation (P0) | 1. Attribution dans une transaction **dédiée et courte** (`TransactionTemplate` ou `REQUIRES_NEW`), jamais incluse dans un `@Transactional` englobant la requête, jamais `readOnly = true` ; 2. `lock_timeout` et `statement_timeout` définis pour cette transaction (valeurs à fixer au lot 1) ; 3. attribution isolée dans un **composant séquenceur unique** et réutilisable (flux et instantané) ; 4. **point d'entrée unique** d'écriture d'événement appliquant R1 (flush, lecture de la version, insertion) ; aucun service métier n'insère directement dans l'outbox ; 5. le point de terminaison du flux **écrit en base** : ni réplica en lecture seule, ni cache ; 6. métriques : nombre d'événements sans `seq`, âge du plus ancien d'entre eux — **jauges Micrometer enregistrées, aucune exposition nouvelle** (pas d'actuator `metrics` public) ; **log WARN** quand un événement reste sans `seq` au-delà d'un seuil configurable (Q5) |
 | Vérification préalable (P8) | Lecture seule, au début du lot : l'URL de connexion de l'application contient-elle `-pooler` ? Sans effet sur la conception D ; déterminant pour tout futur verrou consultatif de session |
 | Rétention | § 5.6 (90 jours minimum, acquittement requis) ; purge livrée **désactivée** |
 | Reprises | Lecture rejouable depuis tout `seq` (exposée au lot 3) |
@@ -387,7 +389,7 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Risques | Événement écrit hors transaction (perte) ; surcoût d'écriture sur stock et ventes ; croissance de table ; régression des comptes de permissions dans les tests |
 | Tests | Un changement ⇒ un événement dans la même transaction ; rollback métier ⇒ aucun événement ; `seq` strictement croissant sous écritures concurrentes ; isolation (deux entreprises d'essai, aucun événement croisé) ; purge en simulation ne supprime rien ; suite complète GestStock (unitaire + intégration) sans régression ; **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 (§ 20.4)** — aucun n'est écrit ni exécuté |
 | Critères d'acceptation (sortie) | Tous les tests verts, dont **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6** (PostgreSQL 17, Testcontainers) ; temps d'une vente de 10 lignes non dégradé de plus de 10 % [Proposé] (T-C3-8) ; aucune régression ; exigences P0 1 à 6 vérifiées en revue ; vérification P8 consignée ; **C3 démontrée** (revue du mécanisme) — C3 n'est « validée » qu'à ce moment |
-| Retour arrière | Publication désactivable par configuration ; `U047` (aucune donnée métier touchée) |
+| Retour arrière | Publication désactivable par configuration ; scripts U des migrations du lot (aucune donnée métier touchée) ; aucun outil n'applique les scripts U à toutes les bases d'entreprise : application manuelle, base par base, avec le compte propriétaire *(v9 : `U047`)* |
 | Preuves | Rapport de tests, revue de code, mesure avant/après |
 | Conditions d'arrêt | Régression ventes/stock ; événement hors transaction ; fuite entre entreprises |
 | Autorisation | Approbation écrite avant lot 2 |
@@ -404,13 +406,13 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Révocation par la boutique | `POST /link/revoke` [Décision C2, approuvée] : définitive, motif facultatif, `REVOKED` + `revokedAt` + secret invalidé + audit ; ancienne liaison ⇒ `401 LINK_REVOKED` (traité par le client comme succès idempotent) ; réservations et commandes engagées conservées jusqu'à expiration ou conversion ; nouvelle connexion = nouvelle autorisation, nouvelle liaison |
 | URL de retour | **Non définies** ; liste blanche stricte, comparaison exacte |
 | Fichiers concernés | Existants : `security/JwtTokenService`, `security/SecurityConfig`, `tenancy/TenantContext`, `platform/CredentialCipher`, `platform/audit/PlatformAudit` ; JCMB `lib/auth.ts`, `middleware.ts`. À créer : contrôleurs et services d'intégration, collection `geststocklinks`, écrans des deux fronts |
-| Migrations | `platform/V002__integration_link.sql` *(à créer)* : `integration_client`, `integration_link`, `integration_authorization_code` ; rollback `U002`. JCMB : script `scripts/migrate-geststock-link.mjs` *(à créer)* |
+| Migrations | Plateforme, *(numéro attribué à l'implémentation)* : `integration_client`, `integration_link`, `integration_authorization_code` ; script U associé. Base de chaque entreprise : permissions `integration:manage` et `integration:price-approve` (Q2 ; met à jour `SchemaConventionsIT.referenceDataIsLoaded`, 51 permissions aujourd'hui). *v9 : `platform/V002__integration_link.sql`, `U002` ; permissions au lot 1.* JCMB : script `scripts/migrate-geststock-link.mjs` *(à créer)* |
 | Angular | GestStock : écran de consentement, « Paramètres → Boutique en ligne » (dépôts, suspension, révocation). JCMB : « Connecter GestStock », statut |
 | Dépendances | Lot 0 (URL de retour, secrets d'essai) |
 | Risques | Erreur de flux = liaison usurpée : tests négatifs obligatoires |
 | Tests | Scénarios 1, 2, 3 (§ 10) + jeton d'audience/émetteur incorrect, expiré, liaison suspendue ; aucun secret dans réponses Angular ni journaux ; critères C2 et C5 (§ 19.3) |
 | Critères d'acceptation | Tous les scénarios négatifs refusés sans effet de bord |
-| Retour arrière | Toutes les liaisons à `REVOKED`, routes désactivées, `U002`, collection supprimée |
+| Retour arrière | Toutes les liaisons à `REVOKED`, routes désactivées, script U de la plateforme, collection supprimée |
 | Preuves | Rapport de tests de sécurité, journal plateforme |
 | Conditions d'arrêt | Un seul scénario de rejeu ou d'usurpation qui réussit |
 | Autorisation | Approbation avant lot 3 |
@@ -428,12 +430,12 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Rapprochement | § 5.3 |
 | Délais attendus **[Proposé]** | Notification ≤ 1 min après le changement ; réconciliation quotidienne ; une synchronisation non reçue apparaît « en retard » au-delà de 15 min |
 | Fichiers concernés | JCMB existants : `models/product.model.ts`, `models/category.model.ts`, `services/product.service.ts`, `services/category.service.ts`, `validators/product.validator.ts` ; à créer : consommateur, modèles `syncstates`, écrans de statut et de rapprochement |
-| Migrations | GestStock `V048__sales_channel.sql` *(à créer)* : `channel_warehouse`, `channel_price` ; JCMB `scripts/migrate-external-ids.mjs`, `scripts/migrate-sync-cursor.mjs` *(à créer)* ; rollbacks associés |
+| Migrations | GestStock *(numéro attribué à l'implémentation)* : `channel_warehouse`, `channel_price` ; JCMB `scripts/migrate-external-ids.mjs`, `scripts/migrate-sync-cursor.mjs` *(à créer)* ; rollbacks associés |
 | Dépendances | Lots 1 et 2 ; **consommateur direct du flux** (`/catalog/changes`, instantané) : bloqué tant que C3 n'est pas validée en sortie du lot 1 (v9-D3) |
 | Risques | Écrasement de données boutique ; doublons |
 | Tests | Scénarios 4 à 9, 19 ; critères C3 côté instantané (T-C3-3 à T-C3-6), C6 et C7 (§ 19.3) |
 | Critères d'acceptation | Catalogue identique après synchronisation et après réconciliation ; aucun champ boutique modifié |
-| Retour arrière | Arrêt du consommateur ; produits synchronisés marqués « déconnectés » et conservés ; scripts Mongo inverses ; `U048` |
+| Retour arrière | Arrêt du consommateur ; produits synchronisés marqués « déconnectés » et conservés ; scripts Mongo inverses ; script U GestStock |
 | Preuves | Comparaison catalogue avant/après sur données d'essai |
 | Conditions d'arrêt | Toute perte ou tout écrasement constaté |
 | Autorisation | Approbation avant lot 4 |
@@ -464,7 +466,7 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | GestStock | Réception idempotente ; boîte « Commandes en ligne » ; acceptation/refus ; conversion en vente au POS pré-remplie (mécanisme des devis : `sales/data/sales.facade.ts › loadQuote` comme modèle) ; paiement selon les règles de caisse existantes |
 | États | § 5.4 |
 | Fichiers concernés | JCMB : `app/api/orders/route.ts`, `services/order.service.ts`, `models/order.model.ts` ; GestStock : `sale/SaleService` (si option (a) § 5.1), module d'intégration *(à créer)*, front POS |
-| Migrations | GestStock `V049__online_order.sql` *(à créer)*, avec unicité (liaison, `externalOrderId`) [Décision C4] ; JCMB : champs d'instantané et de transmission sur `orders` |
+| Migrations | GestStock *(numéro attribué à l'implémentation)*, avec unicité (liaison, `externalOrderId`) [Décision C4] ; JCMB : champs d'instantané et de transmission sur `orders` |
 | Dépendances | Lots 2 et 3 ; décision prix au POS (§ 5.1). Pas de lecture du flux prévue dans ce lot ; **bloqué indirectement** par sa dépendance au lot 3 (v9-D3) |
 | Tests | Scénarios 10, 18, 20 ; critères C4 (§ 19.3) |
 | Retour arrière | Arrêt de la transmission ; les commandes restent dans JCMB comme aujourd'hui |
@@ -481,11 +483,11 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Idempotence | Unicité (liaison, commande externe) ; rejouer renvoie la réservation existante |
 | Expiration | 30 min configurable côté serveur (D3) ; échéance évaluée par horodatage, correcte sans tâche planifiée ; ménage différé ; transitions gardées (§ 5.4) |
 | Annulation / confirmation | Transitions gardées en base ; une seule réussit |
-| Migrations | `V050__stock_reservation.sql` *(à créer)* ; rollback `U050` après libération de toutes les réservations |
+| Migrations | *(numéro attribué à l'implémentation)* : réservations ; script U après libération de toutes les réservations |
 | Tests obligatoires | Scénarios 12 à 17, plus charge : N demandes simultanées sur la dernière unité ⇒ une seule réussit ; aucun stock disponible négatif |
 | Critères d'activation | Tous les tests de concurrence verts sur PostgreSQL réel, 100 exécutions sans écart ; revue de code ; aucune régression POS |
 | Si non sûr | Analyse argumentée de report (blocage exact, risques, mesures temporaires, impact, travail restant, critères) soumise à approbation — **aucun report appliqué d'office** |
-| Retour arrière | Désactivation de la réservation par liaison (retour à la disponibilité indicative) ; libération de toutes les réservations ; `U050` |
+| Retour arrière | Désactivation de la réservation par liaison (retour à la disponibilité indicative) ; libération de toutes les réservations ; script U |
 | Conditions d'arrêt | Une seule survente ou double libération observée |
 | Autorisation | Approbation avant lot 7 |
 
@@ -644,7 +646,7 @@ Recommandation : **B + C** (aucun nouveau service, correction indépendante des 
 | # | Critère | Preuve disponible | État |
 |---|---|---|---|
 | 1 | D1, D2, D3, D5, D8 documentées | § 0, 5.1, 5.4, 5.6, 11 ; D1-D3, D5 validées par écrit (2026-10-28) ; D8 : 7 URL candidates avec vérification sûre (§ 0) | **Partiel** : D8 non confirmée |
-| 2 | Contrat `integration/v1` | `integration-v1.openapi.yaml` (§ 12) ; décisions C2 à C7 appliquées (§ 19) ; YAML **valide**, 36 `$ref` résolues, discriminateur cohérent | **Partiel** : C3 en attente de validation technique ; C1 et C8 ouvertes ; validation complète OpenAPI 3.1 non exécutée (E2 non autorisé) ; contrat dans son ensemble **non approuvé** |
+| 2 | Contrat `integration/v1` | `integration-v1.openapi.yaml` (§ 12) ; décisions C2 à C7, P0 à P8, v9, Q7 appliquées ; YAML **valide**, 36 `$ref` résolues ; **Redocly 2.72.0 (règles recommandées) : 0 erreur**, 3 avertissements justifiés (§ 22.4) | **Partiel** : C3 validée seulement en sortie du lot 1 ; C1 et C8 ouvertes ; contrat dans son ensemble **non approuvé** |
 | 2c | Séquencement du flux sûr sous concurrence (C3) | C3 **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** (P0 à P8, v9-D1, v9-D2, § 20-21) ; aucun mécanisme dans le code (§ 19.2) ; tests T-C3 / T-C7 **non écrits, non exécutés**. Portes (v9-D3) : entrée dans le lot 1 satisfaite sur le plan documentaire (**ne vaut pas autorisation de démarrer**) ; sortie du lot 1 non satisfaite ; lots consommateurs du flux (3, 4 ; 5 indirectement) bloqués jusqu'à la validation de C3 | **Non satisfait** tant que T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 n'ont pas réussi |
 | 2b | Versionnement du plan et du contrat | `git add -f` des deux fichiers dans `gestion-stock` (branche `main`) ; v7 modifiée **après** l'indexation : l'index contient la v6, les modifications v7 ne sont pas indexées (`AM`) | **Partiel** : non commités ; réindexation de la v7 non autorisée à ce stade |
 | 3 | Environnements isolés + données synthétiques | Spécification et scripts § 16 ; **non créés** | **Non satisfait** : création à autoriser |
@@ -837,7 +839,7 @@ Vérifié : `application/problem+json` conforme à l'`ApiError` existant (`ApiEr
 | C | Test de restauration MongoDB (après B2) | Local |
 | D1 | Scripts officiels de sauvegarde et de vérification en local sur `lot0_` | Local ; supprime ses propres bases `verify_…` |
 | D2-bis | Installer GitHub CLI **ou** consulter l'onglet Actions dans le navigateur (par vous) | Installation ou lecture externe |
-| E2 | Télécharger `@redocly/cli` pour la validation OpenAPI | Téléchargement |
+| E2 | ~~Télécharger `@redocly/cli` pour la validation OpenAPI~~ — **accordée et exécutée** (téléchargement temporaire `npx`, § 22.4) | Téléchargement |
 | E3 | ~~Corriger le contrat OpenAPI~~ — **accordée et exécutée** (§ 18.5) | Document |
 | E5 | ~~Indexer le plan et le contrat~~ — **accordée (option 1) et exécutée** ; commit **non autorisé** | Index Git local |
 | E6 | Commit des deux fichiers indexés (sans push) | Historique Git local |
@@ -907,7 +909,7 @@ Source : étude technique C3/C7 en lecture seule (même date). Légende : **[App
 
 **Constats [Observé]** : aucun outbox, `seq`, curseur ni instantané ; isolation PostgreSQL par défaut (READ COMMITTED, aucune configuration contraire) ; verrous métier `SELECT … FOR UPDATE` pris dans l'ordre des identifiants (`StockService`, `ProductService`) ; SQL natif déjà utilisé avec JPA ; tests d'intégration sur PostgreSQL 17 (Testcontainers) avec barrières.
 
-**Structures (par base d'entreprise, à créer au lot 1)** : `integration_outbox` (`write_id` identity, clé primaire, jamais exposé ; `seq` NULL UNIQUE ; index partiel `seq IS NULL` ; type, `object_id`, `version`, opération, charge minimale, `created_at`) ; `integration_feed_state` (une ligne : `id = 1`, `last_seq`). Curseur consommateur : tenu par JCMB ; acquittement par liaison (D5) pour la purge seulement.
+**Structures (par base d'entreprise, à créer au lot 1)** : `integration_outbox` (clé `id uuid` (UUID v7) ; `write_id` identity **UNIQUE**, seule clé d'ordre, jamais exposé ; `seq` NULL UNIQUE ; index partiel `seq IS NULL` ; type, `object_id`, `object_version`, opération, charge minimale, `created_at`) ; `integration_feed_state` (clé `uuid` constante, `CHECK` de ligne unique, `last_seq`) — Q1, § 22. *v8-v9 : « `write_id` identity, clé primaire », « `id = 1` », colonne `version`.* Curseur consommateur : tenu par JCMB ; acquittement par liaison (D5) pour la purge seulement.
 
 **Déroulement**
 
@@ -919,7 +921,7 @@ Transaction métier                                      [aucun verrou de flux]
   4. COMMIT
 
 Lecture du flux / première page d'instantané — séquenceur, transaction dédiée et courte
-  a. SELECT last_seq FROM integration_feed_state WHERE id = 1 FOR UPDATE SKIP LOCKED
+  a. SELECT last_seq FROM integration_feed_state FOR UPDATE SKIP LOCKED   (ligne unique, Q1)
        ligne obtenue → b, c, d ; aucune ligne (autre attribution en cours) → e
   b. événements validés sans seq, par write_id croissant, 1 000 au plus
   c. seq = last_seq + rang ; last_seq += nombre attribué
@@ -962,7 +964,7 @@ Justification de l'événement mince : deux transactions concurrentes tenant des
 
 **Images [Observé]** : `product_image.version` est porté par la ligne, supprimée par `ProductImageService.delete` ; une nouvelle image repart de 0 ; `upload` fait `findByProductId` puis insertion sans verrou (deux premiers envois concurrents : l'un échoue sur l'index unique) ; changer l'image ne modifie pas le produit (intention documentée dans le service) ; `Product` sans `@DynamicUpdate`.
 
-**P7 [Approuvé]** : `product_image_generation (product_id` clé primaire, référence `product ON DELETE CASCADE`, `generation bigint`, `sha256` nullable, `updated_at)` ; jamais supprimée avec l'image ; `INSERT … ON CONFLICT (product_id) DO UPDATE SET generation = generation + 1 … RETURNING generation` = **première instruction** de la transaction d'image ; compteur, image et événement dans la même transaction ; retrait d'image ⇒ événement `UPSERT` avec `imageSha256 = null`. **P6 [Approuvé]** : empreinte inchangée, ou suppression d'une image inexistante ⇒ ni incrément, ni événement.
+**P7 [Approuvé]** : `product_image_generation (product_id` clé primaire, référence `product ON DELETE CASCADE`, `generation bigint`, `sha256` nullable, `updated_at)` ; jamais supprimée avec l'image ; `INSERT … ON CONFLICT (product_id) DO UPDATE SET generation = generation + 1 … RETURNING generation` = **première instruction** de la transaction d'image ; compteur, image et événement dans la même transaction ; retrait d'image ⇒ événement `UPSERT` avec `imageSha256 = null`. **Remplissage (Q6)** : la migration crée une ligne par image existante (génération 1, `sha256` de l'image). **P6 [Approuvé]** : empreinte inchangée, ou suppression d'une image inexistante ⇒ ni incrément, ni événement.
 
 ### 20.4 Tests d'acceptation du lot 1 — **aucun n'est écrit ni exécuté**
 
@@ -1036,3 +1038,60 @@ T-C3-14 (§ 20.4) : `after` < repère ⇒ 410 `CURSOR_EXPIRED` ; instantané pui
 
 ### 21.5 Ce qui n'a pas été fait
 Aucun code, migration, test, configuration ni secret ; aucune colonne ni table nommée pour le repère de purge ; index Git inchangé (v6) ; aucun commit, push ou déploiement ; **lot 1 non démarré** ; **C3 non validée** ; validation complète OpenAPI 3.1 non exécutée (E2 non autorisé).
+
+## 22. Relevé de décisions v10 — 2026-10-28
+
+Source : vérifications préalables du lot 1 en lecture seule (même date) : code et migrations du dépôt backend, `SchemaConventionsIT`, `TenantFlywayStrategy`, `SchemaUpgradeService`, `SecurityConfig`, lint Redocly.
+
+### 22.1 Décisions
+
+| # | Objet | Décision [Approuvé] | Constat qui l'a motivée [Observé] |
+|---|---|---|---|
+| **Q1** | Clés et colonnes des tables du flux | `integration_outbox` : clé `id uuid` (UUID v7), `write_id bigint identity UNIQUE`, **seule clé d'ordre** ; `integration_feed_state` : clé `uuid` constante et `CHECK` de ligne unique ; colonne `object_version` (le JSON du contrat garde `version`) | `SchemaConventionsIT` exige une clé `pk_<table>` dont la première colonne est `uuid`, et impose les colonnes d'audit à toute table portant une colonne `version` |
+| **Q2** | Permissions `integration:*` | Passent au **lot 2** | Utilisées seulement à partir du lot 2 ; `referenceDataIsLoaded` fige 51 permissions |
+| **Q3** | Exposition HTTP | **Aucune route HTTP au lot 1** ; services testés directement ; routes aux lots 2-3 derrière l'authentification par liaison | Toute route `/api/**` non déclarée est ouverte à tout utilisateur d'entreprise authentifié (`SecurityConfig.companyUser`) ; § 9 prévoyait déjà l'exposition au lot 3 |
+| **Q4** | Numéros de migration | Les documents ne fixent plus de numéro : « numéro attribué à l'implémentation » | Le lot 1 a besoin de deux migrations ; les numéros réservés aux lots suivants seraient décalés |
+| **Q5** | Métriques | Jauges Micrometer enregistrées, **aucune exposition nouvelle** (pas d'actuator `metrics` public) ; **log WARN** quand un événement reste sans `seq` au-delà d'un seuil configurable | Seul `health` est exposé aujourd'hui |
+| **Q6** | `product_image_generation` existante | Remplie par la migration : génération 1 et `sha256` pour chaque image existante | Images déjà en base depuis `V046__product_image.sql` |
+| **Q7** | Contrat | Corrections de lint appliquées (§ 22.4) ; chemin C4 inchangé ; `orderId` contraint en UUID par `pattern` | Redocly : 1 erreur, 26 avertissements |
+
+### 22.2 Contraintes de migration (constat 1.4)
+Une nouvelle migration de `db/migration` est jouée, au démarrage (`TenantFlywayStrategy`) ou en arrière-plan (`SchemaUpgradeService`, mode `migrate-on-startup=false`), sur chaque base d'entreprise active, avec le compte propriétaire, puis les droits DML du rôle d'exécution sont accordés. Pendant sa migration, une entreprise est refusée (503) ; un échec ne bloque que cette entreprise ; relance par `POST /api/platform/schema-upgrades` (Super Admin). Aucun retour arrière automatique ; les scripts U sont manuels. D'où, pour le lot 1 : **tables additives uniquement** (aucun `ALTER` sur une table métier), **migrations courtes**, **un script U par script V**, **aucun déploiement avant la porte de sortie du lot 1**.
+
+### 22.3 Plan d'exécution du lot 1 (ordre approuvé)
+
+| Ordre | Étape (numéro du plan) | Contenu | Tests principaux |
+|---|---|---|---|
+| 1 | 1 | Migration du flux : `integration_outbox`, `integration_feed_state` (ligne unique, repère de purge) ; script U ; `SchemaConventionsIT` mis à jour | Schéma, conventions, rollback |
+| 2 | 3 | Point d'entrée unique `IntegrationEvents.publish` (R1) + interrupteur de publication | Événement dans la même transaction ; aucun après annulation ; T-C3-12 |
+| 3 | 5 | Séquenceur (transaction dédiée, `SKIP LOCKED`, `lock_timeout` / `statement_timeout`, lots de 1 000) | T-C3-1, T-C3-2 a-d |
+| 4 | 6 | Lecture du flux (service) : `after`, `lastSeq`, `hasMore`, `limit`, `CURSOR_EXPIRED`, filtre par liaison en interface | T-C3-7, T-C3-9, T-C3-10, T-C3-14 |
+| 5 | 4a | Producteurs `CATEGORY` puis `PRODUCT` (la chaîne complète est d'abord éprouvée avec `CATEGORY`) | Un événement par changement ; T-C3-2 e |
+| 6 | 2 + 4b | Migration `product_image_generation` (remplissage Q6) + raccordement de `ProductImageService` (P6, P7) | T-C7-1 à T-C7-6 |
+| 7 | 4c | Producteur `AVAILABILITY` dans `StockService.applyMovements` (événements minces) | T-C3-8, T-C3-13 |
+| 8 | 7 | Instantané et `pageToken` (HMAC, `kid`, rotation 24 h) | T-C3-3 à T-C3-6, T-C3-11 |
+| 9 | 8 | Métriques (Q5) | Valeurs des jauges ; log WARN au-delà du seuil |
+| 10 | 9 | Purge en mode simulation, désactivée | La simulation ne supprime rien |
+| 11 | 10 | Sortie : suite complète + T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 sur PostgreSQL 17 (Testcontainers), revue P0, P8 consignée | **Porte de sortie ; validation de C3** |
+
+Chaque étape : une validation (commit) indépendante, suite complète verte avant la suivante. Prérequis de développement non encore levé : **Docker disponible** (Testcontainers, exigé par la porte de sortie). Démarrage du lot 1 : autorisation séparée (v9-D3).
+
+### 22.4 Lint du contrat (Q7)
+
+Corrections appliquées : description de `reason` (`/link/revoke`) entre guillemets (seule erreur) ; `data` déclaré dans `ChangeEventBase` (description seulement) ; `operationId` stable en camelCase sur les 15 opérations et le webhook ; une description par tag ; `info.license.name` « Propriétaire — usage restreint », sans URL ; `orderId` contraint (`format: uuid` + `pattern`), avec documentation de l'impossibilité du conflit avec `/online-orders/external/{externalOrderId}`.
+
+Résultat (`@redocly/cli` 2.72.0, configuration recommandée, sans fichier de configuration) : **0 erreur, 3 avertissements** :
+
+| Avertissement | Justification |
+|---|---|
+| `no-ambiguous-paths` (`/online-orders/external/{externalOrderId}` et `/online-orders/{orderId}/cancel`) | **Exception documentée** : la règle est structurelle ; `orderId` est contraint en UUID, `external` ne peut pas en être un |
+| `info-license-strict` (`url` ou `identifier` attendu) | Conséquence de la décision « sans URL ». Levée possible sans URL par `identifier: LicenseRef-Proprietary` — **non appliqué, à décider** |
+| `no-required-schema-properties-undefined` (`data`, dans le `then` de `ChangeEventBase`) | Faux positif : la règle examine le sous-schéma `then` isolément ; `data` est déclaré dans `properties` du même schéma. Levée possible en ajoutant `properties: { data: … }` dans le `then` — **non appliqué, à décider** |
+
+## 23. Constats annexes (hors intégration, backlog)
+
+| # | Constat [Observé] | Suite proposée |
+|---|---|---|
+| A1 | Routes `/api/**` autorisées par défaut à tout utilisateur d'entreprise authentifié (`SecurityConfig`, `anyRequest().access(companyUser)`) : une route oubliée sans `@PreAuthorize` est ouverte à tous les rôles | Revue de sécurité : refus par défaut, ou test qui exige une règle d'autorisation sur chaque contrôleur |
+| A2 | Réactivation d'une entreprise sans migration : `CompanyService.reactivate` ne déclenche pas de migration ; une entreprise suspendue pendant un déploiement ne serait migrée qu'au démarrage suivant ou à une relance Super Admin | **À vérifier** (lecture du code et essai) |
+| A3 | `MigrationRollbackIT` renvoie à `docs/persistence.md` §8, absent du dépôt backend (`docs/` ignoré par Git) | Rétablir le document ou corriger la référence |
