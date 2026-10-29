@@ -152,7 +152,7 @@ info:
       date: '2026-10-29'
       source: 'plan § 27 (décisions du lot 2)'
       approved: [v14-D1, v14-D2, v14-D3, v14-D4, v14-D5, v14-D6, v14-D7, v14-D8, v14-D9, v14-D10, v14-D11, v14-D12, v14-D13, v14-D14, v14-D15, v14-D16, v14-D17, v14-D18]
-      linkFlow: 'PAR serveur à serveur (POST /oauth/par, Basic du client, request_uri à usage unique, environ 90 s) ; consentement sur le frontend GestStock (integration:manage) ; retour sur une page Angular JeCréeMaBoutique protégée, puis échange du code par le backend JeCréeMaBoutique (PKCE S256)'
+      linkFlow: 'PAR serveur à serveur (POST /oauth/par, Basic du client, request_uri à usage unique, 10 min) ; consentement sur le frontend GestStock (integration:manage) ; retour sur une page Angular JeCréeMaBoutique protégée, puis échange du code par le backend JeCréeMaBoutique (PKCE S256)'
       uniqueness: 'une boutique liée à une seule entreprise à la fois (liaisons non révoquées) ; une entreprise peut avoir plusieurs boutiques'
       credentials: 'client JeCréeMaBoutique par environnement (HTTP Basic) et secret par liaison ; secret haché SHA-256, comparaison en temps constant'
       token: 'iss geststock-integration ; claim typ integration ; en-tête typ at+jwt (RFC 9068) ; aud geststock-integration ; 15 min'
@@ -165,6 +165,13 @@ info:
         - 'POST /link/secret ajouté (LinkSecretResponse)'
         - 'linkToken : iss, typ, hachage du secret, rotation ; clientBasic : client par environnement'
         - 'Link : statut PENDING décrit, suspensionReason ; Forbidden : LINK_SUSPENDED décrit'
+      adjustments:
+        - 'request_uri valable 10 min, comme le state JeCréeMaBoutique (première rédaction : environ 90 s)'
+        - 'limites de débit (v13-D4 complété) : /oauth/par 30/min par client ; /link/secret 5/h par liaison ; 429 avec Retry-After, 503 si les compteurs sont indisponibles'
+        - 'Link.currency (ISO 4217, v11-D6)'
+        - 'liaisons PENDING au code expiré révoquées (revocationReason EXPIRED) au dépôt d''une nouvelle demande pour la même boutique, avant le contrôle d''unicité ; nettoyage global au lot 3'
+        - 'Link.revocationReason : SHOP_REQUEST, GESTSTOCK_ADMIN, CODE_REPLAYED, EXPIRED ; nul seulement tant que la liaison n''est pas révoquée ; le consommateur tolère une valeur inconnue (évolution sans rupture)'
+        - 'secret compromis : révocation puis nouvelle liaison, pas la rotation'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: 'Backend GestStock hébergé sur Vercel (v13-D1), appelé directement, jamais à travers le relais nginx du frontend Render (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
@@ -201,7 +208,10 @@ paths:
       description: |
         Première étape du parcours de liaison (v14-D1). Le backend JeCréeMaBoutique, authentifié comme
         **client** (HTTP Basic, v14-D3), dépose la demande : boutique à lier, `redirect_uri`, défi PKCE,
-        portées et `state`. Il reçoit un `request_uri` **à usage unique**, valable environ **90 s**.
+        portées et `state`. Il reçoit un `request_uri` **à usage unique**, valable **10 min**, comme le
+        `state` de JeCréeMaBoutique : la personne GestStock doit pouvoir se connecter. Il reste lié au
+        client et inutilisable sans le vérificateur PKCE, conservé par le backend JeCréeMaBoutique.
+        *(Première rédaction v14 : environ 90 s.)*
         Le navigateur ne transporte ensuite que `client_id` et `request_uri` vers l'écran d'autorisation
         du frontend GestStock (`/integrations/jecreemaboutique/authorize`) : **aucun paramètre lu dans
         l'URL du navigateur** n'est pris en compte. L'écran affiche la boutique telle que déposée ici.
@@ -210,8 +220,13 @@ paths:
         - `redirect_uri` : **comparaison exacte** avec la liste blanche du client pour l'environnement
           (v14-D12 ; `localhost` seulement en développement et en essai).
         - `code_challenge_method` : `S256` uniquement.
+        - Liaisons en attente expirées : dans la même transaction et **avant** le contrôle d'unicité,
+          les liaisons `PENDING` de la même boutique dont le code a expiré passent à `REVOKED`
+          (`revocationReason = EXPIRED`). Le nettoyage global arrive au lot 3 (cron).
         - Unicité (v14-D2) : une boutique déjà liée par une liaison non révoquée de ce client est
           refusée (`invalid_request`) ; un index unique partiel en base reste la garantie finale.
+        - Limite de débit (v13-D4 complété en v14) : **30 requêtes par minute par client** (valeur de
+          départ, configurable) ; dépassement : `429` avec `Retry-After`.
         - Éligibilité de la boutique (v14-D13) : le backend JeCréeMaBoutique ne dépose une demande que
           pour une boutique approuvée et non bannie, à la demande de son propriétaire (jamais du rôle
           `admin` de JeCréeMaBoutique) ; GestStock ne peut pas le vérifier.
@@ -244,6 +259,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OAuthError' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+          description: Plus de 30 requêtes par minute pour le client (v13-D4 complété en v14 ; valeur de départ, configurable)
+        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
 
   /oauth/token:
     post:
@@ -340,7 +359,7 @@ paths:
                 reason: { type: string, maxLength: 500, description: 'Motif facultatif, inscrit au journal d''audit' }
       responses:
         '200':
-          description: Liaison révoquée (`status = REVOKED`, `revokedAt` renseigné)
+          description: Liaison révoquée (`status = REVOKED`, `revokedAt` renseigné, `revocationReason = SHOP_REQUEST`)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Link' }
@@ -364,6 +383,10 @@ paths:
         Si la réponse est perdue, le client garde l'ancien secret, encore valide, et rappelle cette
         route : le nouvel appel **remplace** le secret en attente, qui n'est plus accepté.
         Chaque rotation est inscrite au journal d'audit.
+        Limite de débit (v13-D4 complété en v14) : **5 rotations par heure et par liaison** (valeur de
+        départ, configurable).
+        La rotation n'est **pas** la réponse à un secret compromis : dans ce cas, révoquer la liaison
+        (`POST /link/revoke`) puis en créer une nouvelle (v14-D6).
       responses:
         '200':
           description: Nouveau secret de liaison
@@ -374,6 +397,10 @@ paths:
               schema: { $ref: '#/components/schemas/LinkSecretResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+          description: Plus de 5 rotations par heure pour la liaison (v13-D4 complété en v14 ; valeur de départ, configurable)
+        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
 
   /catalog/changes:
     get:
@@ -990,7 +1017,7 @@ components:
       description: |
         `RATE_LIMITED` : limite de débit dépassée (C1, v13-D4). Compteurs en fenêtre fixe tenus par
         GestStock (base plateforme), par liaison ; sur `/oauth/token`, par identifiant client et par
-        IP. Attendre `Retry-After` secondes avant de réessayer.
+        IP ; sur `/oauth/par`, par client. Attendre `Retry-After` secondes avant de réessayer.
       headers:
         Retry-After:
           required: true
@@ -1057,7 +1084,7 @@ components:
       required: [request_uri, expires_in]
       properties:
         request_uri: { type: string, pattern: '^urn:ietf:params:oauth:request_uri:', description: 'À usage unique ; à transmettre au frontend GestStock avec client_id' }
-        expires_in: { type: integer, examples: [90], description: Secondes }
+        expires_in: { type: integer, examples: [600], description: 'Secondes ; 600 (10 min)' }
 
     AuthorizationCodeGrant:
       type: object
@@ -1106,7 +1133,7 @@ components:
 
     Link:
       type: object
-      required: [id, status, companyCode, externalShopId, scopes, warehouses, settings, createdAt]
+      required: [id, status, companyCode, externalShopId, currency, scopes, warehouses, settings, createdAt]
       properties:
         id: { type: string, format: uuid }
         status:
@@ -1123,7 +1150,22 @@ components:
             Renseigné seulement si `status = SUSPENDED` (v14-D10). Réactivation par une personne
             GestStock disposant de `integration:manage`, qui reconfirme les dépôts. Pendant la
             suspension, la publication des événements continue.
+        revocationReason:
+          type: [string, 'null']
+          enum: [SHOP_REQUEST, GESTSTOCK_ADMIN, CODE_REPLAYED, EXPIRED, null]
+          description: |
+            Motif de la révocation ; **nul seulement tant que la liaison n'est pas révoquée** (renseigné
+            dès que `status = REVOKED`) :
+            - `SHOP_REQUEST` : révocation demandée par la boutique (`POST /link/revoke`, C2) ; le motif
+              libre éventuel est inscrit au journal d'audit ;
+            - `GESTSTOCK_ADMIN` : révocation par une personne GestStock disposant de `integration:manage` ;
+            - `CODE_REPLAYED` : code d'autorisation rejoué (v14-D14) ;
+            - `EXPIRED` : liaison `PENDING` dont le code a expiré, révoquée au dépôt d'une nouvelle
+              demande pour la même boutique.
+            **Évolution sans rupture** : de nouvelles valeurs pourront être ajoutées ; le consommateur
+            **tolère une valeur inconnue** (il la traite comme une révocation au motif non précisé).
         companyCode: { type: string, description: 'Code public de l''entreprise (platform.company.code), jamais un nom de base' }
+        currency: { type: string, pattern: '^[A-Z]{3}$', examples: [XOF], description: 'Devise de la liaison, code ISO 4217 normalisé depuis platform.company.currency (v11-D6)' }
         externalShopId: { type: string, description: Identifiant de la boutique (User._id JeCréeMaBoutique) }
         scopes:
           type: array

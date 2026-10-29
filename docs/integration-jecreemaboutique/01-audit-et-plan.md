@@ -1359,6 +1359,8 @@ Effets dans ce document : D7 (Atlas confirmé, offre ouverte), D8 (hébergeurs c
 | `/catalog/changes` | **120/min par liaison** |
 | `/catalog/snapshot` | **60/min par liaison** |
 | Création de commande (`POST /online-orders`) | **60/min par liaison** |
+| `/oauth/par` *(v14, complément)* | **30/min par client** |
+| `/link/secret` *(v14, complément)* | **5/h par liaison** |
 | Valeurs | De départ, **configurables** |
 | Dépassement | `429`, `code = RATE_LIMITED`, en-tête `Retry-After` (secondes) obligatoire |
 | Compteurs indisponibles | **Refus** : `503`, `code = RATE_LIMIT_UNAVAILABLE` ; jamais de laisser-passer |
@@ -1536,12 +1538,12 @@ Source : plan d'exécution du lot 2 du 2026-10-29 (lecture seule des quatre dép
 
 | # | Objet | Décision [Approuvé] |
 |---|---|---|
-| **v14-D1** | Parcours de liaison | Demande d'autorisation déposée **de serveur à serveur** (PAR, RFC 9126) : `POST /oauth/par`, authentification Basic du client JCMB, `request_uri` à usage unique d'environ **90 s**. Retour par une **page Angular JCMB protégée**, qui transmet `code` et `state` à une route backend authentifiée par Bearer, nettoie l'URL (`history.replaceState`) et applique `Referrer-Policy: no-referrer`. Parcours en 5 étapes : § 27.2. **Contradictions C-A (route de retour backend sans authentification) et C-B (paramètres d'autorisation falsifiables) résolues** |
-| **v14-D2** | Unicité | Une boutique liée à **une seule** entreprise à la fois ; une entreprise peut avoir **plusieurs** boutiques. Index unique partiel côté boutique sur les liaisons non révoquées |
+| **v14-D1** | Parcours de liaison | Demande d'autorisation déposée **de serveur à serveur** (PAR, RFC 9126) : `POST /oauth/par`, authentification Basic du client JCMB, `request_uri` à usage unique valable **10 min**, comme le `state` JCMB (la personne GestStock doit pouvoir se connecter ; le `request_uri` reste à usage unique, lié au client JCMB et inutilisable sans le vérificateur PKCE ; *première rédaction : environ 90 s*) ; limite de débit de `/oauth/par` : **30/min par client** (v13-D4 complété). Retour par une **page Angular JCMB protégée**, qui transmet `code` et `state` à une route backend authentifiée par Bearer, nettoie l'URL (`history.replaceState`) et applique `Referrer-Policy: no-referrer`. Parcours en 5 étapes : § 27.2. **Contradictions C-A (route de retour backend sans authentification) et C-B (paramètres d'autorisation falsifiables) résolues** |
+| **v14-D2** | Unicité | Une boutique liée à **une seule** entreprise à la fois ; une entreprise peut avoir **plusieurs** boutiques. Index unique partiel côté boutique sur les liaisons non révoquées. **Liaisons `PENDING` expirées** : toute nouvelle demande d'autorisation (PAR) pour la même boutique fait passer, dans la même transaction et **avant** le contrôle d'unicité, ses liaisons `PENDING` au code expiré à `REVOKED` (motif `EXPIRED`) ; nettoyage global au lot 3 (cron) |
 | **v14-D3** | Identifiants | **Deux niveaux** : client JCMB par environnement (HTTP Basic) et secret par liaison. v13-D5 est précisé en ce sens : le « secret client » de v13-D5 désigne le **secret de liaison**. **Contradiction C-C résolue** |
 | **v14-D4** | Jeton de liaison | `iss = geststock-integration` ; claim `typ = integration` ; en-tête JOSE `typ = at+jwt` (RFC 9068) |
 | **v14-D5** | Hachage du secret de liaison | SHA-256, comparaison en temps constant |
-| **v14-D6** | Rotation | `POST /link/secret`, de serveur à serveur, avec le jeton de la liaison ; ancien secret valide jusqu'au **premier usage du nouveau**, **24 h au plus** |
+| **v14-D6** | Rotation | `POST /link/secret`, de serveur à serveur, avec le jeton de la liaison ; ancien secret valide jusqu'au **premier usage du nouveau**, **24 h au plus** ; limite de débit : **5 rotations par heure et par liaison** (v13-D4 complété). **Secret compromis : révocation de la liaison puis nouvelle liaison, pas la rotation** (la rotation garde l'ancien secret valide jusqu'au premier usage du nouveau, 24 h au plus) |
 | **v14-D7** | Permissions | `integration:manage` pour **ADMIN uniquement** (52 permissions) ; `integration:price-approve` introduite au lot qui l'utilise (lot 3). *Remplace, pour le lot 2, l'introduction des deux permissions prévue au § 9 (Q2).* |
 | **v14-D8** | IP réelle | Un **seul en-tête configurable posé par Vercel**, à vérifier sur un déploiement de prévisualisation avec un `X-Forwarded-For` falsifié ; **jamais** `X-Forwarded-For` brut sur la chaîne d'intégration. JCMB appelle GestStock **directement sur Vercel**, jamais à travers le relais nginx de Render. Vérification ajoutée à la checklist (I1, § 27.7) |
 | **v14-D9** | Retour arrière de la base plateforme | `db/platform-rollback/U00x`, avec un test V → U → V |
@@ -1549,7 +1551,7 @@ Source : plan d'exécution du lot 2 du 2026-10-29 (lecture seule des quatre dép
 | **v14-D11** | Drapeau de publication | Dans la **base de l'entreprise** (colonne de `integration_feed_state`), posé dans la transaction d'activation de la liaison, retiré à la révocation de la dernière liaison de l'entreprise (met en œuvre v12-D4) |
 | **v14-D12** | `redirect_uri` | Exacte par environnement : domaine réel du frontend JCMB ; `localhost` seulement en développement et en essai |
 | **v14-D13** | Boutiques éligibles | Liaison refusée pour une boutique JCMB non approuvée (`isActive = false`) ou bannie, et pour le rôle `admin` de JCMB |
-| **v14-D14** | Code rejoué | Refusé, et la liaison qu'il a créée est **révoquée** |
+| **v14-D14** | Code rejoué | Refusé, et la liaison qu'il a créée est **révoquée** (motif `CODE_REPLAYED`). **Motif de révocation** (`revocationReason`), renseigné dès que la liaison est révoquée et nul seulement avant : `SHOP_REQUEST` (révocation demandée par la boutique, C2), `GESTSTOCK_ADMIN` (révocation par une personne disposant de `integration:manage`), `CODE_REPLAYED` (code rejoué), `EXPIRED` (liaison `PENDING` au code expiré, v14-D2). Évolution sans rupture : le consommateur **tolère une valeur inconnue** |
 | **v14-D15** | Angular GestStock | URL de retour après connexion limitée aux **chemins internes** (aucune redirection ouverte) |
 | **v14-D16** | Route interne du cron Vercel | **Lot 3** (aucune tâche planifiée nécessaire au lot 2 : codes, demandes et compteurs expirent par horodatage et se nettoient à l'écriture) |
 | **v14-D17** | Noms des interrupteurs et variables | Noms Q14 acceptés : § 15 et § 27.6 ; checklist K1, K2 (§ 27.7) |
@@ -1559,7 +1561,7 @@ Source : plan d'exécution du lot 2 du 2026-10-29 (lecture seule des quatre dép
 
 | # | Qui agit | Application | Requête |
 |---|---|---|---|
-| 1 | Propriétaire de la boutique (rôle `user`, boutique approuvée et non bannie, v14-D13) | Angular JCMB → backend JCMB → API GestStock | `POST /api/integrations/geststock/start` (Bearer). Le backend JCMB crée `state` (haché, 10 min, lié à la boutique) et le vérificateur PKCE (conservé côté serveur), puis dépose la demande : `POST /api/integration/v1/oauth/par` (Basic du client JCMB) avec `shop_id` (= `User._id`), `shop_name`, `redirect_uri`, `code_challenge` (S256), `scope`, `state`. Il reçoit `request_uri` (environ 90 s, usage unique) et renvoie à Angular l'URL `<frontend GestStock>/integrations/jecreemaboutique/authorize?client_id=…&request_uri=…` |
+| 1 | Propriétaire de la boutique (rôle `user`, boutique approuvée et non bannie, v14-D13) | Angular JCMB → backend JCMB → API GestStock | `POST /api/integrations/geststock/start` (Bearer). Le backend JCMB crée `state` (haché, 10 min, lié à la boutique) et le vérificateur PKCE (conservé côté serveur), puis dépose la demande : `POST /api/integration/v1/oauth/par` (Basic du client JCMB) avec `shop_id` (= `User._id`), `shop_name`, `redirect_uri`, `code_challenge` (S256), `scope`, `state`. Il reçoit `request_uri` (10 min, usage unique) et renvoie à Angular l'URL `<frontend GestStock>/integrations/jecreemaboutique/authorize?client_id=…&request_uri=…` |
 | 2 | Personne GestStock connectée, `integration:manage` | Angular GestStock → API GestStock (chaîne principale) | Lecture de la demande : boutique, client, portées, dépôts accessibles (STORE cochés par défaut), devise normalisée (v11-D6 ; devise inconnue ⇒ refus explicite). Aucun paramètre de l'URL du navigateur n'est pris en compte en dehors de `client_id` et `request_uri`. Connexion préalable : retour limité aux chemins internes (v14-D15) |
 | 3 | La même personne | Angular GestStock → API GestStock | Approbation : liaison créée en `PENDING`, dépôts figés (v11-D8), code émis (256 bits, haché, 5 min, usage unique, lié à l'entreprise, au client, à la demande, à sa `redirect_uri` et au défi PKCE) ; redirection vers `redirect_uri?code=…&state=…`. Refus : `error=access_denied&state=…`. Le `request_uri` ne sert qu'à une décision |
 | 4 | Propriétaire de la boutique | Page Angular JCMB protégée → backend JCMB → API GestStock | La page (`AuthGuard`) envoie `code` et `state` à `POST /api/integrations/geststock/complete` (Bearer), nettoie l'URL (`history.replaceState`), `Referrer-Policy: no-referrer`. Le backend vérifie que `state` appartient **à la boutique authentifiée** (usage unique), puis appelle `POST /oauth/token` (`authorization_code`, Basic, `code_verifier`) |
@@ -1589,13 +1591,13 @@ Chaque étape : un commit, tests écrits d'abord (ceux qui doivent échouer avan
 | 4 | G6 | Chaîne de sécurité dédiée `/api/integration/v1/**`, ordre prioritaire, une règle par portée, `denyAll` | Échouent d'abord : `EndpointSecurityCoverageIT` étendu (portée déclarée sur chaque route d'intégration ; seuls `/oauth/par` et `/oauth/token` ouverts au client) ; jeton utilisateur sur l'intégration ⇒ 401 ; jeton de liaison sur `/api/**` ⇒ 401 | Matrice croisée verte |
 | 5 | G3 | Service de liaison : états, secret SHA-256 en temps constant (v14-D5), devise (v11-D6), unicité | Transitions interdites ; devise inconnue refusée ; secret jamais relisible | IT verts |
 | 6 | G7 | Statut de la liaison à chaque appel ; entreprise courante définie par la liaison | `REVOKED` ⇒ 401 `LINK_REVOKED` ; `SUSPENDED` ⇒ 403 `LINK_SUSPENDED` sauf `GET /link` et `/link/revoke` ; liaison de A sur données de B ⇒ 404 | IT verts |
-| 7 | G8 + G9 | `/oauth/par`, `/oauth/token` (deux grants) ; limitation de `/oauth/token` (10/min par client et par IP, en-tête v14-D8) | Code rejoué ⇒ `invalid_grant` et liaison révoquée ; code expiré, d'un autre client ; `redirect_uri` différente ; PKCE faux ; 11ᵉ appel ⇒ 429 + `Retry-After` ; compteurs indisponibles ⇒ 503 ; `X-Forwarded-For` falsifié sans effet | Scénario 2 du § 10 vert |
+| 7 | G8 + G9 | `/oauth/par`, `/oauth/token` (deux grants) ; limitation de `/oauth/token` (10/min par client et par IP, en-tête v14-D8) et de `/oauth/par` (30/min par client) ; révocation `EXPIRED` des liaisons `PENDING` expirées de la boutique avant le contrôle d'unicité | Code rejoué ⇒ `invalid_grant` et liaison révoquée ; code expiré, d'un autre client ; `redirect_uri` différente ; PKCE faux ; 11ᵉ appel ⇒ 429 + `Retry-After` ; compteurs indisponibles ⇒ 503 ; `X-Forwarded-For` falsifié sans effet | Scénario 2 du § 10 vert |
 | 8 | G10 | Consentement et gestion côté GestStock (chaîne principale, `integration:manage`) : lecture de la demande, approbation, refus, liste, suspension et réactivation (reconfirmation des dépôts), révocation | Sans la permission ⇒ 403 ; demande expirée ou déjà décidée ⇒ refus | IT verts ; `EndpointSecurityCoverageIT` vert |
 | 9 | G4 | Dépôts vendables par liaison, figés à l'autorisation (v11-D8) ; `AUTHORIZER_LOST_ACCESS` (v14-D10) | Dépôts ⊆ dépôts accessibles ; STORE par défaut ; dépôt désactivé exclu ; perte d'accès ⇒ `SUSPENDED` | IT verts |
 | 10 | G11 | `GET /link`, `POST /link/revoke` (C2) | Critères C2 (§ 19.3) | IT verts |
 | 11 | G12 | Audit : création, approbation et refus, activation, révocation, suspension, rotation, échecs d'authentification ; auteur machine | Une entrée par événement, aucun secret, code ni en-tête `Authorization` | IT verts |
 | 12 | G13 | Drapeau de publication (v14-D11) | Échouent d'abord : aucune liaison ⇒ aucun événement ; activation ⇒ événements ; révocation de la dernière ⇒ arrêt ; suspension ⇒ publication maintenue | IT verts |
-| 13 | G14 | `POST /link/secret` (v14-D6) | Ancien secret accepté avant le premier usage du nouveau, refusé après ou au-delà de 24 h ; nouvel appel remplace le secret en attente ; réponse `no-store` | IT verts |
+| 13 | G14 | `POST /link/secret` (v14-D6) | Ancien secret accepté avant le premier usage du nouveau, refusé après ou au-delà de 24 h ; nouvel appel remplace le secret en attente ; réponse `no-store` ; 6ᵉ rotation dans l'heure ⇒ 429 | IT verts |
 | 14 | GA1 | Angular GestStock : écran de consentement ; retour après connexion limité aux chemins internes (v14-D15) | Rien envoyé sans confirmation ; URL de retour externe ignorée | Tests verts |
 | 15 | GA2 | Angular GestStock : « Paramètres → Boutique en ligne » | Masqué sans `integration:manage` ; aucun secret affiché | Tests verts |
 | JCMB, en parallèle | J1, J2 | AES-256-GCM (`lib/integration-crypto.ts`) ; modèles `geststocklinks` et demandes d'autorisation (`state` haché, vérificateur, TTL), index unique côté boutique, `scripts/migrate-geststock-link.mjs` | Aller-retour, altération, clé absente ; secret absent de toute sérialisation | vitest vert (GestStock simulé) |
@@ -1638,23 +1640,25 @@ Restent à nommer à l'implémentation : la clé de signature des jetons de liai
 
 Retour arrière : interrupteurs à faux ; liaisons à `REVOKED` ; scripts U (entreprise, puis `db/platform-rollback`) ; collection MongoDB supprimée. Essais de bout en bout sans production : tests automatisés des deux côtés (GestStock en Testcontainers jouant le client JCMB ; JCMB avec GestStock simulé et `mongodb-memory-server` en jeu de réplicas) ; essai local des deux applications (environnements § 16, à autoriser) ; prévisualisation Vercel sur une branche Neon isolée, sur autorisation.
 
-### 27.9 Points encore ouverts (non décidés)
+### 27.9 Points ouverts à la première rédaction, tranchés ensuite (ajustements v14)
 
-| Point | Constat |
-|---|---|
-| Durée du `request_uri` et connexion GestStock | Environ 90 s jusqu'à la lecture authentifiée de la demande : si la personne GestStock doit d'abord se connecter, la demande peut expirer ; JCMB relance alors le parcours. Allonger ou lier la demande à la session : à décider si l'essai le montre gênant |
-| Limitation de débit de `/oauth/par` et `/link/secret` | Aucune valeur fixée par v13-D4 (seul `/oauth/token` l'est) |
-| `currency` sur `Link` | v11-D6 prévoit la devise sur la liaison ; le schéma `Link` du contrat ne la porte pas encore |
-| Liaisons `PENDING` dont le code a expiré | Jamais utilisables ; nettoyage à l'écriture ou au lot 3 (cron) |
+| Point | Constat initial | Décision |
+|---|---|---|
+| Durée du `request_uri` et connexion GestStock | Environ 90 s : la demande pouvait expirer pendant la connexion de la personne GestStock | **10 min**, comme le `state` JCMB (v14-D1) |
+| Limitation de débit de `/oauth/par` et `/link/secret` | Aucune valeur fixée par v13-D4 | **30/min par client** ; **5/h par liaison** ; `429` avec `Retry-After`, `503` si les compteurs sont indisponibles (v13-D4 complété) |
+| `currency` sur `Link` | Prévue par v11-D6, absente du schéma | Ajoutée (ISO 4217, `^[A-Z]{3}$`) |
+| Liaisons `PENDING` dont le code a expiré | Jamais utilisables, nettoyage non défini | Révoquées (motif `EXPIRED`) au dépôt d'une nouvelle demande pour la même boutique, avant le contrôle d'unicité ; nettoyage global au lot 3 (v14-D2) |
+
+Aucun point ouvert ne reste pour le lot 2 en dehors de ceux nommés au § 27.6 (noms à fixer à l'implémentation).
 
 ### 27.10 Changements du contrat (`integration-v1.openapi.yaml`)
 
-- **`POST /oauth/par`** ajouté (Basic du client ; `PushedAuthorizationRequest`, `PushedAuthorizationResponse` ; `redirect_uri` exacte, S256 seulement, boutique déjà liée refusée, éligibilité de la boutique, une décision par `request_uri`).
+- **`POST /oauth/par`** ajouté (Basic du client ; `PushedAuthorizationRequest`, `PushedAuthorizationResponse` ; `redirect_uri` exacte, S256 seulement, boutique déjà liée refusée, éligibilité de la boutique, une décision par `request_uri` ; `request_uri` de 10 min ; révocation `EXPIRED` des liaisons `PENDING` expirées de la boutique ; 30/min par client, `429` et `503`).
 - **`/oauth/token`** : Basic du client exigé pour les deux grants ; `authorization_code` lié à la demande déposée, PKCE S256 (`code_verifier` obligatoire, motif) ; activation `PENDING` → `ACTIVE` ; code rejoué refusé et liaison révoquée ; rotation (ancien secret jusqu'au premier usage du nouveau, 24 h au plus).
-- **`POST /link/secret`** ajouté (`LinkSecretResponse`, `no-store`, sans `Idempotency-Key`, 403 en suspension).
+- **`POST /link/secret`** ajouté (`LinkSecretResponse`, `no-store`, sans `Idempotency-Key`, 403 en suspension ; 5/h par liaison, `429` et `503` ; secret compromis : révocation, pas rotation).
 - **`GET /link`** : accessible en suspension.
 - **`linkToken`** : `iss`, claim `typ`, en-tête `typ=at+jwt`, deux niveaux d'identifiants, SHA-256 en temps constant, rotation, en-tête d'IP unique ; **`clientBasic`** : client par environnement, sur `/oauth/par` et `/oauth/token`.
-- **`Forbidden`** : `LINK_SUSPENDED` décrit ; **`Link`** : statut `PENDING` décrit, `suspensionReason` (`MANUAL`, `AUTHORIZER_LOST_ACCESS`).
+- **`Forbidden`** : `LINK_SUSPENDED` décrit ; **`Link`** : statut `PENDING` décrit, `suspensionReason` (`MANUAL`, `AUTHORIZER_LOST_ACCESS`), `revocationReason` (`SHOP_REQUEST`, `GESTSTOCK_ADMIN`, `CODE_REPLAYED`, `EXPIRED` ; nul seulement avant la révocation ; valeur inconnue tolérée par le consommateur), `currency` (ISO 4217, obligatoire). **`TooManyRequests`** : compteur par client sur `/oauth/par`.
 - `info.description` (principes, décisions v14), `servers` (appel direct sur Vercel), tag « Autorisation », bloc `x-decisions.v14`.
 
 Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du dossier, **inchangés**) : **0 erreur, 0 avertissement** ; 2 exceptions ciblées, déjà justifiées (§ 22.4) ; YAML valide ; 40 `$ref` distinctes, toutes résolues (déréférencement complet sans reste) ; 17 chemins.
