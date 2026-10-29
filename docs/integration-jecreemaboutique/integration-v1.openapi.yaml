@@ -30,10 +30,15 @@ info:
     Principes :
     - L'entreprise GestStock est déduite de la **liaison authentifiée** (jeton), jamais d'un paramètre.
     - Chaque appel relit le statut de la liaison (`ACTIVE` exigé) : révocation et suspension immédiates.
-    - Synchronisation **tirée** : JeCréeMaBoutique lit le flux de changements à partir de son curseur ;
-      la notification signée (webhook) n'est qu'un signal.
-    - Écritures idempotentes : en-tête `Idempotency-Key` obligatoire ; une requête rejouée renvoie le
-      résultat déjà enregistré (même statut, même corps).
+    - Synchronisation **tirée** : JeCréeMaBoutique lit le flux de changements à partir de son curseur,
+      par interrogation périodique (v13-D3 : conteneur consommateur du VPS JeCréeMaBoutique, toutes les
+      30 à 60 s, configurable). **Aucun webhook en v1** (v13-D3) ; une notification sans données pourra
+      être ajoutée dans une version ultérieure.
+    - Écritures idempotentes : une requête rejouée renvoie le résultat déjà enregistré (même statut,
+      même corps). Création de commande : clé naturelle (liaison, `externalOrderId`) (C4, v13-D5) ;
+      autres écritures : en-tête `Idempotency-Key` obligatoire, conservée 7 jours (v13-D5).
+    - Limitation de débit (C1, v13-D4) : `429` avec `Retry-After` ; compteurs indisponibles : `503`,
+      jamais de laisser-passer.
     - Versionnement : préfixe `/api/integration/v1` ; un changement incompatible crée `/v2`.
       Ajouter un type d'événement n'est pas incompatible : le consommateur ignore un `type` inconnu
       et avance son curseur (décision C7).
@@ -43,8 +48,9 @@ info:
     v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1). Statut de C3 :
     **validée (porte de sortie du Lot 1, 2026-10-29)** *(v9-v11 : « approuvée — conception détaillée
     approuvée — validation technique prévue en sortie du lot 1 »)*.
-    C1 (limitation de débit) et C8 (hypothèses marquées « [Hypothèse] ») restent **ouvertes**, sauf
-    la devise et `perWarehouse`, tranchés en v11.
+    **C1 tranchée (v13-D4)** ; **C8 tranchée (v13-D5)**, sauf la durée de conservation des données
+    client, **encore ouverte** (lot 5) ; la devise et `perWarehouse` avaient été tranchés en v11.
+    *(v12 et antérieures : « C1 et C8 restent ouvertes, sauf la devise et `perWarehouse` ».)*
 
     Décisions v11 (2026-10-29, plan § 24) : `409 CURSOR_AHEAD` et deux codes `400` sur
     `/catalog/changes` ; type d'événement inconnu servi tel quel ; `occurredAt` informatif ;
@@ -55,12 +61,21 @@ info:
     Décisions v12 (2026-10-29, plan § 25) : lot 1 terminé (non déployé) et C3 validée à sa porte de
     sortie ; dans l'instantané, un produit absent des sections `productImages` ou `availability` est
     dans son état initial et la dernière page peut être vide.
+
+    Décisions v13 (2026-10-29, plan § 26) : hébergement réel (backend GestStock sur Vercel, sans
+    processus permanent ; backend JeCréeMaBoutique sur un VPS) ; consommation du flux par
+    interrogation, webhook retiré de la v1 ; C1 tranchée (compteurs en base plateforme, `429` avec
+    `Retry-After`, `503` si les compteurs sont indisponibles) ; C8 tranchée sauf la durée de
+    conservation des données client : jeton de liaison de 15 min, clé de signature distincte,
+    rotation du secret de liaison, `Idempotency-Key` conservée 7 jours, 100 lignes et quantité
+    ≤ 9 999 par commande, `discountPercent` retiré, nom et téléphone du client obligatoires, adresse
+    seulement pour une livraison, pas d'e-mail ; liste blanche facultative de l'IP du VPS.
   x-status: proposition-lot-0
   x-decisions:
-    approved: [C2, C3, C4, C5, C6, C7]
+    approved: [C1, C2, C3, C4, C5, C6, C7, C8]
     technicalValidationPending: []
     technicallyValidated: ['C3 : validée (porte de sortie du Lot 1, 2026-10-29)']
-    open: [C1, C8]
+    open: ['C8 : durée de conservation des données client (lot 5, D11)']
     detailedDesign:
       date: '2026-10-28'
       approved: [P0, P1, P2, P3, P4, P5, P6, P7]
@@ -105,9 +120,24 @@ info:
       contractChanges:
         - 'Instantané : produit absent des sections productImages ou availability = état initial (pas d''image, version 0 ; disponibilité 0) ; dernière page possiblement vide (v12-D3)'
       httpEntryCriteria: ['P0-5 vérifiée sur la route', 'tests HTTP des codes INVALID_PAGE_TOKEN, SNAPSHOT_EXPIRED, CURSOR_AHEAD, CURSOR_EXPIRED, VALIDATION_FAILED, INVALID_PARAMETER', 'LinkRef, ChangeFilter, AckSource et WarehouseScope réels', 'publication conditionnée à une liaison active (v12-D4)', 'disponibilité republiée au changement de type de dépôt si le périmètre filtre par type']
+    v13:
+      date: '2026-10-29'
+      source: 'plan § 26 (hébergement réel, C1 et C8, préparation du lot 2)'
+      approved: [v13-D1, v13-D2, v13-D3, v13-D4, v13-D5, v13-D6, v13-D7, v13-D8]
+      hosting: 'GestStock : frontend Render, backend Vercel (serverless, sans processus permanent), base Neon ; JeCréeMaBoutique : frontend Render, backend Next.js sur VPS (Docker), base MongoDB Atlas'
+      c1Decided: 'compteurs en fenêtre fixe dans la base plateforme ; /oauth/token 10/min par identifiant client et par IP ; /catalog/changes 120/min, /catalog/snapshot 60/min, POST /online-orders 60/min par liaison (configurables) ; 429 avec Retry-After ; compteurs indisponibles : 503'
+      c8Decided: ['jeton client_credentials, JWT 15 min, aud geststock-integration, émetteur et type distincts, clé de signature distincte, statut de la liaison vérifié à chaque appel', 'secret de liaison affiché une fois, haché côté GestStock, chiffré côté JeCréeMaBoutique ; rotation avec deux secrets valides pendant la transition', 'idempotence : (liaison, externalOrderId) pour la création de commande ; Idempotency-Key conservée 7 jours pour les autres écritures', 'commande : 100 lignes au plus, quantité ≤ 9 999', 'discountPercent retiré', 'client : nom et téléphone obligatoires, adresse seulement pour une livraison, pas d''e-mail', 'liste blanche facultative de l''IP du VPS JeCréeMaBoutique', 'webhook retiré de la v1 (fenêtre HMAC et déduplication sans objet)']
+      c8StillOpen: ['durée de conservation des données client (lot 5)']
+      contractChanges:
+        - 'webhook geststockChangesAvailable retiré (v13-D3)'
+        - 'OnlineOrderRequest : discountPercent retiré ; quantité ≤ 9 999 ; customer obligatoire (name, phone), sans autre champ ; delivery obligatoire : pickup sans adresse, delivery avec adresse'
+        - 'POST /online-orders : idempotence par externalOrderId, en-tête Idempotency-Key retiré de cette opération ; renvoi identique = même statut et même corps que la première réponse, sans seconde commande ; 409 seulement pour un corps différent'
+        - 'TooManyRequests : Retry-After obligatoire ; 429 et 503 sur /oauth/token, /catalog/changes, /catalog/snapshot, POST /online-orders'
+        - 'linkToken : 15 min, aud geststock-integration, clé distincte, rotation du secret, liste blanche d''IP facultative'
+        - 'Idempotency-Key : conservation 7 jours'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
-    description: '[Hypothèse] Origine du backend GestStock non confirmée (décision D8).'
+    description: 'Backend GestStock hébergé sur Vercel (v13-D1) ; URL publique de production non encore fixée dans ce contrat (D8).'
     variables:
       geststockApiOrigin:
         default: https://geststock-backend.invalid
@@ -142,10 +172,13 @@ paths:
         - `grant_type=authorization_code` : échange du code à usage unique (5 min, haché en base,
           lié à l'entreprise, au client, à `redirect_uri` exacte et au défi PKCE S256). Renvoie la
           liaison créée et son secret (montré **une seule fois**).
-        - `grant_type=client_credentials` : jeton de liaison court (5 min) à partir de l'identifiant et
-          du secret de liaison.
+        - `grant_type=client_credentials` : jeton de liaison de **15 min** (v13-D5) à partir de
+          l'identifiant et du secret de liaison. Pendant une rotation, l'ancien et le nouveau secret sont
+          tous deux acceptés (voir `linkToken`).
         Authentification du client JeCréeMaBoutique : HTTP Basic (identifiant/secret client).
         Code rejoué, expiré, d'un autre client ou `redirect_uri` différente : `invalid_grant`, aucune liaison.
+        Limite de débit (C1, v13-D4) : 10 requêtes par minute par identifiant client **et** par IP
+        (valeur de départ, configurable) ; dépassement : `429` avec `Retry-After`.
       security:
         - clientBasic: []
       requestBody:
@@ -175,6 +208,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/OAuthError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
 
   /link:
     get:
@@ -254,7 +288,7 @@ paths:
 
         `hasMore` (P2) = il existe un événement de `seq > lastSeq` **ou** un événement validé encore
         sans `seq`, évalué après l'attribution. Vrai : rappeler immédiatement avec `after=lastSeq`.
-        Faux : reprendre plus tard (notification ou interrogation) ; ce n'est **pas** une fin
+        Faux : reprendre plus tard (interrogation périodique, v13-D3) ; ce n'est **pas** une fin
         définitive du flux.
 
         `limit` (P5) : 100 par défaut, 500 au plus ; une valeur hors bornes est refusée (400
@@ -320,7 +354,10 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ApiError' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+          description: Plus de 120 requêtes par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
+        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
 
   /catalog/changes/ack:
     post:
@@ -419,6 +456,10 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ApiError' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+          description: Plus de 60 requêtes par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
+        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
 
   /catalog/products/search:
     get:
@@ -590,8 +631,16 @@ paths:
       tags: [Commandes, Réservations]
       summary: Transmettre une commande en ligne (et demander la réservation)
       description: |
-        `Idempotency-Key` = identifiant de la commande JeCréeMaBoutique. Rejouer renvoie la même
-        commande et la même réservation. GestStock contrôle : liaison active, produits liés,
+        Idempotence par **clé naturelle** (liaison, `externalOrderId`) (C4, v13-D5) : aucun en-tête
+        `Idempotency-Key` sur cette opération. **Renvoi identique** (même `externalOrderId`, même corps) :
+        la commande déjà créée est renvoyée avec **le même statut et le même corps que la première
+        réponse** (même réservation), **sans en créer de seconde**. `409 IDEMPOTENCY_KEY_REUSED` ne
+        concerne que le même `externalOrderId` envoyé avec un **corps différent**.
+        *(Première rédaction v13 : renvoi identique en `200`.)*
+        *(v12 et antérieures : `Idempotency-Key` = identifiant de la commande JeCréeMaBoutique.)*
+        Limites (v13-D5) : 100 lignes au plus, quantité ≤ 9 999 par ligne (au-delà des limites
+        actuelles de JeCréeMaBoutique : 50 lignes, quantité 999). Débit (C1, v13-D4) : 60 créations
+        par minute et par liaison (valeur de départ, configurable). GestStock contrôle : liaison active, produits liés,
         version de prix approuvée pour chaque ligne, dépôts associés actifs, quantités. Si la
         réservation est activée pour la liaison, elle est créée dans la même transaction
         (verrous ordonnés), avec `expiresAt` = heure serveur PostgreSQL + durée configurée
@@ -600,8 +649,6 @@ paths:
         **Aucune vente n'est créée** : la conversion en vente se fait au point de vente par le
         personnel, avec caisse ouverte pour tout paiement.
       x-required-scopes: [orders:write]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -609,21 +656,23 @@ paths:
             schema: { $ref: '#/components/schemas/OnlineOrderRequest' }
       responses:
         '201':
-          description: Commande reçue (réservée ou refusée selon le stock)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/OnlineOrder' }
-        '200':
-          description: Requête rejouée — commande déjà reçue
+          description: |
+            Commande reçue (réservée ou refusée selon le stock). Un renvoi identique du même
+            `externalOrderId` reçoit cette même réponse (même statut, même corps), sans seconde commande.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OnlineOrder' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+          description: '`IDEMPOTENCY_KEY_REUSED` : `externalOrderId` déjà reçu pour cette liaison avec un corps différent'
         '422': { $ref: '#/components/responses/BusinessRule' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+          description: Plus de 60 créations par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
+        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
 
   /online-orders/{orderId}:
     get:
@@ -708,31 +757,10 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ApiError' }
 
-webhooks:
-  geststockChangesAvailable:
-    post:
-      operationId: notifyChangesAvailable
-      summary: Signal « changements disponibles » envoyé par GestStock à JeCréeMaBoutique
-      description: |
-        Ne transporte aucune donnée de catalogue : le récepteur relit `/catalog/changes`.
-        Signature : `X-GestStock-Signature: t=<epoch>,v1=<hex HMAC-SHA256(secret, t + "." + corps)>`.
-        Le récepteur refuse un horodatage hors fenêtre de 5 min [Hypothèse] et ignore un
-        `eventId` déjà vu. Route de réception côté JeCréeMaBoutique : à définir (D8).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [eventId, linkId, latestSeq, sentAt]
-              properties:
-                eventId: { type: string, format: uuid }
-                linkId: { type: string, format: uuid }
-                latestSeq: { type: integer, format: int64 }
-                sentAt: { type: string, format: date-time }
-      responses:
-        '204': { description: Signal pris en compte }
-        '401': { description: 'Signature absente, invalide ou expirée' }
+# Webhook retiré de la v1 (v13-D3) : la consommation du flux se fait par interrogation périodique
+# depuis le VPS JeCréeMaBoutique. Historique (v12 et antérieures) : webhook
+# geststockChangesAvailable, signal sans données signé HMAC-SHA256 (fenêtre de 5 min, déduplication
+# par eventId). Une notification sans données pourra être ajoutée dans une version ultérieure.
 
 components:
   securitySchemes:
@@ -741,12 +769,24 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        Jeton de liaison obtenu par `client_credentials` : `iss=geststock`,
-        `aud=geststock-integration-v1` [Hypothèse], `sub`=identifiant de liaison, portées dans `scope`,
-        durée 5 min [Hypothèse]. Signature, émetteur, audience, expiration vérifiés, puis statut de la
-        liaison relu en base à chaque appel. Distinct des jetons utilisateurs GestStock.
+        Jeton de liaison obtenu par `client_credentials` (v13-D5) : JWT de **15 min**,
+        `aud=geststock-integration`, `sub`=identifiant de liaison, portées dans `scope`. Émetteur (`iss`)
+        et type (`typ`) **distincts** de ceux des jetons utilisateurs (valeurs fixées au lot 2) ; signé
+        par une **clé distincte** de celle des jetons utilisateurs. Signature, émetteur, type, audience
+        et expiration vérifiés, puis **statut de la liaison relu en base à chaque appel** (révocation
+        immédiate, C2). Un jeton d'utilisateur GestStock est refusé par la chaîne d'intégration ; un
+        jeton de liaison est refusé par l'API principale.
         Portée exigée par opération : `x-required-scopes`. Implication (décision C5) : un jeton portant
         `orders:write` satisfait aussi `orders:read` ; aucune autre implication entre portées.
+        Secret de liaison (v13-D5) : généré par GestStock à la création de la liaison et affiché une
+        seule fois ; conservé **haché** côté GestStock ; chiffré côté JeCréeMaBoutique (AES-GCM, clé
+        propre à l'intégration, hors Git et hors base). **Rotation** : un nouveau secret est émis et
+        affiché une fois ; l'ancien et le nouveau sont acceptés pendant la transition, puis l'ancien
+        est retiré (déclenchement et durée de la transition : lot 2).
+        Origine (v13-D5) : liste blanche facultative de l'IP du VPS JeCréeMaBoutique, activable par
+        configuration, **en plus** de l'authentification (jamais à sa place).
+        *(v12 et antérieures : `iss=geststock`, `aud=geststock-integration-v1` et durée 5 min, en
+        hypothèse.)*
     clientBasic:
       type: http
       scheme: basic
@@ -758,8 +798,9 @@ components:
       in: header
       required: true
       description: |
-        Unique par liaison et par opération ; conservée au moins 90 jours [Hypothèse alignée D5].
-        Même clé avec un corps différent : `409 IDEMPOTENCY_KEY_REUSED`.
+        Unique par liaison et par opération ; **conservée 7 jours** (v13-D5 ; *v12 et antérieures :
+        90 jours, en hypothèse*). Même clé avec un corps différent : `409 IDEMPOTENCY_KEY_REUSED`.
+        Non utilisée par `POST /online-orders`, idempotente par (liaison, `externalOrderId`).
       schema: { type: string, minLength: 8, maxLength: 100, pattern: '^[A-Za-z0-9._:-]+$' }
     ProductId:
       name: productId
@@ -818,9 +859,22 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ApiError' }
     TooManyRequests:
-      description: Limite de débit par liaison [Hypothèse] ; `Retry-After` fourni
+      description: |
+        `RATE_LIMITED` : limite de débit dépassée (C1, v13-D4). Compteurs en fenêtre fixe tenus par
+        GestStock (base plateforme), par liaison ; sur `/oauth/token`, par identifiant client et par
+        IP. Attendre `Retry-After` secondes avant de réessayer.
       headers:
-        Retry-After: { schema: { type: integer } }
+        Retry-After:
+          required: true
+          description: Délai en secondes avant la fin de la fenêtre en cours
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    RateLimitUnavailable:
+      description: |
+        `RATE_LIMIT_UNAVAILABLE` : les compteurs de débit sont inaccessibles ; la requête est
+        **refusée**, jamais laissée passer (C1, v13-D4). Réessayer plus tard.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ApiError' }
@@ -880,7 +934,7 @@ components:
       properties:
         access_token: { type: string }
         token_type: { type: string, const: Bearer }
-        expires_in: { type: integer, examples: [300] }
+        expires_in: { type: integer, examples: [900], description: 'Secondes ; 900 (15 min) pour un jeton de liaison (v13-D5)' }
         scope: { type: string }
         link:
           description: Présent uniquement à l'échange de code
@@ -1196,27 +1250,47 @@ components:
     OnlineOrderRequest:
       description: Instantané commercial figé à la commande ; les prix sont vérifiés, jamais crus
       type: object
-      required: [externalOrderId, createdAt, currency, lines]
+      required: [externalOrderId, createdAt, currency, customer, delivery, lines]
       properties:
-        externalOrderId: { type: string, maxLength: 64, description: Order._id JeCréeMaBoutique }
+        externalOrderId: { type: string, maxLength: 64, description: 'Order._id JeCréeMaBoutique ; avec la liaison, clé d''idempotence de la création (C4, v13-D5)' }
         createdAt: { type: string, format: date-time }
         currency: { type: string }
         customer:
-          description: Données personnelles minimales, conservation selon D11
+          description: |
+            Données personnelles minimales (v13-D5) : nom et téléphone **obligatoires**, aucun autre
+            champ (pas d'e-mail). Durée de conservation : **ouverte**, fixée au lot 5 (D11).
           type: object
+          required: [name, phone]
+          additionalProperties: false
           properties:
-            name: { type: string, maxLength: 200 }
-            phone: { type: string, maxLength: 30 }
+            name: { type: string, minLength: 1, maxLength: 200 }
+            phone: { type: string, minLength: 1, maxLength: 30 }
         delivery:
-          type: object
-          properties:
-            mode: { type: string, enum: [delivery, pickup] }
-            address: { type: string, maxLength: 500 }
+          description: |
+            **Obligatoire** : retrait (`pickup`) **sans** adresse, ou livraison (`delivery`) **avec**
+            adresse (v13-D5). Aucune version de JeCréeMaBoutique n'appelle encore cette route : aucune
+            compatibilité à préserver. *(Première rédaction v13 : facultatif, pour les anciennes
+            versions de l'application JeCréeMaBoutique sans mode de livraison.)*
+          oneOf:
+            - title: Retrait
+              type: object
+              required: [mode]
+              additionalProperties: false
+              properties:
+                mode: { type: string, const: pickup }
+            - title: Livraison
+              type: object
+              required: [mode, address]
+              additionalProperties: false
+              properties:
+                mode: { type: string, const: delivery }
+                address: { type: string, minLength: 1, maxLength: 500 }
         note: { type: string, maxLength: 500 }
         lines:
           type: array
           minItems: 1
           maxItems: 100
+          description: '100 lignes au plus (v13-D5)'
           items:
             type: object
             required: [productId, quantity, unitPrice, priceVersion]
@@ -1224,9 +1298,13 @@ components:
               productId: { type: string, format: uuid }
               sku: { type: string }
               label: { type: string, maxLength: 200 }
-              quantity: { type: integer, minimum: 1, maximum: 100000 }
-              unitPrice: { type: string, description: Doit égaler le prix approuvé de `priceVersion` }
-              discountPercent: { type: string, description: 'Remise éventuelle, plafonnée par GestStock' }
+              quantity: { type: integer, minimum: 1, maximum: 9999, description: '9 999 au plus (v13-D5 ; v12 et antérieures : 100 000)' }
+              unitPrice:
+                type: string
+                description: |
+                  Prix unitaire **effectivement facturé** par JeCréeMaBoutique ; doit égaler le prix
+                  approuvé de `priceVersion`. Le prix de référence reste du côté de GestStock.
+                  *(`discountPercent` retiré en v13-D5.)*
               priceVersion: { type: integer, format: int64 }
 
     OnlineOrderStatus:
