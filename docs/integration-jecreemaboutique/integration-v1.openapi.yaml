@@ -41,7 +41,8 @@ info:
 
     Décisions appliquées (2026-10-28) : C2, C3, C4, C5, C6, C7 ; conception détaillée P0 à P8 ;
     v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1). Statut de C3 :
-    **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1**.
+    **validée (porte de sortie du Lot 1, 2026-10-29)** *(v9-v11 : « approuvée — conception détaillée
+    approuvée — validation technique prévue en sortie du lot 1 »)*.
     C1 (limitation de débit) et C8 (hypothèses marquées « [Hypothèse] ») restent **ouvertes**, sauf
     la devise et `perWarehouse`, tranchés en v11.
 
@@ -50,10 +51,15 @@ info:
     `currency` et `imageSha256` retirés de `Product` (devise dans l'en-tête de l'instantané et sur la
     liaison, état de l'image par `PRODUCT_IMAGE` seulement) ; `perWarehouse` exposé ; forme de
     l'instantané (en-tête, quatre sections, objets archivés inclus).
+
+    Décisions v12 (2026-10-29, plan § 25) : lot 1 terminé (non déployé) et C3 validée à sa porte de
+    sortie ; dans l'instantané, un produit absent des sections `productImages` ou `availability` est
+    dans son état initial et la dernière page peut être vide.
   x-status: proposition-lot-0
   x-decisions:
     approved: [C2, C3, C4, C5, C6, C7]
-    technicalValidationPending: [C3]
+    technicalValidationPending: []
+    technicallyValidated: ['C3 : validée (porte de sortie du Lot 1, 2026-10-29)']
     open: [C1, C8]
     detailedDesign:
       date: '2026-10-28'
@@ -88,6 +94,17 @@ info:
       c8Decided: ['devise (ISO 4217, en-tête de l''instantané et liaison)', 'perWarehouse']
       c8StillOpen: ['durée de rétention et règle de purge', 'durée du jeton, aud, fenêtre HMAC', 'conservation des clés d''idempotence', 'limites de lignes et de quantités', 'discountPercent', 'origine serveur, webhook, données client']
       c3Status: 'non validée : étapes 7 à 10 du lot 1 restantes'
+    v12:
+      date: '2026-10-29'
+      source: 'plan § 25 (clôture du lot 1)'
+      approved: [v12-D1, v12-D2, v12-D3, v12-D4, v12-D5, v12-D6, v12-D7]
+      c3Status: 'validée (porte de sortie du Lot 1, 2026-10-29)'
+      lot1: 'terminé, non déployé (backend, feat/integration-lot1, c698f75..8e79878, 22 commits)'
+      lot1Exit: 'satisfaite : suite complète verte deux fois sans différence ; T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 ; 100 répétitions de T-C3-1 et de T-C3-2 b (séquenceurs, lecteurs) ; T-C3-8 à 10 lignes 0,1 %, 2,0 %, -1,6 %'
+      reservation: 'P0-5 vérifiée au niveau du service seulement : critère d''entrée du lot qui crée la route HTTP'
+      contractChanges:
+        - 'Instantané : produit absent des sections productImages ou availability = état initial (pas d''image, version 0 ; disponibilité 0) ; dernière page possiblement vide (v12-D3)'
+      httpEntryCriteria: ['P0-5 vérifiée sur la route', 'tests HTTP des codes INVALID_PAGE_TOKEN, SNAPSHOT_EXPIRED, CURSOR_AHEAD, CURSOR_EXPIRED, VALIDATION_FAILED, INVALID_PARAMETER', 'LinkRef, ChangeFilter, AckSource et WarehouseScope réels', 'publication conditionnée à une liaison active (v12-D4)', 'disponibilité republiée au changement de type de dépôt si le périmètre filtre par type']
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: '[Hypothèse] Origine du backend GestStock non confirmée (décision D8).'
@@ -213,8 +230,8 @@ paths:
       tags: [Catalogue]
       summary: Flux ordonné des changements de catalogue, prix et disponibilité
       description: |
-        **Séquencement (C3 approuvée — conception détaillée approuvée — validation technique prévue en
-        sortie du lot 1)** : un `seq` est
+        **Séquencement (C3 validée — porte de sortie du Lot 1, 2026-10-29 ; v9-v11 : validation technique
+        prévue en sortie du lot 1)** : un `seq` est
         attribué **à la lecture du flux**, sous un verrou à lecteur unique, uniquement aux événements
         dont la transaction métier est déjà validée. Un événement non validé n'est jamais exposé ; une
         transaction lente ne peut pas faire apparaître après coup un `seq` inférieur à un `seq` déjà
@@ -350,7 +367,12 @@ paths:
         produit). **Objets archivés inclus** (`active: false`) : un consommateur qui refait un instantané
         complet peut archiver ce qu'il détient encore. `limit` compte les objets **toutes sections
         confondues** ; une page peut chevaucher deux sections ; les sections vides ou terminées sont
-        servies en tableaux vides.
+        servies en tableaux vides. **La dernière page peut être vide** (quatre tableaux vides, sans
+        `nextPageToken`) : accepté (v12-D3).
+        **Produit absent de `productImages` ou `availability`** (créé pendant la pagination, après le
+        passage de ces sections) : il est dans son **état initial**, pas d'image (version 0) et
+        disponibilité 0 ; tout changement ultérieur arrive par le flux après `asOfSeq`. Aucun événement
+        n'est publié à la création d'un produit (v12-D3).
         Versions : `@Version` de l'objet pour `categories` et `products` ; génération de l'image pour
         `productImages` (0 si le produit n'a jamais eu d'image) ; `asOfSeq` pour `availability`. Le
         consommateur applique la règle des versions à l'instantané comme au flux.
@@ -1052,7 +1074,10 @@ components:
         Sections, dans cet ordre : `categories`, `products`, `productImages`, `availability` ; `limit`
         compte les objets toutes sections confondues, une page peut chevaucher deux sections, une section
         sans objet dans la page est un tableau vide. Objets archivés inclus (`active: false`) ; les
-        sections `productImages` et `availability` couvrent tous les produits, archivés compris.
+        sections `productImages` et `availability` couvrent tous les produits, archivés compris ; un
+        produit absent de ces sections (créé pendant la pagination) est dans son état initial : pas
+        d'image (version 0), disponibilité 0. La dernière page peut être vide, sans `nextPageToken`
+        (v12-D3).
         *(v10 : sections `categories` et `products` seulement, `nextPageToken` nul sur la dernière page,
         devise portée par chaque `Product` — remplacé.)*
       type: object

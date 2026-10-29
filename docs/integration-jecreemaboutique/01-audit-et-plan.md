@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Version | 11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
-| Statut | **Proposition soumise à approbation.** Lot 1 **en cours** (§ 24.6) ; aucun autre lot commencé. *v10 : « Aucun lot d'implémentation n'est commencé. »* |
-| Code, bases, déploiements | Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
+| Version | 12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; aucun autre lot commencé. *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
+| Code, bases, déploiements | Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6, § 25.2) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
 | Secrets | Aucun fichier `.env*` lu ; aucune valeur sensible copiée. Les variables citées le sont par leur **nom**, relevé dans le code. |
 
@@ -385,7 +385,7 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Reprises | Lecture rejouable depuis tout `seq` (exposée au lot 3) |
 | Dépendances | Lot 0 accepté |
 | Porte d'entrée (v9-D3) | Conception détaillée C3 approuvée (P0 à P8, v9-D1, v9-D2) : **satisfaite sur le plan documentaire**. **Ne vaut pas autorisation de démarrer** : le démarrage du lot 1 fera l'objet d'une autorisation séparée |
-| Porte de sortie (v9-D3) | T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 réussis sur PostgreSQL 17 (Testcontainers) : **non satisfaite**. La validation de C3 est prononcée **uniquement** à cette sortie |
+| Porte de sortie (v9-D3) | T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 réussis sur PostgreSQL 17 (Testcontainers) : **satisfaite le 2026-10-29** (§ 25.1). La validation de C3 est prononcée **uniquement** à cette sortie : C3 validée (porte de sortie du Lot 1, 2026-10-29). *v9-v11 : « non satisfaite ».* |
 | Risques | Événement écrit hors transaction (perte) ; surcoût d'écriture sur stock et ventes ; croissance de table ; régression des comptes de permissions dans les tests |
 | Tests | Un changement ⇒ un événement dans la même transaction ; rollback métier ⇒ aucun événement ; `seq` strictement croissant sous écritures concurrentes ; isolation (deux entreprises d'essai, aucun événement croisé) ; purge en simulation ne supprime rien ; suite complète GestStock (unitaire + intégration) sans régression ; **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 (§ 20.4)** — état au 2026-10-29 : § 24.6 |
 | Critères d'acceptation (sortie) | Tous les tests verts, dont **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6** (PostgreSQL 17, Testcontainers) ; temps d'une vente de 10 lignes non dégradé de plus de 10 % [Proposé] (T-C3-8) ; aucune régression ; exigences P0 1 à 6 vérifiées en revue ; P8 inscrite à la checklist de déploiement (v11-D12) ; **C3 démontrée** (revue du mécanisme) — C3 n'est « validée » qu'à ce moment. *v10 : « vérification P8 consignée ».* |
@@ -431,7 +431,7 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Délais attendus **[Proposé]** | Notification ≤ 1 min après le changement ; réconciliation quotidienne ; une synchronisation non reçue apparaît « en retard » au-delà de 15 min |
 | Fichiers concernés | JCMB existants : `models/product.model.ts`, `models/category.model.ts`, `services/product.service.ts`, `services/category.service.ts`, `validators/product.validator.ts` ; à créer : consommateur, modèles `syncstates`, écrans de statut et de rapprochement |
 | Migrations | GestStock *(numéro attribué à l'implémentation)* : `channel_warehouse`, `channel_price` ; JCMB `scripts/migrate-external-ids.mjs`, `scripts/migrate-sync-cursor.mjs` *(à créer)* ; rollbacks associés |
-| Dépendances | Lots 1 et 2 ; **consommateur direct du flux** (`/catalog/changes`, instantané) : bloqué tant que C3 n'est pas validée en sortie du lot 1 (v9-D3) |
+| Dépendances | Lots 1 et 2 ; **consommateur direct du flux** (`/catalog/changes`, instantané) : blocage levé, C3 validée (porte de sortie du Lot 1, 2026-10-29) ; exposition HTTP soumise aux critères d'entrée du § 25.4. *v9-v11 : « bloqué tant que C3 n'est pas validée en sortie du lot 1 (v9-D3) ».* |
 | Risques | Écrasement de données boutique ; doublons |
 | Tests | Scénarios 4 à 9, 19 ; critères C3 côté instantané (T-C3-3 à T-C3-6), C6 et C7 (§ 19.3) |
 | Critères d'acceptation | Catalogue identique après synchronisation et après réconciliation ; aucun champ boutique modifié |
@@ -451,7 +451,7 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Différence avec la réservation | Indicative = information ; seule la réservation (lot 6) garantit la quantité |
 | JCMB | `stock`/`inStock` en lecture seule ; contrôle `quantité ≤ disponibilité connue` à la commande (`services/order.service.ts`) |
 | Migrations | Aucune nouvelle |
-| Dépendances | Lot 3 ; **consommateur direct du flux** (événements `AVAILABILITY`) : bloqué tant que C3 n'est pas validée (v9-D3) |
+| Dépendances | Lot 3 ; **consommateur direct du flux** (événements `AVAILABILITY`) : blocage levé, C3 validée (porte de sortie du Lot 1, 2026-10-29). *v9-v11 : « bloqué tant que C3 n'est pas validée (v9-D3) ».* |
 | Tests | Scénarios 11, 12, 17 |
 | Retour arrière | Retour à `inStock` manuel |
 | Conditions d'arrêt | Disponibilité calculée sur un dépôt non associé |
@@ -649,7 +649,7 @@ Recommandation : **B + C** (aucun nouveau service, correction indépendante des 
 |---|---|---|---|
 | 1 | D1, D2, D3, D5, D8 documentées | § 0, 5.1, 5.4, 5.6, 11 ; D1-D3, D5 validées par écrit (2026-10-28) ; D8 : 7 URL candidates avec vérification sûre (§ 0) | **Partiel** : D8 non confirmée |
 | 2 | Contrat `integration/v1` | `integration-v1.openapi.yaml` (§ 12) ; décisions C2 à C7, P0 à P8, v9, Q7 appliquées ; YAML **valide**, 36 `$ref` résolues ; **Redocly 2.72.0 (règles recommandées) : 0 erreur**, 3 avertissements justifiés (§ 22.4) | **Partiel** : C3 validée seulement en sortie du lot 1 ; C1 et C8 ouvertes ; contrat dans son ensemble **non approuvé** |
-| 2c | Séquencement du flux sûr sous concurrence (C3) | C3 **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** (P0 à P8, v9-D1, v9-D2, § 20-21) ; aucun mécanisme dans le code (§ 19.2) ; tests T-C3 / T-C7 **non écrits, non exécutés**. Portes (v9-D3) : entrée dans le lot 1 satisfaite sur le plan documentaire (**ne vaut pas autorisation de démarrer**) ; sortie du lot 1 non satisfaite ; lots consommateurs du flux (3, 4 ; 5 indirectement) bloqués jusqu'à la validation de C3 | **Non satisfait** tant que T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 n'ont pas réussi |
+| 2c | Séquencement du flux sûr sous concurrence (C3) | C3 **validée (porte de sortie du Lot 1, 2026-10-29)** : porte de sortie du lot 1 satisfaite, preuves au § 25.1 (suite complète verte deux fois sans différence ; T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 ; T-C3-8 à 10 lignes ; revue P0 et R1/R2 acceptée, réserve P0-5). Lots consommateurs du flux débloqués quant à C3. *v10-v11 : « approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1 » ; tests non écrits ; sortie du lot 1 non satisfaite.* | **Satisfait** (2026-10-29) |
 | 2b | Versionnement du plan et du contrat | `git add -f` des deux fichiers dans `gestion-stock` (branche `main`) ; v7 modifiée **après** l'indexation : l'index contient la v6, les modifications v7 ne sont pas indexées (`AM`) | **Partiel** : non commités ; réindexation de la v7 non autorisée à ce stade |
 | 3 | Environnements isolés + données synthétiques | Spécification et scripts § 16 ; **non créés** | **Non satisfait** : création à autoriser |
 | 4 | Stratégie de concurrence et de réservation | § 5.4, § 9 lot 6, § 10, § 13.2 ; précédent `CrossModuleConcurrencyIT.java` | **Partiel** : documentée, non approuvée |
@@ -856,7 +856,7 @@ Vérifié : `application/problem+json` conforme à l'`ApiError` existant (`ApiEr
 | # | Objet | Statut | Effet dans le contrat | Effet dans le plan |
 |---|---|---|---|---|
 | **C2** | Révocation par la boutique | **Approuvée, appliquée** | `POST /link/revoke` | Lot 2 (route, tests) |
-| **C3** | Séquencement et pagination | **Décision approuvée — validation technique en attente** *(v9 : « approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1 », § 21)* | Description de `/catalog/changes`, `/catalog/snapshot`, `pageToken`, 400 `INVALID_PAGE_TOKEN`, 410 `SNAPSHOT_EXPIRED`, `ChangePage`, `SnapshotPage` | Lot 1 (migration, tests T-C3) ; § 12 aligné sur `pageToken` ; **lot 1 bloqué** |
+| **C3** | Séquencement et pagination | **Décision approuvée — validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25.1) *(v7-v8 : « décision approuvée — validation technique en attente » ; v9-v11 : « approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1 », § 21)* | Description de `/catalog/changes`, `/catalog/snapshot`, `pageToken`, 400 `INVALID_PAGE_TOKEN`, 410 `SNAPSHOT_EXPIRED`, `ChangePage`, `SnapshotPage` | Lot 1 (migration, tests T-C3) ; § 12 aligné sur `pageToken` ; **lot 1 bloqué** |
 | **C4** | Recherche par `externalOrderId` | **Approuvée, appliquée** | `GET /online-orders/external/{externalOrderId}` | Lot 5 (unicité (liaison, `externalOrderId`), tests) |
 | **C5** | Portée `orders:read` | **Approuvée, appliquée** | `Scope` ; `x-required-scopes` des deux lectures ; implication dans `linkToken` | Lot 2 (portées ; `reservations:write` retirée) |
 | **C6** | Concurrence des propositions de prix | **Approuvée, appliquée** | Description de `/prices/proposals` ; sens de `PRICE_VERSION_MISMATCH` | § 5.1 ; lot 3 (tests) |
@@ -870,7 +870,7 @@ Vérifié : `application/problem+json` conforme à l'`ApiError` existant (`ApiEr
 |---|---|
 | **Décision approuvée** | `seq` attribué à la lecture du flux, sous verrou à lecteur unique, aux seuls événements dont la transaction métier est validée ; `after` = dernier `seq` consommé ; `asOfSeq` fixé à la première page ; `pageToken` opaque, lié à la liaison, 24 h ; 400 si invalide ou d'une autre liaison ; 410 `SNAPSHOT_EXPIRED` si expiré |
 | **Mécanisme observé dans le code** (lecture seule, 2026-10-28) | **Aucun.** Pas de module d'intégration, pas de table d'outbox, pas de `seq`, pas de curseur ni d'instantané (recherche `outbox`, `integration_`, `pg_advisory`, `pg_current_xact_id`, `pg_snapshot`, `asOfSeq`, `pageToken`, `cursor` dans `backend/src` : aucun résultat pertinent). Dernière migration : `V046__product_image.sql`. Verrous existants : `SELECT … FOR UPDATE` / `PESSIMISTIC_WRITE` sur des objets métier (caisse, client, produit, inventaire…), sans rapport avec un flux. Le plan v6 prévoyait un `seq bigserial` attribué à l'écriture : c'est précisément la conception exposée au risque (T2 obtient 9, T1 obtient 10, T1 valide, le consommateur passe à 10, T2 valide : 9 est sauté). |
-| **Validation technique** | **En attente.** Rien à démontrer à partir du code existant ; la sûreté devra être prouvée par l'implémentation du lot 1 et les tests ci-dessous. C3 ne doit pas être déclarée « validée » avant. |
+| **Validation technique** | **Faite** : C3 validée (porte de sortie du Lot 1, 2026-10-29), preuves au § 25.1. *v7-v11 : « En attente. Rien à démontrer à partir du code existant ; la sûreté devra être prouvée par l'implémentation du lot 1 et les tests ci-dessous. C3 ne doit pas être déclarée « validée » avant. »* |
 | **Infrastructure de test disponible** | Tests d'intégration sur PostgreSQL réel avec barrières de démarrage (`CrossModuleConcurrencyIT`, `SaleTransactionIT`, `StockServiceIT`… : `CountDownLatch` / `CyclicBarrier` / `ExecutorService`) ; aucun test ne couvre l'ordre de validation de transactions concurrentes ni un flux d'événements |
 | **Tests restants (critères du lot 1 et du lot 3)** | **T-C3-1** deux connexions PostgreSQL validant dans l'ordre inverse de leur démarrage : le consommateur reçoit les deux événements, dans un ordre `seq` cohérent, aucun sauté ; **T-C3-2** reprise après un curseur avancé : aucun événement perdu ; un événement non validé n'est jamais servi ; deux lecteurs concurrents n'attribuent pas de `seq` en conflit ; interruption pendant l'attribution : aucun événement perdu ni curseur avancé à tort ; **T-C3-3** `asOfSeq` identique sur toutes les pages d'un instantané ; **T-C3-4** instantané complet + rejeu depuis `asOfSeq` = état source, y compris avec modifications pendant la pagination ; **T-C3-5** `pageToken` d'une autre liaison ⇒ 400 ; **T-C3-6** `pageToken` de plus de 24 h ⇒ 410 `SNAPSHOT_EXPIRED` |
 | **Conséquence** | *(v7 — formulation remplacée en v9 par les portes de v9-D3, § 21 : elle était circulaire, les tests ne pouvant exister qu'au lot 1.)* **Le lot 1 reste bloqué** tant que la conception détaillée du mécanisme (verrou, transaction d'attribution, reprise) n'est pas approuvée. Les tests T-C3 sont inscrits comme critères de sortie du lot 1 (§ 9) ; C3 ne sera « validée » qu'après leur passage. |
@@ -897,7 +897,7 @@ Source : étude technique C3/C7 en lecture seule (même date). Légende : **[App
 
 | # | Objet | Statut |
 |---|---|---|
-| **P0** | Conception D = conception détaillée de C3 (§ 20.2) | **[Approuvé]** ; C3 reste « décision approuvée — validation technique en attente » ; lot 1 bloqué *(v9 : statut et portes reformulés par v9-D3, § 21)* |
+| **P0** | Conception D = conception détaillée de C3 (§ 20.2) | **[Approuvé]** ; conception D réalisée au lot 1 et C3 validée (porte de sortie du Lot 1, 2026-10-29) (§ 25.1) *(v8 : « C3 reste décision approuvée — validation technique en attente ; lot 1 bloqué » ; v9 : statut et portes reformulés par v9-D3, § 21)* |
 | **P1** | `lastSeq` = dernier `seq` examiné (changement de contrat) | **[Approuvé]**, appliqué (OpenAPI, § 12) |
 | **P2** | `hasMore` = `EXISTS(seq > lastSeq) OR EXISTS(seq IS NULL)` après attribution (changement de contrat) | **[Approuvé]**, appliqué ; remplace la règle « limite de 1 000 atteinte » de l'étude, inopérante pour un lecteur passé par `SKIP LOCKED` |
 | **P3** | Origine de `version` par famille (§ 20.3) | **[Approuvé]** pour le principe ; `CHANNEL_PRICE` et `ONLINE_ORDER_STATUS` **à confirmer** (lots 3-4) |
@@ -1018,11 +1018,11 @@ Nommage : **v9-D1, v9-D2, v9-D3**, pour éviter la confusion avec les décisions
 | Porte | Condition | État au 2026-10-28 |
 |---|---|---|
 | **Entrée dans le lot 1** | Conception détaillée C3 approuvée (P0 à P8, v9-D1, v9-D2) | **Satisfaite sur le plan documentaire.** **Ne vaut pas autorisation de démarrer** : le démarrage fera l'objet d'une autorisation séparée |
-| **Sortie du lot 1** | T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 réussis sur PostgreSQL 17 (Testcontainers) | **Non satisfaite** (aucun test écrit ni exécuté) |
+| **Sortie du lot 1** | T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 réussis sur PostgreSQL 17 (Testcontainers) | **Non satisfaite** (aucun test écrit ni exécuté). *v12 : satisfaite le 2026-10-29 (§ 25.1).* |
 | **Validation de C3** | Prononcée **uniquement** à la sortie du lot 1 | Non prononcée |
-| **Lots consommateurs du flux** | Bloqués tant que C3 n'est pas validée | Bloqués |
+| **Lots consommateurs du flux** | Bloqués tant que C3 n'est pas validée | Bloqués. *v12 : débloqués quant à C3 ; exposition HTTP soumise au § 25.4.* |
 
-**Statut de C3** : « **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ».
+**Statut de C3** : « **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ». *v12 : « validée (porte de sortie du Lot 1, 2026-10-29) » (§ 25.1).*
 
 ### 21.3 Lots consommateurs du flux (identifiés dans le § 9 réel)
 
@@ -1118,7 +1118,7 @@ Source : réalisation des étapes 1, 3, 5, 6, 4a, 2+4b et 4c du lot 1 (dépôt b
 | **v11-D10** | Forme de l'instantané (`SnapshotPage`) | § 24.3 | Reprise sans perte depuis `asOfSeq`, y compris pour les images et la disponibilité |
 | **v11-D11** | Retour arrière de V048 (`product_image_generation`) | **Destructif** : les générations repartent à 1 ; ni l'instantané ni le rejeu ne suffisent, à cause de la règle des versions. Il impose une **remise à zéro complète côté JCMB** (oubli des versions locales, puis instantané complet). JCMB doit disposer de cette opération (lot 3), qui sert aussi pour `CURSOR_AHEAD` | Une boutique qui a déjà appliqué une génération supérieure ignorerait les changements d'image jusqu'à ce que le compteur la dépasse |
 | **v11-D12** | P8 | **Règle de déploiement** : les URL utilisées par les migrations (`GESTSTOCK_DB_URL`, `GESTSTOCK_PROVISIONER_DB_URL`) pointent vers l'hôte direct, sans `-pooler` ; le pooler n'est envisagé que pour le trafic applicatif, sur besoin mesuré. P8 sort des vérifications en attente et entre dans la checklist de déploiement (§ 24.5) | La conception D n'utilise aucun verrou consultatif de session ; les migrations exigent une connexion directe |
-| **v11-D13** | État du lot 1 | § 24.6 ; T-C3-8 : surcoût de 2,2 à 3,3 % après l'insertion groupée, critère satisfait ; **C3 non validée** (étapes 7 à 10 restantes) | — |
+| **v11-D13** | État du lot 1 | § 24.6 ; T-C3-8 : surcoût de 2,2 à 3,3 % après l'insertion groupée, critère satisfait ; **C3 non validée** (étapes 7 à 10 restantes). *v12 : lot 1 terminé, C3 validée (porte de sortie du Lot 1, 2026-10-29) (§ 25).* | — |
 
 ### 24.2 Réparation de la ligne d'état du flux (v11-D1)
 
@@ -1185,8 +1185,123 @@ Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du do
 
 - **T-C3-8** : surcoût médian des ventes avec publication de 8,5 % et 10,4 % avant l'insertion groupée, puis **2,2 %, 3,3 % et 3,3 %** après (trois exécutions, 200 ventes de 3 lignes par tour, 6 tours alternés) : **critère satisfait**. Écart à noter : la mesure porte sur des ventes de 3 lignes, le critère du § 9 mentionne 10 lignes ; nouvelle mesure à 10 lignes proposée pour la porte de sortie.
 - **Restent** : étape 7 (instantané et `pageToken` : T-C3-3 à T-C3-6, T-C3-11, T-C3-14 complet), étape 8 (métriques), étape 9 (purge en simulation, invariant v11-D1), étape 10 (porte de sortie).
-- **Porte de sortie : non satisfaite. C3 : non validée.**
+- **Porte de sortie : non satisfaite. C3 : non validée.** *v12 : porte satisfaite et C3 validée (porte de sortie du Lot 1, 2026-10-29) (§ 25.1).*
 
 ### 24.7 Ce qui n'a pas été fait
+
+Aucun code, migration, test ni configuration modifié par ce relevé ; dépôt backend lu seulement (journal Git) ; aucun commit, push ou déploiement.
+
+## 25. Relevé de décisions v12 — clôture du lot 1, C3 validée — 2026-10-29
+
+Source : porte de sortie du lot 1 (étapes 10 et 10b, vérification en lecture seule puis compléments de tests) et revue des conditions P0. Dépôt backend : branche `feat/integration-lot1`, de `c698f75` (base) à `8e79878` (dernier commit du lot 1). Décisions numérotées v12-D1 à v12-D7.
+
+### 25.1 v12-D1 — C3 validée à la porte de sortie du lot 1
+
+**Statut de C3 : validée (porte de sortie du Lot 1, 2026-10-29).** *Historique : v7-v8 « décision approuvée — validation technique en attente » ; v9-v11 « approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1 ».*
+
+Preuves :
+
+- **Suite complète verte deux fois de suite, sans différence** (commit `7d22bdc`) : 251 tests unitaires et 733 tests d'intégration, 0 échec, 2 tests ignorés à dessein (mesure de débit et outil de documentation, lancés explicitement) ; 5 min 10 s puis 4 min 39 s ; mêmes résultats, classe par classe. Après les compléments de tests de l'étape 10b (`8e79878`, tests seulement) : 251 et 835, 0 échec.
+- **Matrice complète T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6** (PostgreSQL 17, Testcontainers) :
+
+| Identifiant | Classes de test |
+|---|---|
+| T-C3-1 | `FeedSequencerIT` |
+| T-C3-2 a, c | `FeedSequencerIT` |
+| T-C3-2 b | `FeedSequencerIT` (deux séquenceurs) ; `ConcurrentFeedReadersIT` (deux lecteurs du flux, et variante avec un écrivain concurrent) ; `ChangeFeedServiceIT` (lecteur passé par `SKIP LOCKED`) |
+| T-C3-2 d | `ChangeFeedServiceIT` |
+| T-C3-2 e | `CatalogEventsIT` |
+| T-C3-3, T-C3-4 | `SnapshotServiceIT` |
+| T-C3-5, T-C3-6, T-C3-11 | `PageTokenCodecTest` ; `SnapshotServiceIT` (jeton d'une autre liaison) |
+| T-C3-7, T-C3-9, T-C3-10 | `ChangeFeedServiceIT` ; `RequestParameterValidationTest` (codes des paramètres) |
+| T-C3-8 | `AvailabilityThroughputIT` (mesure, lancement explicite) |
+| T-C3-12 | `IntegrationArchitectureTest` |
+| T-C3-13 | `AvailabilityEventsIT` |
+| T-C3-14 | `ChangeFeedServiceIT`, `SnapshotServiceIT`, `OutboxPurgeIT` |
+| T-C7-1 à T-C7-6 | `ProductImageEventsIT` |
+
+- **Répétitions** : 100 × T-C3-1 (`FeedSequencerIT.lateCommitRepeated`), 100 × T-C3-2 b séquenceurs (`FeedSequencerIT.concurrentSequencersRepeated`), 100 × T-C3-2 b lecteurs (`ConcurrentFeedReadersIT.twoConcurrentReadersRepeated`) : toutes réussies.
+- **T-C3-8 à 10 lignes** (critère du § 9) : surcoût médian des ventes avec publication **0,1 %, 2,0 % et −1,6 %** sur trois exécutions (200 ventes de 10 lignes par tour, 6 tours alternés) ; critère ≤ 10 % satisfait. *Mesures antérieures à 3 lignes : 8,5 % et 10,4 % avant l'insertion groupée, 2,2 % à 3,3 % après.*
+- **Revue des conditions P0-1 à P0-6 et des règles R1/R2 : acceptée**, avec une réserve : **P0-5** (le flux lit la base primaire, sans réplica ni cache) n'est vérifiée qu'au niveau du service, faute de route HTTP ; elle devient un critère d'entrée du lot qui crée la route (§ 25.4).
+
+§ 14, critère 2c : **satisfait**.
+
+### 25.2 v12-D2 — Lot 1 terminé, non déployé
+
+Le lot 1 est terminé. **Il n'est pas déployé** : la publication reste désactivée par défaut (`geststock.integration.publish.enabled=false`), et le premier déploiement suit la checklist du § 25.6. Commits `c698f75..8e79878` (22 ; 101 fichiers, 8 732 insertions, 12 suppressions) :
+
+| Commit | Objet |
+|---|---|
+| `50181e9` | Migration du flux d'événements (outbox, état du flux) |
+| `73a9331` | Point d'entrée unique de publication des événements |
+| `e04a73d` | Séquenceur du flux d'événements (attribution des `seq`) |
+| `f506ab2` | Lecture du flux d'événements (`ChangeFeedService`, sans route HTTP) |
+| `3d3007d` | Un type d'événement inconnu ne bloque pas le flux |
+| `8294b64` | Publication des événements `CATEGORY` et `PRODUCT` |
+| `41b39e5` | Table `product_image_generation` (V048, U048) et remplissage des images existantes |
+| `97fed44` | Génération d'image et événements `PRODUCT_IMAGE` (P6, P7) |
+| `7caebe3` | Absence de `currency` et `imageSha256` dans la charge `PRODUCT` |
+| `a0031b4` | Détection « rien n'a changé » fondée sur le mappeur ; test de stockage indépendant du JDK |
+| `879227f` | Événements `AVAILABILITY` et fournisseur de disponibilité |
+| `0563af1` | Insertion groupée des événements `AVAILABILITY` |
+| `18799db` | Disponibilité republiée quand un dépôt change d'état |
+| `0f6b008`, `f20335a` | Codes d'erreur `CURSOR_AHEAD` et validation unifiée du flux (le second documente les deux codes 400) |
+| `1164119` | Procédure de réparation et retour arrière alignés sur la v11 |
+| `7260855` | Jeton de pagination signé (HMAC, `kid`, rotation) |
+| `6b47317` | Instantané cohérent du catalogue (`asOfSeq`) |
+| `521f538` | Devise de l'instantané figée à la première page |
+| `56cfa3a` | Métriques du flux d'événements (jauges, alerte) |
+| `7d22bdc` | Purge du flux (simulation, désactivée par défaut) |
+| `8e79878` | Compléments de la porte de sortie (T-C3-2 b lecteurs, T-C3-8 à 10 lignes) |
+
+### 25.3 v12-D3 et v12-D4 — Décisions des étapes 7 à 9 ; publication conditionnée à une liaison active
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| v12-D3 a | `pageToken` | Format binaire, signé (HMAC-SHA256, `kid`, numéro de format), base64url **canonique** (aucun bit inutilisé ne peut varier) ; devise figée à la première page et portée par le jeton, comme `asOfSeq` et l'heure de la première page ; longueur maximale mesurée : **158 caractères** (contrat : 512 au plus) |
+| v12-D3 b | Produit absent d'une section | Un produit absent des sections `productImages` ou `availability` (créé pendant la pagination, après le passage de ces sections) est dans son **état initial** : pas d'image (version 0), disponibilité 0. Aucun événement n'est publié à la création d'un produit |
+| v12-D3 c | Dernière page | La dernière page de l'instantané peut être vide (sections vides, sans `nextPageToken`) |
+| v12-D3 d | Purge | Éligibilité par **préfixe contigu** de `seq` (`created_at` n'est pas monotone en `seq`) ; jamais l'événement de plus grand `seq` ni un événement sans `seq` ; rien sans acquittement ; repère jamais en recul. Livrée **désactivée**, en **simulation** |
+| v12-D3 e | Métriques | L'âge du plus ancien événement sans `seq` mesure aussi l'absence de lecture (le `seq` n'est attribué qu'à la lecture) : c'est un signal d'anomalie seulement pour une entreprise qui a un consommateur actif |
+| **v12-D4** | Publication conditionnée à une liaison active (règle du lot 2) | Une entreprise ne publie que si elle a au moins une liaison active ; à la révocation de la dernière, elle cesse de publier et ses événements non consommés deviennent purgeables. L'instantané de création de liaison couvre l'état antérieur. Raison : sans cette règle, les entreprises sans liaison accumuleraient des événements jamais séquencés ni purgés |
+
+### 25.4 v12-D5 — Critères d'entrée du lot qui expose le flux en HTTP (lots 2-3)
+
+1. **P0-5 vérifiée sur la route** : base primaire, aucun cache, aucun réplica.
+2. Tests HTTP des codes `INVALID_PAGE_TOKEN`, `SNAPSHOT_EXPIRED`, `CURSOR_AHEAD`, `CURSOR_EXPIRED`, `VALIDATION_FAILED`, `INVALID_PARAMETER`.
+3. Implémentations réelles de `LinkRef`, `ChangeFilter`, `AckSource` et `WarehouseScope` (au lot 1 : identifiant opaque, aucun filtre, aucun acquittement, tous les dépôts actifs).
+4. Publication conditionnée à une liaison active (v12-D4).
+5. Republication de la disponibilité lors d'un changement de type de dépôt, si le périmètre filtre par type (au lot 1, seule l'activation et la désactivation d'un dépôt la republient).
+
+### 25.5 v12-D6 — Dette rattachée
+
+| Dette | Lot |
+|---|---|
+| Purge en une transaction par lot de suppression, au lieu d'une seule transaction (verrou de la ligne d'état tenu sur tous les lots aujourd'hui) | Lot 3, avec les acquittements |
+| Jauge « dernière mesure réussie » : une base indisponible garde aujourd'hui ses jauges à leur dernière valeur | Branchement de la supervision |
+| Opération de remise à zéro complète côté JCMB (v11-D11 ; sert aussi pour `CURSOR_AHEAD`) | Lot 3 |
+
+### 25.6 v12-D7 — Checklist avant le premier déploiement du backend contenant le lot 1
+
+Complète la checklist du § 24.5.
+
+| # | Contrôle |
+|---|---|
+| D1 | Sauvegardes prouvées : scripts officiels de sauvegarde et de vérification exécutés avec succès (§ 18.6) |
+| M1 | Hébergement MongoDB de production confirmé (§ 18.6) |
+| P8 | `GESTSTOCK_DB_URL` et `GESTSTOCK_PROVISIONER_DB_URL` désignent l'hôte direct, sans `-pooler` (v11-D12) |
+| Clé `pageToken` | Clé de production de signature des `pageToken` définie (`current-kid` et sa clé, 32 octets au moins, par l'environnement) ; sinon `ProductionSafetyCheck` refuse le démarrage si la publication est activée |
+| Publication | `geststock.integration.publish.enabled` laissée à `false` jusqu'au lot 2 (métriques et purge également désactivées par défaut) |
+
+Note : au premier démarrage, V047 et V048 s'appliquent à toutes les bases d'entreprise (tables additives, migrations courtes, remplissage des générations d'image) ; chaque entreprise répond 503 pendant sa propre migration (§ 22.2).
+
+### 25.7 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- `/catalog/snapshot` et `SnapshotPage` : produit absent des sections `productImages` ou `availability` = état initial ; dernière page possiblement vide, sans `nextPageToken`.
+- `info.description`, description de `/catalog/changes` et `x-decisions` : statut de C3 « validée (porte de sortie du Lot 1, 2026-10-29) » ; bloc `x-decisions.v12`. Aucune autre modification de schéma.
+
+Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du dossier, inchangés) : **0 erreur, 0 avertissement** ; 2 exceptions ciblées, déjà justifiées (§ 22.4) ; YAML valide, toutes les `$ref` résolues.
+
+### 25.8 Ce qui n'a pas été fait
 
 Aucun code, migration, test ni configuration modifié par ce relevé ; dépôt backend lu seulement (journal Git) ; aucun commit, push ou déploiement.
