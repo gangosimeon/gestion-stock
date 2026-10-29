@@ -41,9 +41,15 @@ info:
 
     Décisions appliquées (2026-10-28) : C2, C3, C4, C5, C6, C7 ; conception détaillée P0 à P8 ;
     v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1). Statut de C3 :
-    **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1**
-    (aucune implémentation existante). C1 (limitation de débit) et C8 (hypothèses marquées
-    « [Hypothèse] ») restent **ouvertes**.
+    **approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1**.
+    C1 (limitation de débit) et C8 (hypothèses marquées « [Hypothèse] ») restent **ouvertes**, sauf
+    la devise et `perWarehouse`, tranchés en v11.
+
+    Décisions v11 (2026-10-29, plan § 24) : `409 CURSOR_AHEAD` et deux codes `400` sur
+    `/catalog/changes` ; type d'événement inconnu servi tel quel ; `occurredAt` informatif ;
+    `currency` et `imageSha256` retirés de `Product` (devise dans l'en-tête de l'instantané et sur la
+    liaison, état de l'image par `PRODUCT_IMAGE` seulement) ; `perWarehouse` exposé ; forme de
+    l'instantané (en-tête, quatre sections, objets archivés inclus).
   x-status: proposition-lot-0
   x-decisions:
     approved: [C2, C3, C4, C5, C6, C7]
@@ -52,7 +58,8 @@ info:
     detailedDesign:
       date: '2026-10-28'
       approved: [P0, P1, P2, P3, P4, P5, P6, P7]
-      verificationPending: [P8]
+      verificationPending: []
+      deploymentRule: ['P8 (v11-D12) : URL de migration vers l''hôte direct, sans -pooler']
       toConfirm: ['P3 : classement de CHANNEL_PRICE et ONLINE_ORDER_STATUS']
     v9:
       date: '2026-10-28'
@@ -68,6 +75,19 @@ info:
       date: '2026-10-28'
       approved: [Q1, Q2, Q3, Q4, Q5, Q6, Q7]
       lint: 'Redocly recommended : 0 erreur ; exception documentée no-ambiguous-paths (orderId contraint en UUID)'
+    v11:
+      date: '2026-10-29'
+      source: 'plan § 24 (décisions des étapes 4a à 4c du lot 1)'
+      approved: [v11-D1, v11-D2, v11-D3, v11-D4, v11-D5, v11-D6, v11-D7, v11-D8, v11-D9, v11-D10, v11-D11, v11-D12, v11-D13]
+      contractChanges:
+        - 'Product : currency retiré (v11-D6) ; imageSha256 retiré (v11-D7)'
+        - '/catalog/changes : 409 CURSOR_AHEAD (v11-D2) ; 400 VALIDATION_FAILED ou INVALID_PARAMETER (v11-D3)'
+        - 'ChangeEventBase : occurredAt informatif (v11-D5) ; type inconnu servi tel quel (v11-D4)'
+        - 'Availability : perWarehouse exposé, périmètre calculé au service de la page (v11-D8)'
+        - 'SnapshotPage : currency, productImages, availability ; limit toutes sections confondues ; objets archivés inclus (v11-D10)'
+      c8Decided: ['devise (ISO 4217, en-tête de l''instantané et liaison)', 'perWarehouse']
+      c8StillOpen: ['durée de rétention et règle de purge', 'durée du jeton, aud, fenêtre HMAC', 'conservation des clés d''idempotence', 'limites de lignes et de quantités', 'discountPercent', 'origine serveur, webhook, données client']
+      c3Status: 'non validée : étapes 7 à 10 du lot 1 restantes'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: '[Hypothèse] Origine du backend GestStock non confirmée (décision D8).'
@@ -220,11 +240,20 @@ paths:
         Faux : reprendre plus tard (notification ou interrogation) ; ce n'est **pas** une fin
         définitive du flux.
 
-        `limit` (P5) : 100 par défaut, 500 au plus ; une valeur hors bornes est refusée (400, schéma).
+        `limit` (P5) : 100 par défaut, 500 au plus ; une valeur hors bornes est refusée (400
+        `VALIDATION_FAILED`) ; une valeur non numérique ou `after` absent : 400 `INVALID_PARAMETER`
+        (décision v11-D3).
 
         Livraison au moins une fois : le consommateur applique chaque événement de manière idempotente
         et ignore un événement dont la `version` est inférieure ou égale à la dernière appliquée **pour
         le même couple (`type`, `objectId`)**. Un `type` inconnu est ignoré et le curseur avance.
+        GestStock sert tel qu'il est stocké un type que sa propre version ne connaît pas : un type
+        inconnu ne bloque jamais le flux (décision v11-D4). L'ordre repose uniquement sur `seq` ;
+        `occurredAt` est informatif (décision v11-D5).
+        **Curseur en avance (décision v11-D2)** : `after` supérieur au dernier `seq` attribué (curseur
+        d'une autre entreprise, flux réinitialisé) : réponse `409` avec le code `CURSOR_AHEAD`. Le
+        consommateur **arrête la synchronisation et alerte**, sans resynchronisation automatique ; la
+        reprise passe par la remise à zéro complète côté boutique (décision v11-D11).
         **Curseur trop ancien (décision v9-D1)** : GestStock conserve durablement un repère de purge,
         le plus haut `seq` purgé (emplacement : détail d'implémentation du lot 1). Si `after` est
         **strictement inférieur** à ce repère, des événements postérieurs à `after` ne sont plus
@@ -248,8 +277,24 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChangePage' }
+        '400':
+          description: |
+            Deux codes, distingués par le champ `code` de `ApiError` (décision v11-D3) :
+            `VALIDATION_FAILED` : valeur hors bornes (`after` < 0, `limit` hors de 1..500), paramètre
+            fautif dans `errors` ; `INVALID_PARAMETER` : `after` ou `limit` non numérique, ou `after` absent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: |
+            `code = CURSOR_AHEAD` (v11-D2) : `after` est supérieur au dernier `seq` attribué ; arrêter la
+            synchronisation et alerter, sans resynchronisation automatique (remise à zéro complète côté
+            boutique, décision v11-D11).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiError' }
         '410':
           description: |
             `code = CURSOR_EXPIRED` (v9-D1) : `after` est inférieur au repère de purge ; abandonner ce
@@ -299,8 +344,17 @@ paths:
       tags: [Catalogue]
       summary: Instantané paginé du catalogue lié (réconciliation, reprise)
       description: |
-        Renvoie l'état courant des catégories puis des produits visibles par la liaison, avec leur
-        version. `asOfSeq` est **fixé à la première page** (dernier `seq` attribué à cet instant) et
+        Renvoie l'état courant du catalogue visible par la liaison, avec la version de chaque objet
+        (décision v11-D10). **Sections, servies dans cet ordre** : `categories`, `products`,
+        `productImages` (un `ProductImageState` par produit), `availability` (une `Availability` par
+        produit). **Objets archivés inclus** (`active: false`) : un consommateur qui refait un instantané
+        complet peut archiver ce qu'il détient encore. `limit` compte les objets **toutes sections
+        confondues** ; une page peut chevaucher deux sections ; les sections vides ou terminées sont
+        servies en tableaux vides.
+        Versions : `@Version` de l'objet pour `categories` et `products` ; génération de l'image pour
+        `productImages` (0 si le produit n'a jamais eu d'image) ; `asOfSeq` pour `availability`. Le
+        consommateur applique la règle des versions à l'instantané comme au flux.
+        `asOfSeq` est **fixé à la première page** (dernier `seq` attribué à cet instant) et
         **identique sur toutes les pages** de cet instantané. Un objet modifié pendant la pagination
         peut apparaître dans une version plus récente que `asOfSeq` : après la dernière page, reprendre
         le flux avec `after=asOfSeq` et appliquer la règle de version ; l'état obtenu équivaut à
@@ -323,6 +377,7 @@ paths:
           schema: { type: string, maxLength: 512 }
         - name: limit
           in: query
+          description: Nombre maximal d'objets de la page, toutes sections confondues (v11-D10)
           schema: { type: integer, minimum: 1, maximum: 500, default: 200 }
       responses:
         '200':
@@ -868,12 +923,12 @@ components:
       type: object
       required: [seq, type, objectId, version, operation, occurredAt]
       properties:
-        seq: { type: integer, format: int64 }
-        type: { type: string }
+        seq: { type: integer, format: int64, description: 'Position dans le flux : seule clé d''ordre (v11-D5)' }
+        type: { type: string, description: 'Type de l''événement ; un type inconnu du consommateur est ignoré et le curseur avance ; GestStock sert tel qu''il est stocké un type inconnu de sa propre version, sans jamais bloquer le flux (v11-D4)' }
         objectId: { type: string, format: uuid }
         version: { type: integer, format: int64, description: 'Version de l''objet ; un événement de version ≤ dernière appliquée pour le même (type, objectId) est ignoré' }
         operation: { type: string, enum: [UPSERT, ARCHIVE] }
-        occurredAt: { type: string, format: date-time }
+        occurredAt: { type: string, format: date-time, description: 'Informatif : heure de début de la transaction qui a écrit l''événement. Ne sert jamais à ordonner : l''ordre repose uniquement sur seq (v11-D5)' }
         data:
           description: 'État de l''objet ; son schéma est fixé par chaque variante (discriminée par type). Obligatoire pour UPSERT, facultatif pour ARCHIVE.'
       if:
@@ -888,7 +943,9 @@ components:
         référence est publiée comme événement `PRODUCT` (champ `referencePrice`) ; il n'existe pas de
         type `REFERENCE_PRICE`. Le consommateur ignore un `type` absent de cette liste et avance son
         curseur, après l'avoir reçu selon les garanties de livraison du flux (au moins une fois, ordre
-        par `seq`).
+        par `seq`). Côté GestStock, un type stocké mais inconnu de la version qui sert la page est servi
+        tel qu'il est stocké (`type`, `operation`, `objectId`, `version`, `data`) : il ne bloque jamais
+        le flux (v11-D4).
       oneOf:
         - $ref: '#/components/schemas/CategoryChangeEvent'
         - $ref: '#/components/schemas/ProductChangeEvent'
@@ -977,7 +1034,9 @@ components:
         strictement croissant, y compris après suppression puis ajout ou en cas de concurrence.
         Retrait d'une image : événement `UPSERT` avec `imageSha256 = null` et une génération incrémentée.
         P6 : image renvoyée avec une empreinte inchangée, ou suppression d'une image inexistante : ni
-        incrément, ni événement.
+        incrément, ni événement. Dans l'instantané (section `productImages`, v11-D10) : un état par
+        produit, `version` = 0 si le produit n'a jamais eu d'image (aucune génération), `imageSha256` nul
+        si aucune image. Seule source de l'état de l'image : `Product` ne porte plus `imageSha256` (v11-D7).
         *(v7 : point bloquant « source de version » — résolu sur le plan documentaire par P7 ;
         implémentation et tests au lot 1.)*
       type: object
@@ -988,17 +1047,38 @@ components:
         version: { type: integer, format: int64 }
 
     SnapshotPage:
+      description: |
+        Page de l'instantané (décision v11-D10). En-tête : `asOfSeq`, `currency`, `nextPageToken`.
+        Sections, dans cet ordre : `categories`, `products`, `productImages`, `availability` ; `limit`
+        compte les objets toutes sections confondues, une page peut chevaucher deux sections, une section
+        sans objet dans la page est un tableau vide. Objets archivés inclus (`active: false`) ; les
+        sections `productImages` et `availability` couvrent tous les produits, archivés compris.
+        *(v10 : sections `categories` et `products` seulement, `nextPageToken` nul sur la dernière page,
+        devise portée par chaque `Product` — remplacé.)*
       type: object
-      required: [asOfSeq, categories, products]
+      required: [asOfSeq, currency, categories, products, productImages, availability]
       properties:
         asOfSeq: { type: integer, format: int64, description: 'Fixé à la première page, identique sur toutes les pages ; reprendre le flux avec `after=asOfSeq`' }
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          examples: [XOF]
+          description: 'Devise de l''entreprise, code ISO 4217, normalisée depuis platform.company.currency (FCFA, F CFA, XOF → XOF) ; une seule fois par page, jamais par produit (v11-D6)'
         categories:
           type: array
           items: { $ref: '#/components/schemas/Category' }
         products:
           type: array
           items: { $ref: '#/components/schemas/Product' }
-        nextPageToken: { type: [string, 'null'], maxLength: 512, description: 'Opaque, lié à la liaison, valable 24 h depuis la première page ; nul sur la dernière page. Longueur, format et contenu non garantis (v9-D2) : renvoyer tel quel' }
+        productImages:
+          type: array
+          description: 'Un état par produit, archivés compris : version = génération de l''image, 0 si le produit n''a jamais eu d''image ; imageSha256 nul si aucune image'
+          items: { $ref: '#/components/schemas/ProductImageState' }
+        availability:
+          type: array
+          description: 'Une disponibilité par produit, archivés compris ; version de chaque entrée = asOfSeq de l''en-tête (aucun champ version dans Availability)'
+          items: { $ref: '#/components/schemas/Availability' }
+        nextPageToken: { type: string, maxLength: 512, description: 'Opaque, lié à la liaison, valable 24 h depuis la première page ; **absent** sur la dernière page. Longueur, format et contenu non garantis (v9-D2) : renvoyer tel quel' }
 
     Category:
       type: object
@@ -1011,9 +1091,13 @@ components:
         version: { type: integer, format: int64 }
 
     Product:
-      description: Champs détenus par GestStock ; le prix d'achat n'est jamais exposé
+      description: |
+        Champs détenus par GestStock ; le prix d'achat n'est jamais exposé. La devise n'est pas portée
+        par le produit : elle est exposée une seule fois, sur la liaison (lot 2) et dans l'en-tête de
+        l'instantané (v11-D6). L'état de l'image passe uniquement par `PRODUCT_IMAGE` (v11-D7).
+        *(v10 : `currency` et `imageSha256` dans `Product` — retirés en v11.)*
       type: object
-      required: [id, sku, name, categoryId, unit, referencePrice, currency, active, version]
+      required: [id, sku, name, categoryId, unit, referencePrice, active, version]
       properties:
         id: { type: string, format: uuid }
         sku: { type: string, maxLength: 50 }
@@ -1022,8 +1106,6 @@ components:
         categoryId: { type: string, format: uuid }
         unit: { type: string, enum: [UNIT, PAIR, BOX, BOTTLE] }
         referencePrice: { type: string, description: 'Prix de détail GestStock, décimal en chaîne (ex. "6000.00")' }
-        currency: { type: string, examples: [FCFA], description: '[Hypothèse] Devise de l''entreprise (platform.company.currency)' }
-        imageSha256: { type: [string, 'null'], pattern: '^[0-9a-f]{64}$' }
         active: { type: boolean }
         version: { type: integer, format: int64 }
 
@@ -1062,6 +1144,15 @@ components:
         referenceChangedSinceApproval: { type: boolean }
 
     Availability:
+      description: |
+        Disponibilité d'un produit, calculée au moment de servir la page (événement mince
+        `AVAILABILITY`, P3 ; section `availability` de l'instantané) : stock des dépôts du périmètre moins
+        les réservations, jamais négative. **`perWarehouse` exposé** (C8 tranché sur ce point, v11-D8) :
+        détail par dépôt du périmètre ; un dépôt absent vaut 0 ; `available` = somme du détail.
+        Périmètre calculé au moment de servir la page : au lot 2, dépôts vendables choisis par liaison et
+        figés à l'autorisation (par défaut les dépôts `STORE` seulement, `WAREHOUSE` sur option explicite
+        du commerçant) ; si l'utilisateur qui a autorisé la liaison perd ses droits, la liaison passe « à
+        revoir » avec une alerte, sans changement silencieux du périmètre.
       type: object
       required: [productId, available, computedAt]
       properties:
@@ -1071,6 +1162,7 @@ components:
           type: array
           items:
             type: object
+            required: [warehouseId, available]
             properties:
               warehouseId: { type: string, format: uuid }
               available: { type: integer, minimum: 0 }

@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Version | 10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
-| Statut | **Proposition soumise à approbation.** Aucun lot d'implémentation n'est commencé. |
-| Code, bases, déploiements | **Aucune modification** du code, des migrations, de la production ni de l'hébergement. Documents : ce fichier et `integration-v1.openapi.yaml` (nouveau). Seule base créée : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). |
+| Version | 11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Statut | **Proposition soumise à approbation.** Lot 1 **en cours** (§ 24.6) ; aucun autre lot commencé. *v10 : « Aucun lot d'implémentation n'est commencé. »* |
+| Code, bases, déploiements | Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
 | Secrets | Aucun fichier `.env*` lu ; aucune valeur sensible copiée. Les variables citées le sont par leur **nom**, relevé dans le code. |
 
@@ -272,7 +272,7 @@ Aucun paiement en ligne dans le code audité. S'il est ajouté : notifications a
 - **Observabilité** : tâche de purge en mode simulation par défaut (comptage sans suppression), puis suppression par lots bornés ; métriques (événements en attente, purgés, plus ancien non acquitté) ; journal de chaque exécution.
 - **Réversibilité** : une suppression est définitive ; avant purge, export optionnel des lots (format JSON compressé) vers le stockage des sauvegardes ; sinon, recours à la sauvegarde nocturne et à la réconciliation.
 - **Volume (hypothèses à valider)** : ~0,5 Ko par événement avec index ; 2 000 événements/jour/entreprise ⇒ ~180 000 événements et ~90 Mo par entreprise sur 90 jours. Index : clé primaire `id` (`uuid`, UUID v7), index unique sur `write_id` (seule clé d'ordre), index unique sur `seq`, index partiel `seq IS NULL`, index sur `created_at` (Q1, § 22 ; *v8-v9 : « clé primaire `write_id` » — contraire à la convention « clé `uuid` » vérifiée par `SchemaConventionsIT` ; v7 et antérieures : « clé primaire `seq` », incompatible avec un `seq` nul à l'écriture*). Coût de stockage Neon à vérifier selon l'offre.
-- **Purge et conception D** : un événement sans `seq` n'est jamais purgé. **Repère de purge [Approuvé, v9-D1]** : GestStock conserve durablement le plus haut `seq` purgé (emplacement : détail d'implémentation du lot 1) ; un `after` strictement inférieur à ce repère reçoit `410 CURSOR_EXPIRED` et le consommateur repart d'un instantané complet (§ 12, § 21). Points **ouverts, rattachés à C8** (§ 20.5) : durée de rétention ; règle de purge, dont l'exclusion des liaisons révoquées et le traitement des liaisons inactives dans le calcul du plus petit curseur acquitté. *v8 : « erreur renvoyée pour un curseur antérieur à la purge » ouverte — tranchée dans son principe par v9-D1.*
+- **Purge et conception D** : un événement sans `seq` n'est jamais purgé. **Repère de purge [Approuvé, v9-D1]** : GestStock conserve durablement le plus haut `seq` purgé (emplacement : détail d'implémentation du lot 1) ; un `after` strictement inférieur à ce repère reçoit `410 CURSOR_EXPIRED` et le consommateur repart d'un instantané complet (§ 12, § 21). **Invariant de purge [Approuvé, v11-D1]** : l'événement de plus grand `seq` n'est **jamais** purgé (le compteur du flux reste reconstructible ; réparation de la ligne d'état : § 24.2). Points **ouverts, rattachés à C8** (§ 20.5) : durée de rétention ; règle de purge, dont l'exclusion des liaisons révoquées et le traitement des liaisons inactives dans le calcul du plus petit curseur acquitté. *v8 : « erreur renvoyée pour un curseur antérieur à la purge » ouverte — tranchée dans son principe par v9-D1.*
 
 ---
 
@@ -380,15 +380,15 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Migrations | *(numéro attribué à l'implémentation)* (Q4) : `integration_outbox` (clé `id uuid` (UUID v7) ; `write_id` identity **UNIQUE**, seule clé d'ordre, jamais exposé ; `seq` **NULL à l'écriture, UNIQUE**, attribué à la lecture ; index partiel `seq IS NULL` ; type, identifiant d'objet, **`object_version`** (le JSON du contrat garde `version`), opération, charge minimale, `created_at`), `integration_feed_state` (clé `uuid` constante + `CHECK` de ligne unique, `last_seq`, repère de purge), `product_image_generation` (P7, remplie pour les images existantes, Q6) ; chaque script V a son script U. **Contraintes (§ 22.2)** : tables additives uniquement, migrations courtes, aucun déploiement avant la porte de sortie. *v9 : `V047__integration_outbox.sql`, clé `write_id`, `id = 1`, colonne `version`, permissions `integration:*` (passées au lot 2, Q2), rollback `U047`.* *v6 et antérieures : `seq` bigserial attribué à l'écriture — abandonné (risque d'événement sauté, § 19.2)* |
 | Versions | Conception D (§ 20.2) : `seq` attribué à la lecture, contigu, dans l'ordre de `write_id`, aux seuls événements validés ; ordre d'application par (`type`, `objectId`) (C7) ; origine de `version` par famille (P3, § 20.3). *v7 : point bloquant « version de `PRODUCT_IMAGE` » — résolu sur le plan documentaire par P7* |
 | Exigences d'implémentation (P0) | 1. Attribution dans une transaction **dédiée et courte** (`TransactionTemplate` ou `REQUIRES_NEW`), jamais incluse dans un `@Transactional` englobant la requête, jamais `readOnly = true` ; 2. `lock_timeout` et `statement_timeout` définis pour cette transaction (valeurs à fixer au lot 1) ; 3. attribution isolée dans un **composant séquenceur unique** et réutilisable (flux et instantané) ; 4. **point d'entrée unique** d'écriture d'événement appliquant R1 (flush, lecture de la version, insertion) ; aucun service métier n'insère directement dans l'outbox ; 5. le point de terminaison du flux **écrit en base** : ni réplica en lecture seule, ni cache ; 6. métriques : nombre d'événements sans `seq`, âge du plus ancien d'entre eux — **jauges Micrometer enregistrées, aucune exposition nouvelle** (pas d'actuator `metrics` public) ; **log WARN** quand un événement reste sans `seq` au-delà d'un seuil configurable (Q5) |
-| Vérification préalable (P8) | Lecture seule, au début du lot : l'URL de connexion de l'application contient-elle `-pooler` ? Sans effet sur la conception D ; déterminant pour tout futur verrou consultatif de session |
+| Règle de déploiement (P8, v11-D12) | Les URL utilisées par les migrations (`GESTSTOCK_DB_URL`, `GESTSTOCK_PROVISIONER_DB_URL`) pointent vers l'hôte direct, **sans `-pooler`** ; le pooler n'est envisagé que pour le trafic applicatif, sur besoin mesuré ; vérifiée par la checklist de déploiement (§ 24.5). *v10 : « Vérification préalable (P8) — lecture seule, au début du lot : l'URL de connexion de l'application contient-elle `-pooler` ? » — remplacée.* |
 | Rétention | § 5.6 (90 jours minimum, acquittement requis) ; purge livrée **désactivée** |
 | Reprises | Lecture rejouable depuis tout `seq` (exposée au lot 3) |
 | Dépendances | Lot 0 accepté |
 | Porte d'entrée (v9-D3) | Conception détaillée C3 approuvée (P0 à P8, v9-D1, v9-D2) : **satisfaite sur le plan documentaire**. **Ne vaut pas autorisation de démarrer** : le démarrage du lot 1 fera l'objet d'une autorisation séparée |
 | Porte de sortie (v9-D3) | T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 réussis sur PostgreSQL 17 (Testcontainers) : **non satisfaite**. La validation de C3 est prononcée **uniquement** à cette sortie |
 | Risques | Événement écrit hors transaction (perte) ; surcoût d'écriture sur stock et ventes ; croissance de table ; régression des comptes de permissions dans les tests |
-| Tests | Un changement ⇒ un événement dans la même transaction ; rollback métier ⇒ aucun événement ; `seq` strictement croissant sous écritures concurrentes ; isolation (deux entreprises d'essai, aucun événement croisé) ; purge en simulation ne supprime rien ; suite complète GestStock (unitaire + intégration) sans régression ; **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 (§ 20.4)** — aucun n'est écrit ni exécuté |
-| Critères d'acceptation (sortie) | Tous les tests verts, dont **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6** (PostgreSQL 17, Testcontainers) ; temps d'une vente de 10 lignes non dégradé de plus de 10 % [Proposé] (T-C3-8) ; aucune régression ; exigences P0 1 à 6 vérifiées en revue ; vérification P8 consignée ; **C3 démontrée** (revue du mécanisme) — C3 n'est « validée » qu'à ce moment |
+| Tests | Un changement ⇒ un événement dans la même transaction ; rollback métier ⇒ aucun événement ; `seq` strictement croissant sous écritures concurrentes ; isolation (deux entreprises d'essai, aucun événement croisé) ; purge en simulation ne supprime rien ; suite complète GestStock (unitaire + intégration) sans régression ; **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6 (§ 20.4)** — état au 2026-10-29 : § 24.6 |
+| Critères d'acceptation (sortie) | Tous les tests verts, dont **T-C3-1 à T-C3-14 et T-C7-1 à T-C7-6** (PostgreSQL 17, Testcontainers) ; temps d'une vente de 10 lignes non dégradé de plus de 10 % [Proposé] (T-C3-8) ; aucune régression ; exigences P0 1 à 6 vérifiées en revue ; P8 inscrite à la checklist de déploiement (v11-D12) ; **C3 démontrée** (revue du mécanisme) — C3 n'est « validée » qu'à ce moment. *v10 : « vérification P8 consignée ».* |
 | Retour arrière | Publication désactivable par configuration ; scripts U des migrations du lot (aucune donnée métier touchée) ; aucun outil n'applique les scripts U à toutes les bases d'entreprise : application manuelle, base par base, avec le compte propriétaire *(v9 : `U047`)* |
 | Preuves | Rapport de tests, revue de code, mesure avant/après |
 | Conditions d'arrêt | Régression ventes/stock ; événement hors transaction ; fuite entre entreprises |
@@ -583,17 +583,19 @@ Base : `/api/integration/v1` (GestStock). Authentification : jeton de liaison (`
 | `GET /online-orders/external/{externalOrderId}` | `orders:read` (C4, C5) | lecture | Commande retrouvée par l'identifiant JCMB ; 404 identique si inexistante ou d'une autre liaison |
 | Notification GestStock → JCMB | HMAC | identifiant d'événement | « Changements disponibles » |
 
-Événements (C7) : `CATEGORY`, `PRODUCT` (inclut le prix de référence), `PRODUCT_IMAGE` (`ProductImageState`), `CHANNEL_PRICE`, `AVAILABILITY`, `ONLINE_ORDER_STATUS` ; schéma propre à chaque type, discriminé par `type` ; type inconnu ignoré, curseur avancé.
+Événements (C7) : `CATEGORY`, `PRODUCT` (inclut le prix de référence), `PRODUCT_IMAGE` (`ProductImageState`), `CHANNEL_PRICE`, `AVAILABILITY`, `ONLINE_ORDER_STATUS` ; schéma propre à chaque type, discriminé par `type` ; type inconnu ignoré, curseur avancé ; côté GestStock, un type inconnu de la version qui sert la page est servi tel qu'il est stocké et ne bloque jamais le flux (v11-D4). `occurredAt` est informatif (heure de début de la transaction) ; l'ordre repose uniquement sur `seq` (v11-D5). `Product` ne porte ni `currency` ni `imageSha256` (v11-D6, v11-D7).
 
 Flux et instantané (conception détaillée P0–P8, § 20) :
 - `after` = dernier `seq` consommé ; **`lastSeq` = dernier `seq` examiné**, événements filtrés pour la liaison compris, `after` si rien n'a été examiné ; invariants `after ≤ lastSeq ≤` dernier `seq` attribué ; une page vide avec `lastSeq > after` est normale ; le consommateur enregistre toujours `lastSeq` comme nouvel `after` (P1). *v7 : « `seq` du dernier événement de la page » — remplacé.*
 - **`hasMore` = il existe un `seq > lastSeq` ou un événement validé sans `seq`**, évalué après l'attribution ; vrai ⇒ rappel immédiat ; faux ⇒ reprise ultérieure, pas une fin définitive (P2). *v7 : « événements déjà séquencés » — remplacé.*
-- `limit` de `/catalog/changes` : 100 par défaut, 500 au plus ; au-delà, **400** (borne du schéma) ; lot d'attribution : 1 000 ; valeurs configurables, à confirmer par T-C3-8 (P5). `limit` de l'instantané : inchangé (200 par défaut, 500 au plus).
+- `limit` de `/catalog/changes` : 100 par défaut, 500 au plus ; une valeur hors bornes est refusée (**400 `VALIDATION_FAILED`**) ; une valeur non numérique ou `after` absent : **400 `INVALID_PARAMETER`** (v11-D3) ; lot d'attribution : 1 000 ; valeurs configurables (P5). `limit` de l'instantané : 200 par défaut, 500 au plus, objets comptés **toutes sections confondues** (v11-D10). *v10 : « au-delà, 400 (borne du schéma) ».*
+- **`409 CURSOR_AHEAD`** sur `/catalog/changes` (v11-D2) : `after` > dernier `seq` attribué ; le consommateur arrête la synchronisation et alerte, sans resynchronisation automatique (remise à zéro complète, v11-D11).
+- **Instantané** (v11-D10) : en-tête `asOfSeq`, `currency` (ISO 4217), `nextPageToken` (absent sur la dernière page) ; sections dans l'ordre `categories`, `products`, `productImages`, `availability` ; objets archivés inclus ; versions : `@Version` (catégories, produits), génération ou 0 (images), `asOfSeq` (disponibilité). Détail : § 24.3.
 - `pageToken` : opaque pour le client, **signé** (HMAC, clé dédiée par environnement), non chiffré ; porte `kid` et un numéro de format ; rotation : clé précédente acceptée 24 h ; `kid` inconnu ⇒ 400 `INVALID_PAGE_TOKEN` (P4). Longueur maximale **512** ; le client ne suppose ni la longueur, ni le format, ni le contenu ; encodage interne décidé au lot 1 (v9-D2). *v8 : `maxLength` 200.*
 - **`410 CURSOR_EXPIRED`** sur `/catalog/changes` (v9-D1) : `after` strictement inférieur au repère de purge (plus haut `seq` purgé, conservé durablement) ; `after` égal au repère accepté ; le consommateur abandonne ce curseur, relance un instantané complet, puis reprend avec `after=asOfSeq`. **Distinct** de `410 SNAPSHOT_EXPIRED` (jeton d'instantané expiré, sur `/catalog/snapshot`) : les deux se distinguent par le champ `code` d'`ApiError`. Durée de rétention et règle de purge : ouvertes (C8).
 - Origine de `version` (P3) : `CATEGORY`, `PRODUCT` ⇒ `@Version` lu après flush ; `PRODUCT_IMAGE` ⇒ génération `product_image_generation` (P7) ; `AVAILABILITY` ⇒ `seq` de l'événement, événement mince recalculé au service de la page ; `CHANNEL_PRICE`, `ONLINE_ORDER_STATUS` ⇒ **à confirmer** (lots 3-4).
 
-Points tranchés (2026-10-28) : liste des portées (C5), format des événements (C7), pagination (C3), révocation (C2), recherche externe (C4), concurrence des prix (C6). Points **encore ouverts** : codes d'erreur non couverts par une décision, limitation de débit et 429 (C1), durée des jetons (5 min), `aud`, fenêtre HMAC (5 min), route JCMB de notification et autres hypothèses (C8).
+Points tranchés (2026-10-28) : liste des portées (C5), format des événements (C7), pagination (C3), révocation (C2), recherche externe (C4), concurrence des prix (C6). Points **encore ouverts** : codes d'erreur non couverts par une décision, limitation de débit et 429 (C1), durée des jetons (5 min), `aud`, fenêtre HMAC (5 min), route JCMB de notification et autres hypothèses (C8). *v11 : codes d'erreur de `/catalog/changes` tranchés (v11-D2, v11-D3) ; devise et `perWarehouse` tranchés dans C8 (v11-D6, v11-D8).*
 
 ## 13. Hébergement et tâches planifiées (D9)
 
@@ -860,7 +862,7 @@ Vérifié : `application/problem+json` conforme à l'`ApiError` existant (`ApiEr
 | **C6** | Concurrence des propositions de prix | **Approuvée, appliquée** | Description de `/prices/proposals` ; sens de `PRICE_VERSION_MISMATCH` | § 5.1 ; lot 3 (tests) |
 | **C7** | Schémas des événements | **Approuvée, appliquée** — un point bloquant pour le lot 1 (§ 19.3) | `ChangeEventBase`, `ChangeEvent` (`oneOf` + discriminateur), 6 variantes, `ProductImageState` ; `REFERENCE_PRICE` supprimé | Lots 1 et 3 |
 | C1 | Limitation de débit, 429 | **Ouverte** | Inchangé : 429 sur 3 opérations, marqué « [Hypothèse] » | Valeurs, stockage des compteurs, calendrier : non décidés |
-| C8 | Hypothèses restantes | **Ouverte** | Inchangé : durée du jeton, `aud`, fenêtre HMAC et déduplication, conservation des clés d'idempotence, limites de lignes et de quantités, `discountPercent`, `perWarehouse`, devise, origine serveur, webhook, données client | Non décidés ; dépendent aussi de D8, D11 |
+| C8 | Hypothèses restantes | **Ouverte** (partiellement tranchée en v11) | Inchangé : durée du jeton, `aud`, fenêtre HMAC et déduplication, conservation des clés d'idempotence, limites de lignes et de quantités, `discountPercent`, origine serveur, webhook, données client. **Tranchés en v11 (§ 24)** : devise (ISO 4217, liaison et en-tête de l'instantané, v11-D6) ; `perWarehouse` exposé (v11-D8) | Non décidés ; dépendent aussi de D8, D11 |
 
 ### 19.2 C3 — séparation des constats
 
@@ -903,7 +905,7 @@ Source : étude technique C3/C7 en lecture seule (même date). Légende : **[App
 | **P5** | Lot d'attribution 1 000 ; `limit` 100 par défaut, 500 au plus | **[Approuvé]**, valeurs configurables, à confirmer par T-C3-8 |
 | **P6** | Image identique ou suppression à vide : ni incrément, ni événement | **[Approuvé]** |
 | **P7** | Table `product_image_generation` | **[Approuvé]** ; lève le point bloquant C7 sur le plan documentaire |
-| **P8** | Présence de `-pooler` dans l'URL de connexion de l'application | **Vérification à faire** en lecture seule au début du lot 1 [Hypothèse : inconnu à ce jour] |
+| **P8** | Présence de `-pooler` dans l'URL de connexion de l'application | **Règle de déploiement [Approuvé, v11-D12]** : URL de migration (`GESTSTOCK_DB_URL`, `GESTSTOCK_PROVISIONER_DB_URL`) vers l'hôte direct, sans `-pooler` ; pooler réservé au trafic applicatif, sur besoin mesuré ; inscrite à la checklist de déploiement (§ 24.5). *v8-v10 : « Vérification à faire en lecture seule au début du lot 1 » — retirée des vérifications en attente.* |
 
 ### 20.2 Conception D (P0)
 
@@ -966,7 +968,7 @@ Justification de l'événement mince : deux transactions concurrentes tenant des
 
 **P7 [Approuvé]** : `product_image_generation (product_id` clé primaire, référence `product ON DELETE CASCADE`, `generation bigint`, `sha256` nullable, `updated_at)` ; jamais supprimée avec l'image ; `INSERT … ON CONFLICT (product_id) DO UPDATE SET generation = generation + 1 … RETURNING generation` = **première instruction** de la transaction d'image ; compteur, image et événement dans la même transaction ; retrait d'image ⇒ événement `UPSERT` avec `imageSha256 = null`. **Remplissage (Q6)** : la migration crée une ligne par image existante (génération 1, `sha256` de l'image). **P6 [Approuvé]** : empreinte inchangée, ou suppression d'une image inexistante ⇒ ni incrément, ni événement.
 
-### 20.4 Tests d'acceptation du lot 1 — **aucun n'est écrit ni exécuté**
+### 20.4 Tests d'acceptation du lot 1 — *v8 : aucun n'est écrit ni exécuté ; état au 2026-10-29 : § 24.6*
 
 | # | Objet | Critère |
 |---|---|---|
@@ -1095,3 +1097,96 @@ Résultat (`@redocly/cli` 2.72.0, configuration recommandée, sans fichier de co
 | A1 | Routes `/api/**` autorisées par défaut à tout utilisateur d'entreprise authentifié (`SecurityConfig`, `anyRequest().access(companyUser)`) : une route oubliée sans `@PreAuthorize` est ouverte à tous les rôles | Revue de sécurité : refus par défaut, ou test qui exige une règle d'autorisation sur chaque contrôleur |
 | A2 | Réactivation d'une entreprise sans migration : `CompanyService.reactivate` ne déclenche pas de migration ; une entreprise suspendue pendant un déploiement ne serait migrée qu'au démarrage suivant ou à une relance Super Admin | **À vérifier** (lecture du code et essai) |
 | A3 | `MigrationRollbackIT` renvoie à `docs/persistence.md` §8, absent du dépôt backend (`docs/` ignoré par Git) | Rétablir le document ou corriger la référence |
+
+## 24. Relevé de décisions v11 — 2026-10-29
+
+Source : réalisation des étapes 1, 3, 5, 6, 4a, 2+4b et 4c du lot 1 (dépôt backend, branche `feat/integration-lot1`) et revues associées. Les décisions sont numérotées v11-D1 à v11-D13.
+
+### 24.1 Décisions
+
+| # | Objet | Décision [Approuvé] | Constat ou motif |
+|---|---|---|---|
+| **v11-D1** | Réparation de la ligne d'état du flux ; invariant de purge | Si la ligne unique de `integration_feed_state` a disparu : `last_seq = MAX(seq)` et `purged_through_seq = MIN(seq) - 1` sur les événements séquencés ; aucun événement séquencé ⇒ (0, 0). **Invariant de purge : l'événement de plus grand `seq` n'est jamais purgé.** Procédure : § 24.2 | L'ancienne procédure (repère de purge « connu », 0 à défaut) provoquait une perte silencieuse et ne survivait pas à une purge totale (§ 24.2) |
+| **v11-D2** | `409 CURSOR_AHEAD` sur `/catalog/changes` | `after` > dernier `seq` attribué ⇒ `409`, code `CURSOR_AHEAD`. Le consommateur **arrête la synchronisation et alerte**, sans resynchronisation automatique ; la reprise passe par la remise à zéro complète côté boutique (v11-D11) | Curseur d'une autre entreprise, ou flux réinitialisé : une page vide silencieuse ferait attendre indéfiniment des `seq` qui ne viendront qu'après un saut |
+| **v11-D3** | Deux codes `400` sur `/catalog/changes` | Distingués par le champ `code` d'`ApiError` : `VALIDATION_FAILED` pour une valeur hors bornes (`after` < 0, `limit` hors de 1..500), paramètre fautif dans `errors` ; `INVALID_PARAMETER` pour `after` ou `limit` non numérique, ou `after` absent. Même type de contenu que les autres erreurs (`application/problem+json`) | Codes produits par l'API existante : Bean Validation des paramètres ⇒ `VALIDATION_FAILED` ; conversion impossible ou paramètre manquant ⇒ `INVALID_PARAMETER` (vérifié par test) |
+| **v11-D4** | Type d'événement inconnu | Servi tel qu'il est stocké ; le consommateur l'ignore et avance son curseur. Un type inconnu ne bloque jamais le flux | Un type écrit par une version plus récente ne doit pas arrêter la lecture du flux |
+| **v11-D5** | `occurredAt` | Informatif : heure de début de la transaction qui a écrit l'événement. L'ordre repose **uniquement** sur `seq` | Deux transactions concurrentes peuvent valider dans l'ordre inverse de leur début |
+| **v11-D6** | Devise | `Product.currency` **retiré**. La devise est exposée une seule fois : par la liaison (lot 2) et dans l'en-tête de l'instantané, en code **ISO 4217**, normalisée depuis `platform.company.currency` (`FCFA`, `F CFA`, `XOF` ⇒ `XOF`). Valeur inconnue ⇒ la création de la liaison échoue avec un message explicite. **Partie « devise » de C8 tranchée** | Une même devise répétée dans chaque produit ; libellés locaux non normalisés en base (`FCFA`, `F CFA`, `XOF`) |
+| **v11-D7** | Image dans `Product` | `Product.imageSha256` **retiré** : l'état de l'image passe uniquement par `PRODUCT_IMAGE` (`ProductImageState`) | Deux sources pour un même état, avec des versions différentes (`@Version` du produit, génération de l'image) |
+| **v11-D8** | `perWarehouse` et périmètre | `perWarehouse` **exposé** (C8 tranché sur ce point). Périmètre des dépôts calculé au moment de servir la page. Au lot 2 : dépôts vendables choisis par liaison et figés à l'autorisation ; par défaut les dépôts `STORE` seulement, `WAREHOUSE` sur option explicite du commerçant. Si l'utilisateur qui a autorisé la liaison perd ses droits, la liaison passe « à revoir » avec une alerte, **sans changement silencieux du périmètre** | Lot 1 : tous les dépôts actifs, `STORE` (point de vente) et `WAREHOUSE` (dépôt de stockage, sans vente) confondus |
+| **v11-D9** | Disponibilité modifiée sans mouvement de stock | L'activation et la désactivation d'un dépôt republient la disponibilité (**réalisé**). Les réservations (lot 5) et les changements de périmètre d'une liaison (lots 2-3) feront de même. La réconciliation quotidienne reste le filet de sécurité | Seuls les mouvements de stock publiaient `AVAILABILITY` |
+| **v11-D10** | Forme de l'instantané (`SnapshotPage`) | § 24.3 | Reprise sans perte depuis `asOfSeq`, y compris pour les images et la disponibilité |
+| **v11-D11** | Retour arrière de V048 (`product_image_generation`) | **Destructif** : les générations repartent à 1 ; ni l'instantané ni le rejeu ne suffisent, à cause de la règle des versions. Il impose une **remise à zéro complète côté JCMB** (oubli des versions locales, puis instantané complet). JCMB doit disposer de cette opération (lot 3), qui sert aussi pour `CURSOR_AHEAD` | Une boutique qui a déjà appliqué une génération supérieure ignorerait les changements d'image jusqu'à ce que le compteur la dépasse |
+| **v11-D12** | P8 | **Règle de déploiement** : les URL utilisées par les migrations (`GESTSTOCK_DB_URL`, `GESTSTOCK_PROVISIONER_DB_URL`) pointent vers l'hôte direct, sans `-pooler` ; le pooler n'est envisagé que pour le trafic applicatif, sur besoin mesuré. P8 sort des vérifications en attente et entre dans la checklist de déploiement (§ 24.5) | La conception D n'utilise aucun verrou consultatif de session ; les migrations exigent une connexion directe |
+| **v11-D13** | État du lot 1 | § 24.6 ; T-C3-8 : surcoût de 2,2 à 3,3 % après l'insertion groupée, critère satisfait ; **C3 non validée** (étapes 7 à 10 restantes) | — |
+
+### 24.2 Réparation de la ligne d'état du flux (v11-D1)
+
+Si `integration_feed_state` a perdu sa ligne unique, le séquenceur s'arrête : aucun `seq` n'est attribué et les événements restent en attente, sans perte. Recréer la ligne, avec le compte propriétaire de la base de l'entreprise :
+
+```sql
+INSERT INTO integration_feed_state (id, last_seq, purged_through_seq)
+SELECT '00000000-0000-0000-0000-000000000001', COALESCE(MAX(seq), 0), COALESCE(MIN(seq) - 1, 0)
+FROM integration_outbox
+WHERE seq IS NOT NULL;
+```
+
+- Les `seq` sont contigus (conception D) et la purge supprime les plus petits : le plus petit `seq` restant moins 1 est exactement le repère de purge.
+- **Invariant de purge** : l'événement de plus grand `seq` n'est jamais purgé. `MAX(seq)` reste donc disponible même après une purge, et le compteur reprend sans réutiliser un `seq`.
+- Aucun événement séquencé (flux jamais lu) : (0, 0).
+
+*Historique — procédure abandonnée (proposée à l'étape 5 du lot 1) : `last_seq = COALESCE(MAX(seq), 0)` et `purged_through_seq` = « dernier repère de purge connu », 0 à défaut. Raisons de l'abandon : (1) un repère remis à 0 fait accepter un curseur antérieur à la purge sans `410 CURSOR_EXPIRED` : les événements purgés entre ce curseur et le vrai repère manquent, **perte silencieuse** ; (2) si tous les événements ont été purgés, `MAX(seq)` est perdu et le compteur repartirait de 0, réutilisant des `seq` déjà servis.*
+
+À aligner dans le dépôt backend à la prochaine étape (non modifié par ce relevé) : la Javadoc de `FeedSequencer` et le message de `IntegrationFeedStateMissingException` décrivent encore la procédure abandonnée ; le commentaire de `U048` recommande un instantané complet, insuffisant selon v11-D11 ; la purge (étape 9) doit appliquer l'invariant.
+
+### 24.3 Forme de l'instantané (v11-D10)
+
+| Élément | Règle |
+|---|---|
+| En-tête | `asOfSeq` (fixé à la première page, identique sur toutes les pages) ; `currency` (ISO 4217, v11-D6) ; `nextPageToken` (**absent** sur la dernière page ; *v10 : nul*) |
+| Sections, dans cet ordre | `categories`, `products`, `productImages`, `availability` |
+| `limit` | 200 par défaut, 500 au plus ; compte les objets **toutes sections confondues** ; une page peut chevaucher deux sections ; une section sans objet dans la page est un tableau vide |
+| Objets archivés | Inclus (`active: false`) : un consommateur qui refait un instantané complet peut archiver ce qu'il détient encore |
+| `productImages` | Un `ProductImageState` par produit, archivés compris ; `version` = génération, ou 0 sans ligne de génération ; `imageSha256` nul si aucune image |
+| `availability` | Une `Availability` par produit, archivés compris ; version = `asOfSeq` (aucun champ `version` dans `Availability`) |
+| Versions | `@Version` pour `categories` et `products` |
+| Reprise | Le consommateur applique la règle des versions à l'instantané comme au flux, puis reprend le flux depuis `asOfSeq` |
+
+### 24.4 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- `Product` : `currency` et `imageSha256` retirés (et de `required`), note dans la description.
+- `/catalog/changes` : réponses `400` (deux codes, v11-D3) et `409 CURSOR_AHEAD` ; description de `limit` remplacée ; curseur en avance, type inconnu et rôle de `occurredAt` décrits.
+- `ChangeEventBase` : descriptions de `seq`, `type` et `occurredAt` ; `ChangeEvent` : traitement d'un type inconnu.
+- `SnapshotPage` : `currency`, `productImages`, `availability`, règle de `limit`, ordre des sections, objets archivés ; `nextPageToken` absent sur la dernière page. `ProductImageState` et `Availability` réutilisés, leurs descriptions complétées (version 0 sans génération ; `perWarehouse` et périmètre).
+- `info.description` et `x-decisions.v11` ; P8 sortie de `verificationPending`.
+
+Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du dossier, inchangés) : **0 erreur, 0 avertissement** ; 2 exceptions ciblées, déjà justifiées (§ 22.4) ; YAML valide, toutes les `$ref` résolues.
+
+### 24.5 Checklist de déploiement (v11-D12)
+
+| # | Contrôle | Origine |
+|---|---|---|
+| P8 | `GESTSTOCK_DB_URL` et `GESTSTOCK_PROVISIONER_DB_URL` désignent l'hôte direct (aucun `-pooler`) | v11-D12 |
+| D1 | Scripts officiels de sauvegarde et de vérification exécutés avec succès avant le déploiement | § 18.6 (D1) |
+| M1 | Hébergement MongoDB de production confirmé (Atlas ou VPS), sans copie de `MONGODB_URI` | § 18.6 (M1) |
+
+### 24.6 État du lot 1 au 2026-10-29
+
+| Étape (plan) | Contenu | Commits (dépôt backend, `feat/integration-lot1`) | Tests d'acceptation |
+|---|---|---|---|
+| 1 | Migration du flux (V047, U047) | `50181e9` | Schéma, conventions, rollback |
+| 3 | Point d'entrée unique de publication | `73a9331` | T-C3-12 |
+| 5 | Séquenceur | `e04a73d` | T-C3-1, T-C3-2 a-c |
+| 6 | Lecture du flux ; type inconnu non bloquant | `f506ab2`, `3d3007d` | T-C3-2 d, T-C3-7, T-C3-9, T-C3-10, T-C3-14 (version simplifiée, sans instantané) |
+| 4a | `CATEGORY`, `PRODUCT` | `8294b64`, `a0031b4` (détection « rien n'a changé » fondée sur le mappeur) | T-C3-2 e |
+| 2 + 4b | `product_image_generation` (V048, U048), `PRODUCT_IMAGE` | `41b39e5`, `97fed44`, `7caebe3` | T-C7-1 à T-C7-6 |
+| 4c | `AVAILABILITY`, fournisseur de disponibilité | `879227f` | T-C3-8, T-C3-13 |
+| Correctifs | Insertion groupée ; republication par dépôt ; codes d'erreur | `0563af1`, `18799db`, `0f6b008`, `f20335a` | T-C3-8 (nouvelle mesure) |
+
+- **T-C3-8** : surcoût médian des ventes avec publication de 8,5 % et 10,4 % avant l'insertion groupée, puis **2,2 %, 3,3 % et 3,3 %** après (trois exécutions, 200 ventes de 3 lignes par tour, 6 tours alternés) : **critère satisfait**. Écart à noter : la mesure porte sur des ventes de 3 lignes, le critère du § 9 mentionne 10 lignes ; nouvelle mesure à 10 lignes proposée pour la porte de sortie.
+- **Restent** : étape 7 (instantané et `pageToken` : T-C3-3 à T-C3-6, T-C3-11, T-C3-14 complet), étape 8 (métriques), étape 9 (purge en simulation, invariant v11-D1), étape 10 (porte de sortie).
+- **Porte de sortie : non satisfaite. C3 : non validée.**
+
+### 24.7 Ce qui n'a pas été fait
+
+Aucun code, migration, test ni configuration modifié par ce relevé ; dépôt backend lu seulement (journal Git) ; aucun commit, push ou déploiement.
