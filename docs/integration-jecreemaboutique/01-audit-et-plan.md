@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Version | 13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
-| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 en préparation, **non commencé** ; aucun autre lot commencé. *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
+| Version | 14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 en préparation, **non commencé**, décisions arrêtées (§ 27) ; aucun autre lot commencé. *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
 | Code, bases, déploiements | Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6, § 25.2) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
 | Secrets | Aucun fichier `.env*` lu ; aucune valeur sensible copiée. Les variables citées le sont par leur **nom**, relevé dans le code. |
@@ -35,7 +35,7 @@ Base GestStock : PostgreSQL chez **Neon** (`backend/scripts/backup/README.md`), 
 
 Callbacks / retours OAuth **[Proposé, non configuré]** :
 - écran d'autorisation GestStock : `https://geststock-frontend.onrender.com/integrations/jecreemaboutique/authorize` (route Angular *à créer*) ;
-- retour vers JCMB : une route **backend** `…/api/integrations/geststock/callback` *(à créer)* sur l'origine API JCMB retenue ci-dessus ;
+- retour vers JCMB : une route **backend** `…/api/integrations/geststock/callback` *(à créer)* sur l'origine API JCMB retenue ci-dessus ; *v14-D1 : remplacé par une page **Angular** JCMB protégée, qui transmet `code` et `state` à une route backend authentifiée (§ 27.2) ; v14-D12 : `redirect_uri` exacte par environnement*
 - liste blanche à comparaison exacte, une entrée par environnement (essai, production).
 
 Aucun callback n'est configuré ; aucun paramètre Render, Vercel, DNS, OAuth ou de sécurité n'est modifié. **D8 reste ouverte** jusqu'à confirmation des origines backend. *v13-D1 : hébergeurs confirmés par le responsable (backend GestStock sur Vercel, backend JCMB sur le VPS de U5) ; URL publiques de production et callbacks encore à fixer.*
@@ -399,20 +399,20 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | Rubrique | Contenu |
 |---|---|
 | Objectif | Lier explicitement une entreprise GestStock et une boutique JCMB |
-| Flux | 1) JCMB crée `state` (256 bits, haché, 10 min, lié à la boutique) et un vérificateur PKCE, puis redirige vers l'écran d'autorisation GestStock ; 2) personne GestStock connectée, permission `integration:manage`, voit la boutique, choisit les dépôts (accessibles par elle) et les portées, confirme ; 3) GestStock émet un **code** (256 bits, seul le haché est stocké, 5 min, usage unique, lié à l'entreprise, au client, à l'URL de retour exacte et au défi PKCE) et redirige vers l'URL préenregistrée ; 4) le backend JCMB vérifie `state` (usage unique) et échange le code serveur à serveur (secret client + vérificateur PKCE) ; 5) GestStock renvoie la liaison et un secret (montré une fois ; haché côté GestStock, chiffré AES-GCM côté JCMB) |
+| Flux | 1) JCMB crée `state` (256 bits, haché, 10 min, lié à la boutique) et un vérificateur PKCE, puis redirige vers l'écran d'autorisation GestStock ; 2) personne GestStock connectée, permission `integration:manage`, voit la boutique, choisit les dépôts (accessibles par elle) et les portées, confirme ; 3) GestStock émet un **code** (256 bits, seul le haché est stocké, 5 min, usage unique, lié à l'entreprise, au client, à l'URL de retour exacte et au défi PKCE) et redirige vers l'URL préenregistrée ; 4) le backend JCMB vérifie `state` (usage unique) et échange le code serveur à serveur (secret client + vérificateur PKCE) ; 5) GestStock renvoie la liaison et un secret (montré une fois ; haché côté GestStock, chiffré AES-GCM côté JCMB) *— v14-D1 : demande déposée de serveur à serveur (`POST /oauth/par`) et retour par une page Angular JCMB protégée ; parcours de référence : § 27.2* |
 | États de liaison | `PENDING` → `ACTIVE` → `SUSPENDED` (temporaire, réactivable) / `REVOKED` (définitif) ; réautorisation = nouveau flux complet |
-| Appels de service | Jeton court (5 min) par `client_credentials` ; `iss=geststock`, `aud` dédiée, `sub` = liaison, portées ; statut de liaison relu à chaque appel *— v13-D5 : JWT de 15 min, `aud=geststock-integration`, émetteur, type et clé de signature distincts de ceux des utilisateurs (§ 26.5)* |
+| Appels de service | Jeton court (5 min) par `client_credentials` ; `iss=geststock`, `aud` dédiée, `sub` = liaison, portées ; statut de liaison relu à chaque appel *— v13-D5 : JWT de 15 min, `aud=geststock-integration`, émetteur, type et clé de signature distincts de ceux des utilisateurs (§ 26.5) ; v14-D4 : `iss=geststock-integration`, claim `typ=integration`, en-tête `typ=at+jwt`* |
 | Portées | `catalog:read`, `catalog:match`, `price:propose`, `stock:read`, `orders:read`, `orders:write` ; `orders:write` implique `orders:read` [Décision C5, approuvée]. `reservations:write` retirée : fusionnée dans `orders:write` (la réservation est créée avec la commande, § 12) |
 | Révocation par la boutique | `POST /link/revoke` [Décision C2, approuvée] : définitive, motif facultatif, `REVOKED` + `revokedAt` + secret invalidé + audit ; ancienne liaison ⇒ `401 LINK_REVOKED` (traité par le client comme succès idempotent) ; réservations et commandes engagées conservées jusqu'à expiration ou conversion ; nouvelle connexion = nouvelle autorisation, nouvelle liaison |
-| URL de retour | **Non définies** ; liste blanche stricte, comparaison exacte |
-| Fichiers concernés | Existants : `security/JwtTokenService`, `security/SecurityConfig`, `tenancy/TenantContext`, `platform/CredentialCipher`, `platform/audit/PlatformAudit` ; JCMB `lib/auth.ts`, `middleware.ts`. À créer : contrôleurs et services d'intégration, collection `geststocklinks`, écrans des deux fronts |
-| Migrations | Plateforme, *(numéro attribué à l'implémentation)* : `integration_client`, `integration_link`, `integration_authorization_code` ; script U associé. Base de chaque entreprise : permissions `integration:manage` et `integration:price-approve` (Q2 ; met à jour `SchemaConventionsIT.referenceDataIsLoaded`, 51 permissions aujourd'hui). *v9 : `platform/V002__integration_link.sql`, `U002` ; permissions au lot 1.* JCMB : script `scripts/migrate-geststock-link.mjs` *(à créer)* |
+| URL de retour | **Non définies** ; liste blanche stricte, comparaison exacte *— v14-D12 : une par environnement, domaine réel du frontend JCMB, `localhost` seulement en développement et en essai* |
+| Fichiers concernés | Existants : `security/JwtTokenService`, `security/SecurityConfig`, `tenancy/TenantContext`, `platform/CredentialCipher`, `platform/audit/PlatformAudit` ; JCMB `lib/auth.ts`, `middleware.ts`. À créer : contrôleurs et services d'intégration, collection `geststocklinks`, écrans des deux fronts *— v14 : étapes détaillées et ordre au § 27.4* |
+| Migrations | Plateforme, *(numéro attribué à l'implémentation)* : `integration_client`, `integration_link`, `integration_authorization_code` ; script U associé. Base de chaque entreprise : permissions `integration:manage` et `integration:price-approve` (Q2 ; met à jour `SchemaConventionsIT.referenceDataIsLoaded`, 51 permissions aujourd'hui). *v14-D7 : `integration:manage` seulement au lot 2 (ADMIN, 52 permissions) ; `integration:price-approve` au lot 3. v14-D9 : retour arrière plateforme dans `db/platform-rollback`. v14-D11 : colonne de publication dans `integration_feed_state`.* *v9 : `platform/V002__integration_link.sql`, `U002` ; permissions au lot 1.* JCMB : script `scripts/migrate-geststock-link.mjs` *(à créer)* |
 | Angular | GestStock : écran de consentement, « Paramètres → Boutique en ligne » (dépôts, suspension, révocation). JCMB : « Connecter GestStock », statut |
 | Dépendances | Lot 0 (URL de retour, secrets d'essai) |
 | Risques | Erreur de flux = liaison usurpée : tests négatifs obligatoires |
 | Tests | Scénarios 1, 2, 3 (§ 10) + jeton d'audience/émetteur incorrect, expiré, liaison suspendue ; aucun secret dans réponses Angular ni journaux ; critères C2 et C5 (§ 19.3) |
 | Critères d'acceptation | Tous les scénarios négatifs refusés sans effet de bord |
-| Retour arrière | Toutes les liaisons à `REVOKED`, routes désactivées, script U de la plateforme, collection supprimée |
+| Retour arrière | Toutes les liaisons à `REVOKED`, routes désactivées, script U de la plateforme, collection supprimée *— v14 : interrupteurs et ordre au § 27.8* |
 | Preuves | Rapport de tests de sécurité, journal plateforme |
 | Conditions d'arrêt | Un seul scénario de rejeu ou d'usurpation qui réussit |
 | Autorisation | Approbation avant lot 3 |
@@ -567,9 +567,11 @@ Base : `/api/integration/v1` (GestStock). Authentification : jeton de liaison (`
 
 | Méthode et chemin | Portée | Idempotence | Rôle |
 |---|---|---|---|
-| `POST /oauth/token` | client JCMB | — | Échange de code (PKCE) ; `client_credentials` |
+| `POST /oauth/par` | client JCMB (Basic) | — | Dépôt de la demande d'autorisation (v14-D1) |
+| `POST /oauth/token` | client JCMB | — | Échange de code (PKCE) ; `client_credentials` *— v14 : Basic exigé pour les deux grants ; code rejoué ⇒ liaison révoquée* |
 | `GET /link` | toute | — | Statut, dépôts associés, réglages |
 | `POST /link/revoke` | toute | oui (déjà révoquée ⇒ `401 LINK_REVOKED`, traité comme succès) | Révocation définitive par la boutique (C2) |
+| `POST /link/secret` | toute (liaison `ACTIVE`) | non (un nouvel appel remplace le secret en attente) | Rotation du secret de liaison (v14-D6) |
 | `GET /catalog/changes?after=&limit=` | `catalog:read` | lecture | Événements ordonnés par `seq` attribué à la lecture (C3) |
 | `POST /catalog/changes/ack` | `catalog:read` | oui (`seq`) | Acquittement du curseur (D5) |
 | `GET /catalog/snapshot?pageToken=` | `catalog:read` | lecture | Réconciliation paginée ; `asOfSeq` fixé à la première page ; `pageToken` opaque, lié à la liaison, 24 h (C3). *v6 et antérieures : `?cursor=` — remplacé par `pageToken`* |
@@ -667,7 +669,7 @@ Pour lever les critères restants : approbation du contrat (2) ; autorisation de
 | GestStock | `GESTSTOCK_JWT_SECRET`, `GESTSTOCK_DB_PASSWORD`, `GESTSTOCK_PLATFORM_DB_PASSWORD`, `GESTSTOCK_PROVISIONER_DB_PASSWORD`, `GESTSTOCK_TENANT_CREDENTIALS_KEY`, `GESTSTOCK_ADMIN_PASSWORD`, `GESTSTOCK_PLATFORM_ADMIN_PASSWORD` ; sauvegarde : `GESTSTOCK_BACKUP_ADMIN_URL`, `GESTSTOCK_BACKUP_PROVISIONER_URL`, `GESTSTOCK_BACKUP_PASSPHRASE` |
 | JeCréeMaBoutique | `JWT_SECRET`, `MONGODB_URI`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RESEND_API_KEY`, `VAPID_PRIVATE_KEY`, `CACHE_INVALIDATION_SECRET`, `SWAGGER_ACCESS_KEY` |
 
-Nouveaux **[Proposé, noms à définir]** : secret du client JCMB chez GestStock (stocké haché côté GestStock) ; clé de chiffrement des secrets de liaison côté JCMB ; secret HMAC des notifications par liaison (chiffré par `platform/CredentialCipher` côté GestStock) ; un jeu distinct par environnement. *v13 : secret HMAC des notifications sans objet en v1 (v13-D3) ; clé de signature des jetons de liaison distincte de celle des utilisateurs ; clé de chiffrement des secrets de liaison côté JCMB nouvelle, propre à l'intégration, présente seulement dans l'environnement du VPS (v13-D5, v13-D8).*
+Nouveaux **[Proposé, noms à définir]** : secret du client JCMB chez GestStock (stocké haché côté GestStock) ; clé de chiffrement des secrets de liaison côté JCMB ; secret HMAC des notifications par liaison (chiffré par `platform/CredentialCipher` côté GestStock) ; un jeu distinct par environnement. *v13 : secret HMAC des notifications sans objet en v1 (v13-D3) ; clé de signature des jetons de liaison distincte de celle des utilisateurs ; clé de chiffrement des secrets de liaison côté JCMB nouvelle, propre à l'intégration, présente seulement dans l'environnement du VPS (v13-D5, v13-D8). v14-D17 : noms retenus — GestStock `geststock.integration.links.enabled` ; JCMB `GESTSTOCK_INTEGRATION_ENABLED`, `GESTSTOCK_API_ORIGIN`, `GESTSTOCK_CLIENT_ID`, `GESTSTOCK_CLIENT_SECRET`, `GESTSTOCK_LINK_ENCRYPTION_KEY` (§ 27.6) ; clé de signature des jetons de liaison côté GestStock : nom à fixer à l'implémentation.*
 
 **À créer au lot 1 [Décision P4, nom à définir]** : clé HMAC de signature des `pageToken` — aléatoire, 32 octets au moins, une par environnement, distincte des secrets JWT, jamais journalisée ; identifiée par un `kid` ; rotation avec acceptation de la clé précédente pendant 24 h. **Aucun secret créé à ce stade.** Aucun secret partagé avec l'authentification existante (`JWT_SECRET`, `GESTSTOCK_JWT_SECRET`).
 
@@ -1465,8 +1467,8 @@ Complète et reprend les §§ 24.5 et 25.6.
 | Clé `pageToken` | Clé de production de signature des `pageToken` définie par l'environnement ; sinon `ProductionSafetyCheck` refuse le démarrage si la publication est activée | v12-D7 |
 | Publication | `geststock.integration.publish.enabled` à `false` jusqu'au lot 2 ; métriques et purge désactivées | v12-D7 |
 | T1 | Tâches `@Scheduled` du lot 1 laissées désactivées en production tant que le cron Vercel et la route interne ne sont pas livrés | v13-D2 |
-| K1 | Clé de signature des jetons de liaison distincte de celle des jetons utilisateurs, fournie par l'environnement (lot 2) | v13-D5 |
-| K2 | Clé de chiffrement des secrets de liaison côté JCMB nouvelle, propre à l'intégration, seulement dans l'environnement du VPS | v13-D5, v13-D8 |
+| K1 | Clé de signature des jetons de liaison distincte de celle des jetons utilisateurs, fournie par l'environnement (lot 2) *— v14 : précisé au § 27.7* | v13-D5 |
+| K2 | Clé de chiffrement des secrets de liaison côté JCMB nouvelle, propre à l'intégration, seulement dans l'environnement du VPS *— v14 : `GESTSTOCK_LINK_ENCRYPTION_KEY`, précisé au § 27.7* | v13-D5, v13-D8 |
 | R1 | Secrets possiblement valides dans l'historique public de JCMB — **risque accepté le 2026-10-29** | v13-D8 |
 | R2 | MongoDB du `docker-compose.yml` exposé sur 27017 sans authentification — **risque accepté le 2026-10-29** | v13-D8 |
 
@@ -1522,4 +1524,143 @@ Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du do
 
 - Aucun code, migration, test ni configuration modifié par ce relevé.
 - Dépôts JCMB et backend GestStock lus seulement.
+- Aucun commit, push ou déploiement.
+
+## 27. Relevé de décisions v14 — décisions du lot 2 — 2026-10-29
+
+Source : plan d'exécution du lot 2 du 2026-10-29 (lecture seule des quatre dépôts : GestStock backend `8e79878`, gestion-stock `65a8db6`, JCMB backend `6e5cdbd`, JCMB frontend `8365146`), questions Q1 à Q14 tranchées par le responsable. Décisions numérotées v14-D1 à v14-D18.
+
+**Applications déployées : aucun effet.** Ce relevé ne modifie que ce document et le contrat. Les routes décrites n'existent pas encore ; elles arriveront derrière des interrupteurs désactivés par défaut (§ 27.6).
+
+### 27.1 Décisions
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| **v14-D1** | Parcours de liaison | Demande d'autorisation déposée **de serveur à serveur** (PAR, RFC 9126) : `POST /oauth/par`, authentification Basic du client JCMB, `request_uri` à usage unique d'environ **90 s**. Retour par une **page Angular JCMB protégée**, qui transmet `code` et `state` à une route backend authentifiée par Bearer, nettoie l'URL (`history.replaceState`) et applique `Referrer-Policy: no-referrer`. Parcours en 5 étapes : § 27.2. **Contradictions C-A (route de retour backend sans authentification) et C-B (paramètres d'autorisation falsifiables) résolues** |
+| **v14-D2** | Unicité | Une boutique liée à **une seule** entreprise à la fois ; une entreprise peut avoir **plusieurs** boutiques. Index unique partiel côté boutique sur les liaisons non révoquées |
+| **v14-D3** | Identifiants | **Deux niveaux** : client JCMB par environnement (HTTP Basic) et secret par liaison. v13-D5 est précisé en ce sens : le « secret client » de v13-D5 désigne le **secret de liaison**. **Contradiction C-C résolue** |
+| **v14-D4** | Jeton de liaison | `iss = geststock-integration` ; claim `typ = integration` ; en-tête JOSE `typ = at+jwt` (RFC 9068) |
+| **v14-D5** | Hachage du secret de liaison | SHA-256, comparaison en temps constant |
+| **v14-D6** | Rotation | `POST /link/secret`, de serveur à serveur, avec le jeton de la liaison ; ancien secret valide jusqu'au **premier usage du nouveau**, **24 h au plus** |
+| **v14-D7** | Permissions | `integration:manage` pour **ADMIN uniquement** (52 permissions) ; `integration:price-approve` introduite au lot qui l'utilise (lot 3). *Remplace, pour le lot 2, l'introduction des deux permissions prévue au § 9 (Q2).* |
+| **v14-D8** | IP réelle | Un **seul en-tête configurable posé par Vercel**, à vérifier sur un déploiement de prévisualisation avec un `X-Forwarded-For` falsifié ; **jamais** `X-Forwarded-For` brut sur la chaîne d'intégration. JCMB appelle GestStock **directement sur Vercel**, jamais à travers le relais nginx de Render. Vérification ajoutée à la checklist (I1, § 27.7) |
+| **v14-D9** | Retour arrière de la base plateforme | `db/platform-rollback/U00x`, avec un test V → U → V |
+| **v14-D10** | Suspension | Statut `SUSPENDED` avec un motif (`MANUAL`, `AUTHORIZER_LOST_ACCESS`) ; réactivation par une personne disposant de `integration:manage`, qui **reconfirme les dépôts** ; pendant la suspension, `403 LINK_SUSPENDED` partout sauf `GET /link` et `POST /link/revoke` ; la **publication continue** |
+| **v14-D11** | Drapeau de publication | Dans la **base de l'entreprise** (colonne de `integration_feed_state`), posé dans la transaction d'activation de la liaison, retiré à la révocation de la dernière liaison de l'entreprise (met en œuvre v12-D4) |
+| **v14-D12** | `redirect_uri` | Exacte par environnement : domaine réel du frontend JCMB ; `localhost` seulement en développement et en essai |
+| **v14-D13** | Boutiques éligibles | Liaison refusée pour une boutique JCMB non approuvée (`isActive = false`) ou bannie, et pour le rôle `admin` de JCMB |
+| **v14-D14** | Code rejoué | Refusé, et la liaison qu'il a créée est **révoquée** |
+| **v14-D15** | Angular GestStock | URL de retour après connexion limitée aux **chemins internes** (aucune redirection ouverte) |
+| **v14-D16** | Route interne du cron Vercel | **Lot 3** (aucune tâche planifiée nécessaire au lot 2 : codes, demandes et compteurs expirent par horodatage et se nettoient à l'écriture) |
+| **v14-D17** | Noms des interrupteurs et variables | Noms Q14 acceptés : § 15 et § 27.6 ; checklist K1, K2 (§ 27.7) |
+| **v14-D18** | Ordre des étapes | GestStock : G1, G2, G5, G6, G3, G7, G8 + G9, G10, G4, G11, G12, G13, G14, puis GA1 et GA2. JCMB : J1 et J2 en parallèle (GestStock simulé), puis J3, J4 et JA1 après G8. Déploiement : § 27.8 |
+
+### 27.2 Parcours de liaison (v14-D1)
+
+| # | Qui agit | Application | Requête |
+|---|---|---|---|
+| 1 | Propriétaire de la boutique (rôle `user`, boutique approuvée et non bannie, v14-D13) | Angular JCMB → backend JCMB → API GestStock | `POST /api/integrations/geststock/start` (Bearer). Le backend JCMB crée `state` (haché, 10 min, lié à la boutique) et le vérificateur PKCE (conservé côté serveur), puis dépose la demande : `POST /api/integration/v1/oauth/par` (Basic du client JCMB) avec `shop_id` (= `User._id`), `shop_name`, `redirect_uri`, `code_challenge` (S256), `scope`, `state`. Il reçoit `request_uri` (environ 90 s, usage unique) et renvoie à Angular l'URL `<frontend GestStock>/integrations/jecreemaboutique/authorize?client_id=…&request_uri=…` |
+| 2 | Personne GestStock connectée, `integration:manage` | Angular GestStock → API GestStock (chaîne principale) | Lecture de la demande : boutique, client, portées, dépôts accessibles (STORE cochés par défaut), devise normalisée (v11-D6 ; devise inconnue ⇒ refus explicite). Aucun paramètre de l'URL du navigateur n'est pris en compte en dehors de `client_id` et `request_uri`. Connexion préalable : retour limité aux chemins internes (v14-D15) |
+| 3 | La même personne | Angular GestStock → API GestStock | Approbation : liaison créée en `PENDING`, dépôts figés (v11-D8), code émis (256 bits, haché, 5 min, usage unique, lié à l'entreprise, au client, à la demande, à sa `redirect_uri` et au défi PKCE) ; redirection vers `redirect_uri?code=…&state=…`. Refus : `error=access_denied&state=…`. Le `request_uri` ne sert qu'à une décision |
+| 4 | Propriétaire de la boutique | Page Angular JCMB protégée → backend JCMB → API GestStock | La page (`AuthGuard`) envoie `code` et `state` à `POST /api/integrations/geststock/complete` (Bearer), nettoie l'URL (`history.replaceState`), `Referrer-Policy: no-referrer`. Le backend vérifie que `state` appartient **à la boutique authentifiée** (usage unique), puis appelle `POST /oauth/token` (`authorization_code`, Basic, `code_verifier`) |
+| 5 | GestStock, puis backend JCMB | API GestStock → backend JCMB | Liaison `PENDING` → `ACTIVE`, drapeau de publication posé dans la même transaction (v14-D11). Réponse : liaison et secret de liaison (une seule fois ; empreinte SHA-256 côté GestStock ; chiffré AES-GCM côté JCMB). JCMB ne renvoie à Angular que le statut, le nom et le code de l'entreprise. Ensuite : `client_credentials` (Basic + `link_id` + `link_secret`) ⇒ JWT de 15 min |
+
+Exigences du cahier des charges : autorisation explicite des deux côtés (`integration:manage` ; propriétaire authentifié aux étapes 1 et 4) ; jamais par e-mail, nom ou slug (`shop_id = User._id`, entreprise = celle de la personne connectée) ; code à usage unique, court, rejeu refusé avec révocation (v14-D14) ; redirection comparée à l'identique (v14-D12) ; boutique affichée telle que déposée par le serveur JCMB authentifié ; aucun secret dans Angular ; unicité (v14-D2). **Toutes satisfaites par le parcours.**
+
+### 27.3 Choix ajoutés par ce relevé (dans le cadre des décisions)
+
+| Choix | Motif |
+|---|---|
+| La liaison est créée en `PENDING` à l'approbation et passe `ACTIVE` à l'échange du code | Donne un sens au statut `PENDING` du contrat et permet v14-D14 (révoquer la liaison créée par un code rejoué) ; le drapeau de publication n'est posé qu'à l'activation |
+| Boutique déjà liée : refus dès `POST /oauth/par` (`invalid_request`), l'index unique partiel restant la garantie finale | Évite qu'une personne GestStock approuve une demande vouée à l'échec |
+| `POST /link/secret` sans `Idempotency-Key` ; un nouvel appel remplace le secret en attente | Rejouer la réponse obligerait à conserver le secret en clair ; l'ancien secret reste valide si la réponse est perdue. Exception justifiée à la règle « autres écritures : `Idempotency-Key` » (v13-D5) |
+| `POST /link/secret` refusé en `SUSPENDED` (`403 LINK_SUSPENDED`) | Application littérale de v14-D10 |
+| Champs de la demande PAR : `shop_id`, `shop_name` (affichage seulement), `state` de 32 à 512 caractères | Forme minimale ; aucun slug ni e-mail |
+
+### 27.4 Étapes du lot 2 (ordre v14-D18)
+
+Chaque étape : un commit, tests écrits d'abord (ceux qui doivent échouer avant la modification sont indiqués), retour arrière = revert, plus le script U s'il y a une migration. Numéros de migration attribués à l'implémentation (Q4).
+
+| Ordre | Étape | Contenu | Tests d'abord | Critère de passage |
+|---|---|---|---|---|
+| 1 | G1 | Permission `integration:manage` (migration d'entreprise V + U ; `common/security/Permissions`) | Échouent d'abord : `SchemaConventionsIT.referenceDataIsLoaded` (51 → 52, ADMIN 52, GESTIONNAIRE 40, CAISSIER 15), `PermissionCatalogIT`, `RolePermissionMatrixIT`, `RoleApiIT`, `RoleRepositoryIT` ; `MigrationRollbackIT` | Suite verte |
+| 2 | G2 | Base plateforme : `integration_client`, `integration_authorization_request`, `integration_authorization_code`, `integration_link` (index unique partiel côté boutique, v14-D2), `integration_rate_limit` ; `db/platform-rollback/U00x` (v14-D9) | Conventions plateforme (nommage, `uuid`, `timestamptz`, commentaires), unicité, V → U → V sur schéma isolé | Schéma conforme ; V → U → V vert |
+| 3 | G5 | Jeton de liaison : clé distincte, 15 min, `aud`, `iss`, `typ` (v14-D4) ; `ProductionSafetyCheck` (clé absente, courte ou égale à la clé utilisateur ⇒ refus de démarrer si les liaisons sont activées) | Échouent d'abord : clé utilisateur, `aud`/`iss`/`typ` faux, expiré ⇒ refus | **Ne pas** déclarer un second `JwtEncoder`/`JwtDecoder` en bean injecté par type (`security/JwtConfig` en déclare un seul) |
+| 4 | G6 | Chaîne de sécurité dédiée `/api/integration/v1/**`, ordre prioritaire, une règle par portée, `denyAll` | Échouent d'abord : `EndpointSecurityCoverageIT` étendu (portée déclarée sur chaque route d'intégration ; seuls `/oauth/par` et `/oauth/token` ouverts au client) ; jeton utilisateur sur l'intégration ⇒ 401 ; jeton de liaison sur `/api/**` ⇒ 401 | Matrice croisée verte |
+| 5 | G3 | Service de liaison : états, secret SHA-256 en temps constant (v14-D5), devise (v11-D6), unicité | Transitions interdites ; devise inconnue refusée ; secret jamais relisible | IT verts |
+| 6 | G7 | Statut de la liaison à chaque appel ; entreprise courante définie par la liaison | `REVOKED` ⇒ 401 `LINK_REVOKED` ; `SUSPENDED` ⇒ 403 `LINK_SUSPENDED` sauf `GET /link` et `/link/revoke` ; liaison de A sur données de B ⇒ 404 | IT verts |
+| 7 | G8 + G9 | `/oauth/par`, `/oauth/token` (deux grants) ; limitation de `/oauth/token` (10/min par client et par IP, en-tête v14-D8) | Code rejoué ⇒ `invalid_grant` et liaison révoquée ; code expiré, d'un autre client ; `redirect_uri` différente ; PKCE faux ; 11ᵉ appel ⇒ 429 + `Retry-After` ; compteurs indisponibles ⇒ 503 ; `X-Forwarded-For` falsifié sans effet | Scénario 2 du § 10 vert |
+| 8 | G10 | Consentement et gestion côté GestStock (chaîne principale, `integration:manage`) : lecture de la demande, approbation, refus, liste, suspension et réactivation (reconfirmation des dépôts), révocation | Sans la permission ⇒ 403 ; demande expirée ou déjà décidée ⇒ refus | IT verts ; `EndpointSecurityCoverageIT` vert |
+| 9 | G4 | Dépôts vendables par liaison, figés à l'autorisation (v11-D8) ; `AUTHORIZER_LOST_ACCESS` (v14-D10) | Dépôts ⊆ dépôts accessibles ; STORE par défaut ; dépôt désactivé exclu ; perte d'accès ⇒ `SUSPENDED` | IT verts |
+| 10 | G11 | `GET /link`, `POST /link/revoke` (C2) | Critères C2 (§ 19.3) | IT verts |
+| 11 | G12 | Audit : création, approbation et refus, activation, révocation, suspension, rotation, échecs d'authentification ; auteur machine | Une entrée par événement, aucun secret, code ni en-tête `Authorization` | IT verts |
+| 12 | G13 | Drapeau de publication (v14-D11) | Échouent d'abord : aucune liaison ⇒ aucun événement ; activation ⇒ événements ; révocation de la dernière ⇒ arrêt ; suspension ⇒ publication maintenue | IT verts |
+| 13 | G14 | `POST /link/secret` (v14-D6) | Ancien secret accepté avant le premier usage du nouveau, refusé après ou au-delà de 24 h ; nouvel appel remplace le secret en attente ; réponse `no-store` | IT verts |
+| 14 | GA1 | Angular GestStock : écran de consentement ; retour après connexion limité aux chemins internes (v14-D15) | Rien envoyé sans confirmation ; URL de retour externe ignorée | Tests verts |
+| 15 | GA2 | Angular GestStock : « Paramètres → Boutique en ligne » | Masqué sans `integration:manage` ; aucun secret affiché | Tests verts |
+| JCMB, en parallèle | J1, J2 | AES-256-GCM (`lib/integration-crypto.ts`) ; modèles `geststocklinks` et demandes d'autorisation (`state` haché, vérificateur, TTL), index unique côté boutique, `scripts/migrate-geststock-link.mjs` | Aller-retour, altération, clé absente ; secret absent de toute sérialisation | vitest vert (GestStock simulé) |
+| JCMB, après G8 | J3, J4, JA1 | Client GestStock (jeton en mémoire ; 401, 429, 503) ; routes `start`, `complete`, statut, révocation ; page Angular de retour et section « Connecter GestStock » | `admin`, boutique non approuvée ou bannie refusées (v14-D13) ; `state` d'une autre boutique, rejoué ou expiré refusé ; aucun secret vers Angular ; limitation qui refuse en cas de panne | vitest et tests Angular verts |
+
+### 27.5 Tests de sécurité exigés au lot 2
+
+Liaison refusée sans `integration:manage` ; code rejoué (et révocation de la liaison créée) ou expiré refusé ; `redirect_uri` modifiée refusée ; demande PAR expirée ou réutilisée refusée ; jeton d'utilisateur refusé sur la chaîne d'intégration et jeton de liaison refusé sur la chaîne principale ; liaison révoquée : 401 `LINK_REVOKED` immédiat ; liaison suspendue : 403 `LINK_SUSPENDED` hors `GET /link` et `/link/revoke` ; liaison de A sans accès aux données de B ; limitation de `/oauth/token`, y compris 503 si les compteurs sont indisponibles et `X-Forwarded-For` falsifié sans effet ; secret absent des journaux, de l'audit, des réponses après la première remise et de toute réponse JCMB vers Angular ; publication démarrée seulement avec une liaison active et arrêtée à la révocation de la dernière ; boutique non éligible et rôle `admin` JCMB refusés ; clé AES absente ⇒ refus de démarrer.
+
+### 27.6 Interrupteurs et variables (v14-D17)
+
+| Application | Nom | Rôle |
+|---|---|---|
+| GestStock | `geststock.integration.links.enabled` (défaut `false`) | Chaîne d'intégration, routes de liaison et écrans désactivés tant qu'il est faux |
+| GestStock | `geststock.integration.publish.enabled` (défaut `false`, existant) | Publication des événements ; avec v14-D11, seules les entreprises liées publient |
+| JCMB | `GESTSTOCK_INTEGRATION_ENABLED` (défaut faux) | Routes d'intégration (404) et bouton masqués |
+| JCMB | `GESTSTOCK_API_ORIGIN` | Origine du backend GestStock sur Vercel (jamais le relais Render, v14-D8) |
+| JCMB | `GESTSTOCK_CLIENT_ID`, `GESTSTOCK_CLIENT_SECRET` | Client JCMB de l'environnement (v14-D3) |
+| JCMB | `GESTSTOCK_LINK_ENCRYPTION_KEY` | Clé AES-256-GCM des secrets de liaison, propre à l'intégration, VPS seulement |
+
+Restent à nommer à l'implémentation : la clé de signature des jetons de liaison côté GestStock, l'en-tête d'IP retenu (v14-D8) et la liste blanche des `redirect_uri` du client.
+
+### 27.7 Checklist de déploiement (complète le § 26.9)
+
+| # | Contrôle | Origine |
+|---|---|---|
+| K1 | Clé de signature des jetons de liaison distincte de `GESTSTOCK_JWT_SECRET`, fournie par l'environnement (nom à fixer à l'implémentation) ; `geststock.integration.links.enabled` à `false` jusqu'à l'activation | v13-D5, v14-D17 |
+| K2 | `GESTSTOCK_LINK_ENCRYPTION_KEY` nouvelle, propre à l'intégration, présente seulement dans l'environnement du VPS ; `GESTSTOCK_CLIENT_SECRET` propre à l'environnement ; `GESTSTOCK_INTEGRATION_ENABLED` à faux jusqu'à l'activation | v13-D5, v13-D8, v14-D17 |
+| I1 | En-tête d'IP posé par Vercel vérifié sur un déploiement de prévisualisation avec un `X-Forwarded-For` falsifié ; `GESTSTOCK_API_ORIGIN` pointe vers Vercel, pas vers le relais nginx de Render | v14-D8 |
+| U1 | `redirect_uri` de production = domaine réel du frontend JCMB ; aucune entrée `localhost` hors développement et essai | v14-D12 |
+| PR | Migration plateforme et script `db/platform-rollback` vérifiés V → U → V avant déploiement | v14-D9 |
+
+### 27.8 Ordre de déploiement
+
+1. **Backend GestStock** (Vercel) : migrations additives (plateforme, puis permission d'entreprise ; brève indisponibilité 503 par entreprise pendant sa migration, § 22.2), interrupteurs à `false` ; suite complète et checklist (P8, N1, K1, I1, PR).
+2. **Angular GestStock** (Render) : écrans masqués sans la permission et l'interrupteur.
+3. **Backend JCMB** (VPS) : `GESTSTOCK_INTEGRATION_ENABLED` faux, variables K2, index MongoDB ; le conteneur en service ne change pas de comportement.
+4. **Angular JCMB** (Render).
+5. **Activation** pour une entreprise et une boutique d'essai : `links.enabled` côté GestStock, puis l'interrupteur JCMB ; `publish.enabled` seulement avec G13.
+
+Retour arrière : interrupteurs à faux ; liaisons à `REVOKED` ; scripts U (entreprise, puis `db/platform-rollback`) ; collection MongoDB supprimée. Essais de bout en bout sans production : tests automatisés des deux côtés (GestStock en Testcontainers jouant le client JCMB ; JCMB avec GestStock simulé et `mongodb-memory-server` en jeu de réplicas) ; essai local des deux applications (environnements § 16, à autoriser) ; prévisualisation Vercel sur une branche Neon isolée, sur autorisation.
+
+### 27.9 Points encore ouverts (non décidés)
+
+| Point | Constat |
+|---|---|
+| Durée du `request_uri` et connexion GestStock | Environ 90 s jusqu'à la lecture authentifiée de la demande : si la personne GestStock doit d'abord se connecter, la demande peut expirer ; JCMB relance alors le parcours. Allonger ou lier la demande à la session : à décider si l'essai le montre gênant |
+| Limitation de débit de `/oauth/par` et `/link/secret` | Aucune valeur fixée par v13-D4 (seul `/oauth/token` l'est) |
+| `currency` sur `Link` | v11-D6 prévoit la devise sur la liaison ; le schéma `Link` du contrat ne la porte pas encore |
+| Liaisons `PENDING` dont le code a expiré | Jamais utilisables ; nettoyage à l'écriture ou au lot 3 (cron) |
+
+### 27.10 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- **`POST /oauth/par`** ajouté (Basic du client ; `PushedAuthorizationRequest`, `PushedAuthorizationResponse` ; `redirect_uri` exacte, S256 seulement, boutique déjà liée refusée, éligibilité de la boutique, une décision par `request_uri`).
+- **`/oauth/token`** : Basic du client exigé pour les deux grants ; `authorization_code` lié à la demande déposée, PKCE S256 (`code_verifier` obligatoire, motif) ; activation `PENDING` → `ACTIVE` ; code rejoué refusé et liaison révoquée ; rotation (ancien secret jusqu'au premier usage du nouveau, 24 h au plus).
+- **`POST /link/secret`** ajouté (`LinkSecretResponse`, `no-store`, sans `Idempotency-Key`, 403 en suspension).
+- **`GET /link`** : accessible en suspension.
+- **`linkToken`** : `iss`, claim `typ`, en-tête `typ=at+jwt`, deux niveaux d'identifiants, SHA-256 en temps constant, rotation, en-tête d'IP unique ; **`clientBasic`** : client par environnement, sur `/oauth/par` et `/oauth/token`.
+- **`Forbidden`** : `LINK_SUSPENDED` décrit ; **`Link`** : statut `PENDING` décrit, `suspensionReason` (`MANUAL`, `AUTHORIZER_LOST_ACCESS`).
+- `info.description` (principes, décisions v14), `servers` (appel direct sur Vercel), tag « Autorisation », bloc `x-decisions.v14`.
+
+Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du dossier, **inchangés**) : **0 erreur, 0 avertissement** ; 2 exceptions ciblées, déjà justifiées (§ 22.4) ; YAML valide ; 40 `$ref` distinctes, toutes résolues (déréférencement complet sans reste) ; 17 chemins.
+
+### 27.11 Ce qui n'a pas été fait
+
+- Aucun code, migration, test ni configuration modifié par ce relevé.
+- Dépôts applicatifs lus seulement.
 - Aucun commit, push ou déploiement.
