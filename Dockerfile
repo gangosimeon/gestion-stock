@@ -17,6 +17,8 @@ RUN npx ng build --configuration production
 FROM nginx:1.27-alpine
 # Gabarit : ${BACKEND_URL} remplacé au démarrage du conteneur (envsubst de l'image officielle).
 COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
+# En-têtes de sécurité, inclus par chaque location qui ajoute ses propres en-têtes.
+COPY deploy/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist/gestion-stock/browser /usr/share/nginx/html
 ENV BACKEND_URL=http://backend:8080
 EXPOSE 80
