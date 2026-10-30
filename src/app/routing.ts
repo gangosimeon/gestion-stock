@@ -34,6 +34,14 @@ export const appRoutes: Routes = [
     path: 'platform',
     loadChildren: () => import('./features/platform/platform.routes').then((m) => m.PLATFORM_ROUTES)
   },
+  // Consentement d'une liaison boutique (lot 2, GA1) : écran autonome, hors de la coquille de l'application ;
+  // sans session, connexion puis retour sur cet écran (URL de retour interne).
+  {
+    path: 'integrations/jecreemaboutique/authorize',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/integrations/pages/authorize-page.component').then((m) => m.AuthorizePageComponent)
+  },
   {
     path: '',
     // Toute l'application authentifiée ; sans session, retour à l'écran de connexion.

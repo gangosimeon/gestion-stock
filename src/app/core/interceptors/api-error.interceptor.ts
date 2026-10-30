@@ -1,7 +1,13 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, throwError } from 'rxjs';
+
+/**
+ * Requête dont l'écran affiche lui-même l'erreur (message et conduite à tenir) : aucun bandeau global.
+ * Usage : `this.http.post(url, body, { context: new HttpContext().set(SILENT_API_ERROR, true) })`.
+ */
+export const SILENT_API_ERROR = new HttpContextToken<boolean>(() => false);
 
 /** Message affiché à l'utilisateur pour une erreur HTTP (exporté pour les tests). */
 export function toMessage(err: HttpErrorResponse): string {
@@ -30,7 +36,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((e: unknown) => {
-      if (e instanceof HttpErrorResponse) {
+      if (e instanceof HttpErrorResponse && !req.context.get(SILENT_API_ERROR)) {
         snackBar.open(toMessage(e), 'OK', { duration: 4500 });
       }
 

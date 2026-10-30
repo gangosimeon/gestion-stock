@@ -1,0 +1,126 @@
+<main class="consent">
+  <section class="consent-card">
+    <header class="consent-header">
+      <mat-icon aria-hidden="true">storefront</mat-icon>
+      <h1>Autoriser une boutique en ligne</h1>
+    </header>
+
+    @switch (view()) {
+      @case ('loading') {
+        <div class="consent-loading">
+          <mat-spinner diameter="32" />
+          <p>Chargement de la demande…</p>
+        </div>
+      }
+
+      @case ('forbidden') {
+        <div class="consent-notice">
+          <p class="consent-notice-title">Seul un administrateur peut autoriser une boutique.</p>
+          <p>Demandez à un administrateur de votre entreprise d’ouvrir ce lien depuis votre boutique.</p>
+        </div>
+      }
+
+      @case ('missing') {
+        <div class="consent-notice">
+          <p class="consent-notice-title">Ce lien d’autorisation est incomplet.</p>
+          <p>Recommencez depuis votre boutique.</p>
+        </div>
+      }
+
+      @case ('error') {
+        <div class="consent-notice consent-notice-error" role="alert">
+          <p class="consent-notice-title">{{ error()?.message }}</p>
+          <p>{{ error()?.action }}</p>
+        </div>
+      }
+
+      @case ('leaving') {
+        <div class="consent-loading">
+          <mat-spinner diameter="32" />
+          <p>Retour vers la boutique…</p>
+        </div>
+      }
+
+      @case ('ready') {
+        @if (request(); as request) {
+          <p class="consent-intro">
+            La boutique <strong>{{ request.shopName }}</strong> demande, par l’application
+            <strong>{{ request.clientName }}</strong>, un accès à votre entreprise GestStock.
+          </p>
+
+          <div class="consent-section">
+            <h2>Ce que cet accès permet</h2>
+            <ul class="consent-scopes">
+              @for (label of scopes(); track $index) {
+                <li data-test="scope"><mat-icon aria-hidden="true">check</mat-icon><span>{{ label }}</span></li>
+              }
+            </ul>
+          </div>
+
+          <div class="consent-facts">
+            <p><span>Devise des prix</span><strong>{{ request.currency }}</strong></p>
+            @if (!expired()) {
+              <p><span>Validité de la demande</span><strong>expire dans {{ remaining() }}</strong></p>
+            }
+          </div>
+
+          @if (expired()) {
+            <div class="consent-notice consent-notice-error" role="alert">
+              <p class="consent-notice-title">Cette demande d’accès a expiré.</p>
+              <p>Recommencez depuis votre boutique.</p>
+            </div>
+          } @else {
+            <fieldset class="consent-section consent-warehouses">
+              <legend>Dépôts dont la boutique vend le stock</legend>
+              @for (warehouse of request.warehouses; track warehouse.id) {
+                <div class="consent-warehouse" [attr.data-warehouse]="warehouse.id">
+                  <mat-checkbox
+                    [checked]="isSelected(warehouse)"
+                    [disabled]="!warehouse.active || busy()"
+                    (change)="toggle(warehouse, $event.checked)"
+                  >
+                    {{ warehouse.name }}
+                    <span class="consent-warehouse-type">
+                      {{ warehouse.type === 'STORE' ? 'Magasin' : 'Entrepôt' }}
+                    </span>
+                  </mat-checkbox>
+                  @if (warehouse.type !== 'STORE') {
+                    <p class="consent-warning">À cocher seulement si vous expédiez depuis ce dépôt.</p>
+                  }
+                </div>
+              } @empty {
+                <p class="consent-warning">Aucun dépôt accessible : demandez l’accès à un dépôt actif.</p>
+              }
+              @if (selected().size === 0) {
+                <p class="consent-hint">Choisissez au moins un dépôt.</p>
+              }
+            </fieldset>
+
+            @if (error(); as error) {
+              <div class="consent-notice consent-notice-error" role="alert">
+                <p class="consent-notice-title">{{ error.message }}</p>
+                <p>{{ error.action }}</p>
+              </div>
+            }
+
+            <div class="consent-actions">
+              <button mat-stroked-button type="button" data-test="deny" [disabled]="!canDeny()" (click)="deny()">
+                Refuser
+              </button>
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                data-test="approve"
+                [disabled]="!canApprove()"
+                (click)="approve()"
+              >
+                Autoriser
+              </button>
+            </div>
+          }
+        }
+      }
+    }
+  </section>
+</main>

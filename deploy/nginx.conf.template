@@ -7,12 +7,12 @@ server {
   index index.html;
   server_tokens off;
 
-  # En-têtes de sécurité (complétés par HSTS sur le reverse proxy HTTPS).
-  add_header X-Content-Type-Options "nosniff" always;
-  add_header X-Frame-Options "DENY" always;
-  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+  # En-têtes de sécurité (complétés par HSTS sur le reverse proxy HTTPS), dans un seul fichier
+  # (deploy/security-headers.conf). Dans nginx, un add_header de location remplace TOUS ceux hérités du serveur :
+  # chaque location qui ajoute un en-tête inclut donc aussi ce fichier, sinon elle perd les en-têtes de sécurité.
+  # Referrer-Policy par défaut ; une location peut la remplacer (set) avant l'inclusion.
+  set $geststock_referrer_policy "strict-origin-when-cross-origin";
+  include /etc/nginx/snippets/security-headers.conf;
 
   gzip on;
   gzip_types text/css application/javascript application/json image/svg+xml;
@@ -42,15 +42,26 @@ server {
   location ~* \.(?:js|css|woff2?|ttf|svg|png|jpg|ico)$ {
     expires 1y;
     add_header Cache-Control "public, immutable";
-    add_header X-Content-Type-Options "nosniff" always;
+    include /etc/nginx/snippets/security-headers.conf;
     try_files $uri =404;
+  }
+
+  # Écran de consentement d'une liaison boutique (lot 2, GA1) : aucun Referer vers un autre site (le lien porte le
+  # request_uri avant que l'écran ne le retire de l'URL), jamais mis en cache.
+  location ^~ /integrations/ {
+    set $geststock_referrer_policy "no-referrer";
+    add_header Cache-Control "no-store" always;
+    include /etc/nginx/snippets/security-headers.conf;
+    # Même repli que la location / (fichier existant, sinon l'application), mais /index.html servi DANS cette
+    # location (=404 en dernier) : une redirection interne vers /index.html reprendrait les en-têtes de location /
+    # et perdrait no-referrer (observé).
+    try_files $uri $uri/ /index.html =404;
   }
 
   # Application monopage : toute autre route renvoie index.html, jamais mis en cache.
   location / {
     add_header Cache-Control "no-cache";
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
+    include /etc/nginx/snippets/security-headers.conf;
     try_files $uri $uri/ /index.html;
   }
 }

@@ -70,10 +70,30 @@ describe('Guards (authGuard, guestGuard, permissionGuard)', () => {
     expect(router.url).toBe('/login');
   });
 
-  it('route authentifiée sans session : redirection vers /login', async () => {
+  it('route authentifiée sans session : redirection vers /login, avec l’URL de retour', async () => {
     const { harness, router } = await setup(null);
     await harness.navigateByUrl('/dashboard');
-    expect(router.url).toBe('/login');
+    expect(router.url).toBe('/login?returnUrl=%2Fdashboard');
+  });
+
+  it('route authentifiée sans session : l’URL de retour garde la requête (GA1)', async () => {
+    const { harness, router } = await setup(null);
+    await harness.navigateByUrl('/dashboard?request_uri=urn%3Aexemple');
+    const returnUrl = router.parseUrl(router.url).queryParams['returnUrl'] as string;
+    expect(router.parseUrl(returnUrl).queryParams).toEqual({ request_uri: 'urn:exemple' });
+    expect(returnUrl.startsWith('/dashboard?')).toBe(true);
+  });
+
+  it('déjà connecté : /login suit l’URL de retour interne', async () => {
+    const { harness, router } = await setup(ADMIN);
+    await harness.navigateByUrl('/login?returnUrl=%2Fusers');
+    expect(router.url).toBe('/users');
+  });
+
+  it('déjà connecté : URL de retour externe ignorée, tableau de bord', async () => {
+    const { harness, router } = await setup(CAISSIER);
+    await harness.navigateByUrl('/login?returnUrl=' + encodeURIComponent('//evil.example/x'));
+    expect(router.url).toBe('/dashboard');
   });
 
   it('déjà connecté : /login renvoie au tableau de bord', async () => {

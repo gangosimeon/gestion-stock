@@ -14,6 +14,7 @@ import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { CompanyBranding } from '../../../core/branding/branding.model';
 import { BrandingService } from '../../../core/branding/branding.service';
+import { RETURN_URL_PARAM, safeReturnUrl } from '../../return-url';
 import { AuthService, isCompanySuspended } from '../../services/auth.service';
 
 @Component({
@@ -94,7 +95,8 @@ export class LoginComponent implements OnInit {
     this.auth.login(username, password, rememberMe, company).subscribe({
       next: () => {
         this.isLoading = false;
-        void this.router.navigateByUrl('/dashboard');
+        // Écran demandé avant la connexion (chemin interne seulement), sinon le tableau de bord.
+        void this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get(RETURN_URL_PARAM)));
       },
       error: (err: unknown) => {
         this.isLoading = false;

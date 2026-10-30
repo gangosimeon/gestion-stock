@@ -1,6 +1,9 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { toMessage } from './api-error.interceptor';
+import { SILENT_API_ERROR, apiErrorInterceptor, toMessage } from './api-error.interceptor';
 
 const err = (status: number, error: unknown = null) => new HttpErrorResponse({ status, error, url: '/api/x' });
 
@@ -24,5 +27,34 @@ describe('Messages d’erreur HTTP', () => {
 
   it('erreur métier : message du backend tel quel', () => {
     expect(toMessage(err(422, { message: 'Stock insuffisant.' }))).toBe('Stock insuffisant.');
+  });
+});
+
+describe('Bandeau global des erreurs HTTP', () => {
+  function call(context?: HttpContext): { shown: string[]; failed: unknown[] } {
+    const shown: string[] = [];
+    const failed: unknown[] = [];
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+        { provide: MatSnackBar, useValue: { open: (message: string) => void shown.push(message) } }
+      ]
+    });
+    TestBed.inject(HttpClient).get('/api/x', { context }).subscribe({ error: (e: unknown) => void failed.push(e) });
+    TestBed.inject(HttpTestingController).expectOne('/api/x').flush({ message: 'Refusé.' }, { status: 409, statusText: 'Conflict' });
+    return { shown, failed };
+  }
+
+  it('par défaut : bandeau affiché, erreur transmise', () => {
+    const { shown, failed } = call();
+    expect(shown).toEqual(['Refusé.']);
+    expect(failed.length).toBe(1);
+  });
+
+  it('SILENT_API_ERROR : aucun bandeau, erreur toujours transmise à l’écran', () => {
+    const { shown, failed } = call(new HttpContext().set(SILENT_API_ERROR, true));
+    expect(shown).toEqual([]);
+    expect(failed.length).toBe(1);
   });
 });
