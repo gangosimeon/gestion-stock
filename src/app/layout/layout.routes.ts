@@ -121,6 +121,17 @@ export const LAYOUT_ROUTES: Routes = [
           import('../features/company/company-profile-page.component').then((m) => m.CompanyProfilePageComponent)
       },
       {
+        // Avant « settings » : chemin plus précis, protégé par sa propre permission (integration:manage).
+        path: 'settings/online-shop',
+        canMatch: [permissionGuard],
+        data: { permissions: ROUTE_PERMISSIONS['settings/online-shop'] },
+        title: 'Boutique en ligne',
+        loadComponent: () =>
+          import('../features/integrations/pages/online-shop-links-page.component').then(
+            (m) => m.OnlineShopLinksPageComponent
+          )
+      },
+      {
         path: 'settings',
         canMatch: [permissionGuard],
         data: { permissions: ROUTE_PERMISSIONS['settings'] },

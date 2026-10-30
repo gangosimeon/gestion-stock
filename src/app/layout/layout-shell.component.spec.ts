@@ -98,6 +98,20 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
     expect(setup(false, ['sale:read', 'sale:create', 'user:manage']).navLabels()).not.toContain('Paramètres');
   });
 
+  it('« Boutique en ligne » (liaisons boutique, GA2) : proposée avec integration:manage', () => {
+    expect(setup(false, ['integration:manage']).navLabels()).toEqual(['Dashboard', 'Boutique en ligne']);
+  });
+
+  it('« Boutique en ligne » : masquée sans integration:manage, même avec settings:manage', () => {
+    expect(setup(false, ['settings:manage', 'user:manage', 'company:manage']).navLabels()).not.toContain('Boutique en ligne');
+  });
+
+  it('« Boutique en ligne » : route /settings/online-shop protégée par integration:manage', () => {
+    const route = (LAYOUT_ROUTES[0].children ?? []).find((r) => r.path === 'settings/online-shop');
+    expect(route?.canMatch).toContain(permissionGuard);
+    expect(route?.data?.['permissions']).toEqual(['integration:manage']);
+  });
+
   it('sans permission : seul le tableau de bord est proposé (plus de « Accès refusé » au clic)', () => {
     const { navLabels } = setup(false, []);
     expect(navLabels()).toEqual(['Dashboard']);

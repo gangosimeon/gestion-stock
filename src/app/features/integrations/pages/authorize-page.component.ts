@@ -3,7 +3,6 @@ import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } fr
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -13,6 +12,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { confirmWith } from '../../../shared/dialog/confirm-dialog.component';
 import { ConsentError, SHOP_REDIRECT, consentError, isSafeShopRedirect, scopeLabel } from '../data/consent';
 import { AuthorizationRequest, IntegrationLinksApiService, LinkWarehouseChoice } from '../data/integration-links-api.service';
+import { LinkWarehousePickerComponent } from '../ui/link-warehouse-picker.component';
 
 /** Permission exigée pour autoriser ou refuser une boutique (backend : `integration:manage`). */
 const INTEGRATION_MANAGE = 'integration:manage';
@@ -37,7 +37,7 @@ type View = 'loading' | 'forbidden' | 'missing' | 'ready' | 'error' | 'leaving';
 @Component({
   selector: 'app-authorize-page',
   standalone: true,
-  imports: [MatButtonModule, MatCheckboxModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, LinkWarehousePickerComponent],
   templateUrl: './authorize-page.component.html',
   styleUrl: './authorize-page.component.scss'
 })
@@ -105,10 +105,6 @@ export class AuthorizePageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.timer !== null) clearInterval(this.timer);
     this.referrerMeta?.remove();
-  }
-
-  isSelected(warehouse: LinkWarehouseChoice): boolean {
-    return this.selected().has(warehouse.id);
   }
 
   toggle(warehouse: LinkWarehouseChoice, checked: boolean): void {

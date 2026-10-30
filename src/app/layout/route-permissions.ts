@@ -32,7 +32,10 @@ export const ROUTE_PERMISSIONS = {
   // Profil et identité visuelle de l'entreprise : administrateur de l'entreprise.
   company: ['company:manage'],
   // Configuration de la facture et informations de l'entreprise : administrateur.
-  settings: ['settings:manage']
+  settings: ['settings:manage'],
+  // Paramètres → Boutique en ligne : boutiques liées (lot 2, GA2), administrateur. Route distincte de settings,
+  // pour ne pas exiger aussi settings:manage.
+  'settings/online-shop': ['integration:manage']
 } as const satisfies Record<string, readonly string[]>;
 
 export type AppSection = keyof typeof ROUTE_PERMISSIONS;

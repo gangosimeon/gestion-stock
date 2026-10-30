@@ -70,31 +70,12 @@
               <p>Recommencez depuis votre boutique.</p>
             </div>
           } @else {
-            <fieldset class="consent-section consent-warehouses">
-              <legend>Dépôts dont la boutique vend le stock</legend>
-              @for (warehouse of request.warehouses; track warehouse.id) {
-                <div class="consent-warehouse" [attr.data-warehouse]="warehouse.id">
-                  <mat-checkbox
-                    [checked]="isSelected(warehouse)"
-                    [disabled]="!warehouse.active || busy()"
-                    (change)="toggle(warehouse, $event.checked)"
-                  >
-                    {{ warehouse.name }}
-                    <span class="consent-warehouse-type">
-                      {{ warehouse.type === 'STORE' ? 'Magasin' : 'Entrepôt' }}
-                    </span>
-                  </mat-checkbox>
-                  @if (warehouse.type !== 'STORE') {
-                    <p class="consent-warning">À cocher seulement si vous expédiez depuis ce dépôt.</p>
-                  }
-                </div>
-              } @empty {
-                <p class="consent-warning">Aucun dépôt accessible : demandez l’accès à un dépôt actif.</p>
-              }
-              @if (selected().size === 0) {
-                <p class="consent-hint">Choisissez au moins un dépôt.</p>
-              }
-            </fieldset>
+            <app-link-warehouse-picker
+              [warehouses]="request.warehouses"
+              [selected]="selected()"
+              [disabled]="busy()"
+              (toggled)="toggle($event.warehouse, $event.checked)"
+            />
 
             @if (error(); as error) {
               <div class="consent-notice consent-notice-error" role="alert">

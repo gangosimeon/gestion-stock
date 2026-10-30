@@ -1,0 +1,105 @@
+<section class="links-page">
+  <header class="links-header">
+    <h1>Boutique en ligne</h1>
+    <p>Boutiques JeCréeMaBoutique liées à votre entreprise : elles vendent le stock des dépôts choisis.</p>
+  </header>
+
+  @if (error(); as error) {
+    <div class="links-alert" role="alert">
+      <p class="links-alert-title">{{ error.message }}</p>
+      <p>{{ error.action }}</p>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="links-loading">
+      <mat-spinner diameter="32" />
+      <p>Chargement des boutiques liées…</p>
+    </div>
+  } @else {
+    @if (current().length === 0) {
+      <div class="links-empty">
+        <mat-icon aria-hidden="true">storefront</mat-icon>
+        <p class="links-empty-title">Aucune boutique n’est liée à votre entreprise.</p>
+        <p>
+          Depuis votre boutique JeCréeMaBoutique, choisissez Connecter GestStock, puis autorisez la demande dans
+          GestStock.
+        </p>
+      </div>
+    }
+
+    <div class="links-list" data-test="current">
+      @for (link of current(); track link.id) {
+        <ng-container [ngTemplateOutlet]="linkCard" [ngTemplateOutletContext]="{ $implicit: link }" />
+      }
+    </div>
+
+    @if (history().length > 0) {
+      <details class="links-history" data-test="history">
+        <summary>Historique ({{ history().length }})</summary>
+        <div class="links-list">
+          @for (link of history(); track link.id) {
+            <ng-container [ngTemplateOutlet]="linkCard" [ngTemplateOutletContext]="{ $implicit: link }" />
+          }
+        </div>
+      </details>
+    }
+  }
+</section>
+
+<ng-template #linkCard let-link>
+  <article class="link-card" [attr.data-link]="link.id" [class.link-card--revoked]="link.status === 'REVOKED'">
+    <div class="link-card-head">
+      <h2>{{ link.shopName }}</h2>
+      <span [class]="'link-status link-status--' + link.status.toLowerCase()">
+        {{ statusLabel(link) }}
+      </span>
+    </div>
+    @if (reasonLabel(link); as reason) {
+      <p class="link-reason">{{ reason }}</p>
+    }
+    <dl class="link-facts">
+      <div>
+        <dt>Dépôts</dt>
+        <dd>{{ link.warehouses.length > 0 ? warehouseNames(link) : 'Aucun' }}</dd>
+      </div>
+      <div>
+        <dt>Responsable</dt>
+        <dd>{{ link.authorizedBy }}</dd>
+      </div>
+      <div>
+        <dt>Liée le</dt>
+        <dd>{{ link.activatedAt ?? link.createdAt | date: 'dd/MM/yyyy' }}</dd>
+      </div>
+      @if (link.status === 'SUSPENDED' && link.suspendedAt) {
+        <div>
+          <dt>Suspendue le</dt>
+          <dd>{{ link.suspendedAt | date: 'dd/MM/yyyy' }}</dd>
+        </div>
+      }
+      @if (link.revokedAt) {
+        <div>
+          <dt>Révoquée le</dt>
+          <dd>{{ link.revokedAt | date: 'dd/MM/yyyy' }}</dd>
+        </div>
+      }
+    </dl>
+    @if (link.status !== 'REVOKED') {
+      <div class="link-actions">
+        @if (link.status === 'ACTIVE') {
+          <button mat-stroked-button type="button" data-test="suspend" [disabled]="busy()" (click)="suspend(link)">
+            Suspendre
+          </button>
+        }
+        @if (link.status === 'SUSPENDED') {
+          <button mat-flat-button color="primary" type="button" data-test="reactivate" [disabled]="busy()" (click)="reactivate(link)">
+            Réactiver
+          </button>
+        }
+        <button mat-button color="warn" type="button" data-test="revoke" [disabled]="busy()" (click)="revoke(link)">
+          Révoquer
+        </button>
+      </div>
+    }
+  </article>
+</ng-template>

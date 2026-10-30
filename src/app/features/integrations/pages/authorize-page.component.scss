@@ -75,40 +75,6 @@
   color: var(--color-neutral-text);
 }
 
-.consent-warehouses {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 12px 16px;
-
-  legend {
-    font-weight: 600;
-    padding: 0 4px;
-  }
-}
-
-.consent-warehouse {
-  padding: 4px 0;
-  overflow-wrap: anywhere;
-}
-
-.consent-warehouse-type {
-  color: var(--color-neutral-text);
-  font-size: 0.85em;
-  margin-left: 4px;
-}
-
-.consent-warning {
-  margin: 0 0 4px 40px;
-  font-size: 0.875rem;
-  color: var(--color-warning-text);
-}
-
-.consent-hint {
-  margin: 8px 0 0;
-  font-size: 0.875rem;
-  color: var(--color-danger-text);
-}
-
 .consent-notice {
   border-radius: 8px;
   padding: 12px 16px;
