@@ -2,9 +2,12 @@ openapi: 3.1.0
 # =============================================================================
 # Contrat d'intégration GestStock × JeCréeMaBoutique — version 1 — PROPOSITION
 #
-# Statut : document de conception soumis à approbation (lot 0). Aucun de ces
-# endpoints n'existe encore ; aucun endpoint existant n'est modifié. Ne pas
-# générer de code à partir de ce fichier avant approbation.
+# Statut : document de conception soumis à approbation (lot 0). v15 : les
+# routes /oauth/par, /oauth/token, GET /link, POST /link/revoke et
+# POST /link/secret existent (lot 2, non déployé) et ce fichier les décrit
+# telles qu'implémentées ; les autres routes n'existent pas encore. Aucun
+# endpoint existant hors intégration n'est modifié. Ne pas générer de code à
+# partir de ce fichier avant approbation.
 #
 # Réalité auditée prise en compte :
 #  - GestStock : Spring Boot, une base PostgreSQL par entreprise, schéma platform,
@@ -43,7 +46,21 @@ info:
       même corps). Création de commande : clé naturelle (liaison, `externalOrderId`) (C4, v13-D5) ;
       autres écritures : en-tête `Idempotency-Key` obligatoire, conservée 7 jours (v13-D5).
     - Limitation de débit (C1, v13-D4) : `429` avec `Retry-After` ; compteurs indisponibles : `503`,
-      jamais de laisser-passer.
+      jamais de laisser-passer. Sur `/oauth/par` et `/oauth/token`, deux compteurs séparés (v15) : par
+      IP **avant** l'authentification du client (toutes tentatives comprises), par client **après** une
+      authentification réussie seulement.
+    - Formats d'erreur (v15) : `/oauth/par` et `/oauth/token` répondent au format `OAuthError`
+      (`application/json`), sauf la limitation de débit (`429`, `503 RATE_LIMIT_UNAVAILABLE`), au format
+      `ApiError` (`application/problem+json`) ; toutes les autres routes répondent au format `ApiError`.
+      Corps JSON illisible : `400 MALFORMED_REQUEST`. Requête refusée par le pare-feu HTTP avant toute
+      route (par exemple `%00` dans l'URL, caractère de contrôle dans un en-tête) : `400` **sans corps**.
+      Liaisons désactivées : `404 RESOURCE_NOT_FOUND` sur toute la chaîne. Erreur inattendue :
+      `500 INTERNAL_ERROR` (`ApiError`), sur toutes les routes, `/oauth/*` compris.
+    - Caractères de contrôle (U+0000 à U+001F, U+007F ; v15) refusés dans tout champ texte reçu, nom de
+      paramètre compris, sans rien enregistrer : `400 invalid_request` sur `/oauth/*`,
+      `400 VALIDATION_FAILED` ailleurs, `401 invalid_client` dans l'identifiant du client. Tabulation et
+      sauts de ligne sont permis dans le **seul** motif libre de `POST /link/revoke`. Aucune valeur reçue
+      n'est reprise dans un message d'erreur ni dans les journaux.
     - Versionnement : préfixe `/api/integration/v1` ; un changement incompatible crée `/v2`.
       Ajouter un type d'événement n'est pas incompatible : le consommateur ignore un `type` inconnu
       et avance son curseur (décision C7).
@@ -83,6 +100,11 @@ info:
     liaison haché en SHA-256 et comparé en temps constant ; rotation par `POST /link/secret` ;
     suspension avec motif (`403 LINK_SUSPENDED`) ; code rejoué refusé et liaison créée par ce code
     révoquée.
+
+    Décisions v15 (plan § 28) : contrat aligné sur les routes du lot 2 telles qu'implémentées
+    (le code fait foi) : `iss` dans l'URL de retour, `OAuthError.code` et `temporarily_unavailable`,
+    codes `COMPANY_*` et `SCHEMA_UPGRADE_*`, encodage de l'en-tête Basic, `Link.companyName`,
+    caractères de contrôle, compteurs du limiteur.
   x-status: proposition-lot-0
   x-decisions:
     approved: [C1, C2, C3, C4, C5, C6, C7, C8]
@@ -172,6 +194,23 @@ info:
         - 'liaisons PENDING au code expiré révoquées (revocationReason EXPIRED) au dépôt d''une nouvelle demande pour la même boutique, avant le contrôle d''unicité ; nettoyage global au lot 3'
         - 'Link.revocationReason : SHOP_REQUEST, GESTSTOCK_ADMIN, CODE_REPLAYED, EXPIRED ; nul seulement tant que la liaison n''est pas révoquée ; le consommateur tolère une valeur inconnue (évolution sans rupture)'
         - 'secret compromis : révocation puis nouvelle liaison, pas la rotation'
+    v15:
+      date: '2026-10-31'
+      source: 'plan § 28 (lot 2 réalisé : contrat aligné sur le code ; le code fait foi)'
+      approved: [v15-D1, v15-D2, v15-D3, v15-D4, v15-D5, v15-D6]
+      implemented: 'POST /oauth/par, POST /oauth/token, GET /link, POST /link/revoke, POST /link/secret (backend GestStock, lot 2, non déployé)'
+      contractChanges:
+        - 'URL de retour : code, state et iss (geststock-integration, identifiant fixe et non une URL : écart assumé avec RFC 9207) ; refus : error=access_denied, state et iss'
+        - 'OAuthError : temporarily_unavailable ajouté ; champ code (LINK_REVOKED, client_credentials sur une liaison révoquée)'
+        - '/oauth/token : 503 temporarily_unavailable (OAuthError, code non consommé) en plus de 503 RATE_LIMIT_UNAVAILABLE (ApiError)'
+        - 'Forbidden : COMPANY_SUSPENDED, COMPANY_UNAVAILABLE ; ServiceUnavailable : SCHEMA_UPGRADE_IN_PROGRESS, SCHEMA_UPGRADE_FAILED, RATE_LIMIT_UNAVAILABLE (jamais sur POST /link/revoke)'
+        - 'PushedAuthorizationRequest : shop_id et shop_name non blancs ; corps de formulaire seulement, aucun paramètre dans l''URL, chaque paramètre une fois'
+        - 'clientBasic : identifiant et secret encodés (RFC 6749 § 2.3.1) ; en-tête illisible : 401 invalid_client'
+        - 'Link : companyName (nom commercial, 150 caractères au plus, null s''il est vide) ; warehouses sans priority ; settings {} et lastSyncAt null en attendant les lots qui les définissent ; révocation : warehouses []'
+        - 'POST /link/revoke : reason facultatif, 500 caractères au plus ; 400 VALIDATION_FAILED ou MALFORMED_REQUEST ; revocationReason SHOP_REQUEST'
+        - 'caractères de contrôle refusés (invalid_request, VALIDATION_FAILED, 401 invalid_client) ; tabulation et sauts de ligne permis dans le seul motif de révocation ; 400 MALFORMED_REQUEST pour un JSON illisible ; 400 sans corps pour une requête refusée par le pare-feu'
+        - 'limiteur de /oauth/par et /oauth/token : compteur par IP avant l''authentification du client et compteur par client après ; en-tête d''IP de confiance à confirmer en I1'
+        - 'routes du lot 2 : toute réponse que le code peut émettre est déclarée (404 RESOURCE_NOT_FOUND si les liaisons sont désactivées, 500 INTERNAL_ERROR, 400 sans corps du pare-feu ; POST /link/revoke : 403 INSUFFICIENT_SCOPE et 415 UNSUPPORTED_MEDIA_TYPE, aucun 503 ; GET /link : 503 SERVICE_CAPACITY_REACHED)'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: 'Backend GestStock hébergé sur Vercel (v13-D1), appelé directement, jamais à travers le relais nginx du frontend Render (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
@@ -217,23 +256,37 @@ paths:
         l'URL du navigateur** n'est pris en compte. L'écran affiche la boutique telle que déposée ici.
 
         Règles :
+        - Corps `application/x-www-form-urlencoded` seulement ; **aucun paramètre dans l'URL** ; chaque
+          paramètre **une seule fois** (RFC 6749 § 3.2) ; sinon `invalid_request`. Un nom de paramètre
+          inconnu n'est jamais repris dans un message d'erreur (v15).
+        - Caractère de contrôle (U+0000 à U+001F, U+007F) dans un nom ou une valeur, tabulation et
+          sauts de ligne compris : `invalid_request`, avant tout traitement, rien n'est enregistré (v15).
         - `redirect_uri` : **comparaison exacte** avec la liste blanche du client pour l'environnement
           (v14-D12 ; `localhost` seulement en développement et en essai).
         - `code_challenge_method` : `S256` uniquement.
+        - `scope` : portées séparées par des espaces, au moins une, toutes autorisées pour le client ;
+          sinon `invalid_scope`.
         - Liaisons en attente expirées : dans la même transaction et **avant** le contrôle d'unicité,
           les liaisons `PENDING` de la même boutique dont le code a expiré passent à `REVOKED`
-          (`revocationReason = EXPIRED`). Le nettoyage global arrive au lot 3 (cron).
+          (`revocationReason = EXPIRED`) ; de même, à l'approbation, avant la création de la nouvelle
+          liaison en attente. Le nettoyage global arrive au lot 3 (cron).
         - Unicité (v14-D2) : une boutique déjà liée par une liaison non révoquée de ce client est
           refusée (`invalid_request`) ; un index unique partiel en base reste la garantie finale.
-        - Limite de débit (v13-D4 complété en v14) : **30 requêtes par minute par client** (valeur de
-          départ, configurable) ; dépassement : `429` avec `Retry-After`.
+        - Limite de débit (v13-D4 complété en v14 et v15) : **30 requêtes par minute par IP**, avant
+          l'authentification du client (toutes tentatives comprises), et **30 par minute par client**,
+          après une authentification réussie seulement (valeurs de départ, configurables) ;
+          dépassement : `429` avec `Retry-After`.
         - Éligibilité de la boutique (v14-D13) : le backend JeCréeMaBoutique ne dépose une demande que
           pour une boutique approuvée et non bannie, à la demande de son propriétaire (jamais du rôle
           `admin` de JeCréeMaBoutique) ; GestStock ne peut pas le vérifier.
 
         Après consentement d'une personne GestStock disposant de `integration:manage`, le navigateur
-        est redirigé vers `redirect_uri?code=…&state=…` (refus : `error=access_denied&state=…`). Le
-        `request_uri` ne sert qu'à **une** décision (approbation ou refus).
+        est redirigé vers `redirect_uri?code=…&state=…&iss=geststock-integration` ; refus :
+        `redirect_uri?error=access_denied&state=…&iss=geststock-integration`. `iss` (RFC 9207) vaut
+        l'identifiant **fixe** `geststock-integration`, le même que l'émetteur des jetons de liaison, et
+        non une URL d'émetteur comme le prévoit la RFC 9207 : **écart assumé** (v15) ; le backend
+        JeCréeMaBoutique le compare à l'identique. Le `request_uri` ne sert qu'à **une** décision
+        (approbation ou refus).
       security:
         - clientBasic: []
       requestBody:
@@ -250,19 +303,24 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PushedAuthorizationResponse' }
         '400':
-          description: Demande invalide (`invalid_request`, `invalid_scope`) ; `redirect_uri` hors liste blanche ; boutique déjà liée
+          description: |
+            Demande invalide (`invalid_request`, `invalid_scope`) : paramètre absent, répété, dans l'URL
+            ou contenant un caractère de contrôle ; `redirect_uri` hors liste blanche ; boutique déjà
+            liée. Requête refusée par le pare-feu HTTP avant la route : `400` sans corps.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OAuthError' }
         '401':
-          description: Client non authentifié (`invalid_client`)
+          description: Client non authentifié ou en-tête `Authorization` illisible (`invalid_client`, en-tête `WWW-Authenticate` Basic)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OAuthError' }
         '429':
           $ref: '#/components/responses/TooManyRequests'
-          description: Plus de 30 requêtes par minute pour le client (v13-D4 complété en v14 ; valeur de départ, configurable)
+          description: Plus de 30 requêtes par minute pour l'IP ou pour le client (v13-D4 complété en v14 et v15 ; valeurs de départ, configurables)
         '503': { $ref: '#/components/responses/RateLimitUnavailable' }
+        '404': { $ref: '#/components/responses/LinksDisabled' }
+        '500': { $ref: '#/components/responses/InternalError' }
 
   /oauth/token:
     post:
@@ -280,11 +338,22 @@ paths:
           **révoquée**.
         - `grant_type=client_credentials` : jeton de liaison de **15 min** (v13-D5) à partir de
           l'identifiant et du secret de liaison. Pendant une rotation, l'ancien et le nouveau secret sont
-          tous deux acceptés jusqu'au premier usage du nouveau, 24 h au plus (v14-D6).
+          tous deux acceptés jusqu'au premier usage du nouveau, 24 h au plus (v14-D6). Liaison
+          suspendue : jeton émis (seuls `GET /link` et `POST /link/revoke` répondront). Liaison
+          **révoquée** : `400 invalid_grant` avec **`code = LINK_REVOKED`** (v15) ; liaison inconnue ou
+          d'un autre client, secret faux : `invalid_grant` sans `code`. `scope` facultatif : sous-ensemble
+          non vide des portées de la liaison, sinon `invalid_scope`.
         Code expiré, d'un autre client, `redirect_uri` différente ou `code_verifier` faux :
-        `invalid_grant`, aucune liaison activée.
-        Limite de débit (C1, v13-D4) : 10 requêtes par minute par identifiant client **et** par IP
-        (valeur de départ, configurable) ; dépassement : `429` avec `Retry-After`.
+        `invalid_grant` **sans `code`**, aucune liaison activée ; une `redirect_uri` différente ou un
+        `code_verifier` faux laissent le code utilisable avec les bons paramètres.
+        Drapeau de publication de l'entreprise non posé (base de l'entreprise verrouillée au-delà de
+        2 s, v15) : `503 temporarily_unavailable`, **code non consommé** ; réessayer avec le même code.
+        Corps de formulaire seulement, sans paramètre dans l'URL ni paramètre répété ; caractère de
+        contrôle dans un nom ou une valeur : `invalid_request` (v15).
+        Limite de débit (C1, v13-D4, v15) : **10 requêtes par minute par IP**, avant l'authentification
+        du client (toutes tentatives comprises), et **10 par minute par client**, après une
+        authentification réussie seulement (valeurs de départ, configurables) ; dépassement : `429` avec
+        `Retry-After`.
       security:
         - clientBasic: []
       requestBody:
@@ -304,32 +373,58 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TokenResponse' }
         '400':
-          description: Requête OAuth invalide (`invalid_request`, `invalid_grant`, `unsupported_grant_type`)
+          description: |
+            Requête OAuth invalide (`invalid_request`, `invalid_grant`, `invalid_scope`,
+            `unsupported_grant_type`) ; liaison révoquée (`client_credentials`) : `invalid_grant` avec
+            `code = LINK_REVOKED`. Requête refusée par le pare-feu HTTP avant la route : `400` sans corps.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OAuthError' }
         '401':
-          description: Client non authentifié (`invalid_client`)
+          description: Client non authentifié ou en-tête `Authorization` illisible (`invalid_client`, en-tête `WWW-Authenticate` Basic)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OAuthError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
-        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
+        '503':
+          description: |
+            Deux cas, deux formats (v15) :
+            - `RATE_LIMIT_UNAVAILABLE` (`ApiError`, `application/problem+json`) : compteurs de débit
+              inaccessibles, requête refusée (C1, v13-D4) ;
+            - `temporarily_unavailable` (`OAuthError`, `application/json`) : échange du code impossible
+              pour l'instant (drapeau de publication non posé) ; **code non consommé**, réessai sûr.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+            application/json:
+              schema: { $ref: '#/components/schemas/OAuthError' }
+        '404': { $ref: '#/components/responses/LinksDisabled' }
+        '500': { $ref: '#/components/responses/InternalError' }
 
   /link:
     get:
       operationId: getLink
       tags: [Liaison]
       summary: Statut et périmètre de la liaison appelante
-      description: Accessible aussi pour une liaison `SUSPENDED` (v14-D10), afin d'en lire le motif.
+      description: |
+        Accessible aussi pour une liaison `SUSPENDED` (v14-D10), afin d'en lire le motif. Lit les dépôts
+        dans la base de l'entreprise : contrôles d'entreprise (`403 COMPANY_SUSPENDED`,
+        `COMPANY_UNAVAILABLE`) et de migration (`503 SCHEMA_UPGRADE_IN_PROGRESS`,
+        `SCHEMA_UPGRADE_FAILED`). Portées effectives (portées du jeton ∩ portées de la liaison en base).
       responses:
         '200':
           description: Liaison
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Link' }
+        '400': { $ref: '#/components/responses/FirewallRejected' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/LinksDisabled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+          description: '`SCHEMA_UPGRADE_IN_PROGRESS`, `SCHEMA_UPGRADE_FAILED` ou `SERVICE_CAPACITY_REACHED` (lecture des dépôts dans la base de l''entreprise) ; jamais `RATE_LIMIT_UNAVAILABLE` (route non limitée en débit)'
 
   /link/revoke:
     post:
@@ -343,10 +438,19 @@ paths:
         (motif éventuel inclus). **Aucune réactivation** : une nouvelle connexion exige une nouvelle
         autorisation et crée une nouvelle liaison.
 
-        Après révocation, toute requête de l'ancienne liaison (y compris `client_credentials`) reçoit
-        `401 LINK_REVOKED`. Idempotence : si la liaison est déjà révoquée, l'appel reçoit
-        `401 LINK_REVOKED` ; le client traite cette réponse **comme le succès de la révocation**, sans
-        jamais réactiver la liaison.
+        Après révocation, toute requête de l'ancienne liaison avec un jeton reçoit `401 LINK_REVOKED` ;
+        `client_credentials` reçoit `400 invalid_grant` avec `code = LINK_REVOKED` (v15).
+        Idempotence : si la liaison est déjà révoquée, l'appel reçoit `401 LINK_REVOKED` ; le client
+        traite cette réponse **comme le succès de la révocation**, sans jamais réactiver la liaison.
+
+        Ne touche que la base plateforme : servie même si l'entreprise est suspendue, indisponible ou en
+        migration (aucun `403 COMPANY_*` ni `503 SCHEMA_UPGRADE_*`), et pendant une suspension de la
+        liaison. Réponse : la liaison, `revocationReason = SHOP_REQUEST`, **`warehouses` vide** (une
+        liaison révoquée ne vend plus aucun dépôt).
+
+        Corps **facultatif** (sans corps : aucun motif). `reason` : texte libre de 500 caractères au
+        plus, réservé au journal d'audit (jamais renvoyé ni journalisé ailleurs) ; tabulation et sauts de
+        ligne permis, autres caractères de contrôle refusés (v15).
 
         Réservations et commandes déjà engagées : **conservées** jusqu'à l'expiration de la réservation
         ou la conversion de la commande dans GestStock ; aucune annulation automatique.
@@ -356,14 +460,41 @@ paths:
             schema:
               type: object
               properties:
-                reason: { type: string, maxLength: 500, description: 'Motif facultatif, inscrit au journal d''audit' }
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: |
+                    Motif facultatif, inscrit tel quel au journal d'audit. Tabulation (U+0009), saut de
+                    ligne (U+000A) et retour chariot (U+000D) permis ; tout autre caractère de contrôle
+                    (U+0000 à U+001F, U+007F) : `400 VALIDATION_FAILED`.
       responses:
         '200':
-          description: Liaison révoquée (`status = REVOKED`, `revokedAt` renseigné, `revocationReason = SHOP_REQUEST`)
+          description: Liaison révoquée (`status = REVOKED`, `revokedAt` renseigné, `revocationReason = SHOP_REQUEST`, `warehouses` vide)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Link' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          description: |
+            `VALIDATION_FAILED` : motif de plus de 500 caractères ou caractère de contrôle refusé ;
+            `MALFORMED_REQUEST` : corps JSON illisible. Aucune révocation ni audit. Requête refusée par
+            le pare-feu HTTP avant la route : `400` sans corps.
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: |
+            `INSUFFICIENT_SCOPE` seulement : jeton sans aucune portée effective (portées du jeton ∩ portées
+            de la liaison en base). Jamais `LINK_SUSPENDED` (révocation permise pendant une suspension)
+            ni `COMPANY_*` (base plateforme seulement).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404': { $ref: '#/components/responses/LinksDisabled' }
+        '415':
+          description: '`UNSUPPORTED_MEDIA_TYPE` : corps présent dans un autre format que `application/json`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '500': { $ref: '#/components/responses/InternalError' }
 
   /link/secret:
     post:
@@ -395,12 +526,17 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LinkSecretResponse' }
+        '400': { $ref: '#/components/responses/FirewallRejected' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/LinksDisabled' }
         '429':
           $ref: '#/components/responses/TooManyRequests'
           description: Plus de 5 rotations par heure pour la liaison (v13-D4 complété en v14 ; valeur de départ, configurable)
-        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+          description: '`RATE_LIMIT_UNAVAILABLE` (compteur des rotations inaccessible), `SCHEMA_UPGRADE_IN_PROGRESS` ou `SCHEMA_UPGRADE_FAILED`'
 
   /catalog/changes:
     get:
@@ -501,7 +637,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
           description: Plus de 120 requêtes par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
-        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /catalog/changes/ack:
     post:
@@ -530,6 +666,7 @@ paths:
                   acknowledgedSeq: { type: integer, format: int64 }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '422':
           description: '`seq` supérieur au dernier événement émis'
           content:
@@ -603,7 +740,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
           description: Plus de 60 requêtes par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
-        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /catalog/products/search:
     get:
@@ -633,6 +770,7 @@ paths:
                     items: { $ref: '#/components/schemas/Product' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /catalog/products/{productId}/image:
     get:
@@ -656,6 +794,7 @@ paths:
         '304': { description: Image inchangée }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /prices/proposals:
@@ -700,6 +839,7 @@ paths:
               schema: { $ref: '#/components/schemas/ChannelPrice' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/IdempotencyConflict' }
         '422': { $ref: '#/components/responses/BusinessRule' }
@@ -733,6 +873,7 @@ paths:
                     items: { $ref: '#/components/schemas/ChannelPrice' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /availability:
     get:
@@ -768,6 +909,7 @@ paths:
                     items: { $ref: '#/components/schemas/Availability' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /online-orders:
     post:
@@ -816,7 +958,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
           description: Plus de 60 créations par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
-        '503': { $ref: '#/components/responses/RateLimitUnavailable' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   /online-orders/{orderId}:
     get:
@@ -835,6 +977,7 @@ paths:
               schema: { $ref: '#/components/schemas/OnlineOrder' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /online-orders/external/{externalOrderId}:
@@ -864,6 +1007,7 @@ paths:
               schema: { $ref: '#/components/schemas/OnlineOrder' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /online-orders/{orderId}/cancel:
@@ -894,6 +1038,7 @@ paths:
               schema: { $ref: '#/components/schemas/OnlineOrder' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: '`ORDER_NOT_CANCELLABLE` (déjà convertie)'
@@ -935,7 +1080,11 @@ components:
         plus.
         Origine (v13-D5, v14-D8) : liste blanche facultative de l'IP du VPS JeCréeMaBoutique, activable
         par configuration, **en plus** de l'authentification (jamais à sa place). L'IP est lue dans un
-        **seul en-tête configurable posé par Vercel**, jamais dans `X-Forwarded-For` brut.
+        **seul en-tête configurable posé par Vercel**, jamais dans `X-Forwarded-For` brut. Nom de cet
+        en-tête : **à confirmer en I1** (vérification sur un déploiement de prévisualisation Vercel) ;
+        réglage `geststock.integration.client-ip-header` (variable
+        `GESTSTOCK_INTEGRATION_CLIENT_IP_HEADER` en production), obligatoire quand les liaisons sont
+        activées (v15). L'IP sert aussi au compteur de débit par IP de `/oauth/par` et `/oauth/token`.
         *(v12 et antérieures : `iss=geststock`, `aud=geststock-integration-v1` et durée 5 min, en
         hypothèse ; v13 : `iss` et `typ` « fixés au lot 2 », rotation « à définir au lot 2 ».)*
     clientBasic:
@@ -944,6 +1093,13 @@ components:
       description: |
         Identifiant et secret du **client** JeCréeMaBoutique, un jeu par environnement (v14-D3), sur
         `/oauth/par` et `/oauth/token` seulement. Distinct du secret de chaque liaison.
+        Encodage (RFC 6749 § 2.3.1, v15) : identifiant et secret sont chacun encodés au format
+        `application/x-www-form-urlencoded` **avant** d'être joints par `:` puis encodés en Base64 ;
+        GestStock les décode dans le même ordre. En-tête absent, illisible (Base64 invalide, sans `:`,
+        identifiant vide) ou contenant un caractère de contrôle après décodage : `401 invalid_client`
+        (en-tête `WWW-Authenticate: Basic`), sans requête en base. Chaque échec est inscrit au journal
+        d'audit (`CLIENT_AUTHENTICATION_FAILED`), sans l'identifiant annoncé s'il est illisible et jamais
+        avec le secret (v15-D1).
 
   parameters:
     IdempotencyKey:
@@ -976,7 +1132,10 @@ components:
 
   responses:
     BadRequest:
-      description: Données invalides
+      description: |
+        Données invalides : `VALIDATION_FAILED` (champ refusé, caractère de contrôle compris ; le message
+        nomme le champ, jamais la valeur reçue) ou `MALFORMED_REQUEST` (corps JSON illisible : syntaxe,
+        type, UUID). Aucun extrait de la valeur reçue dans la réponse ni dans les journaux (v15).
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ApiError' }
@@ -987,8 +1146,12 @@ components:
           schema: { $ref: '#/components/schemas/ApiError' }
     Forbidden:
       description: |
-        Portée insuffisante (`INSUFFICIENT_SCOPE`) ou liaison suspendue (`LINK_SUSPENDED`, v14-D10 :
-        sur toutes les routes sauf `GET /link` et `POST /link/revoke` ; motif lisible par `GET /link`)
+        Dans l'ordre des contrôles :
+        - liaison suspendue (`LINK_SUSPENDED`, v14-D10 : sur toutes les routes sauf `GET /link` et
+          `POST /link/revoke` ; motif lisible par `GET /link`) ;
+        - entreprise non active (v15) : `COMPANY_SUSPENDED` (entreprise suspendue) ou
+          `COMPANY_UNAVAILABLE` (tout autre statut) ; jamais sur `POST /link/revoke` ;
+        - portée insuffisante (`INSUFFICIENT_SCOPE`).
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ApiError' }
@@ -1016,8 +1179,11 @@ components:
     TooManyRequests:
       description: |
         `RATE_LIMITED` : limite de débit dépassée (C1, v13-D4). Compteurs en fenêtre fixe tenus par
-        GestStock (base plateforme), par liaison ; sur `/oauth/token`, par identifiant client et par
-        IP ; sur `/oauth/par`, par client. Attendre `Retry-After` secondes avant de réessayer.
+        GestStock (base plateforme), par liaison ; sur `/oauth/par` et `/oauth/token`, deux compteurs
+        **séparés** (v15) : par IP **avant** l'authentification du client (toutes tentatives comprises,
+        y compris un mauvais secret ou un identifiant illisible), par client **après** une
+        authentification réussie seulement (annoncer l'identifiant du client sans son secret n'épuise
+        jamais son quota). Attendre `Retry-After` secondes avant de réessayer.
       headers:
         Retry-After:
           required: true
@@ -1030,6 +1196,39 @@ components:
       description: |
         `RATE_LIMIT_UNAVAILABLE` : les compteurs de débit sont inaccessibles ; la requête est
         **refusée**, jamais laissée passer (C1, v13-D4). Réessayer plus tard.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    ServiceUnavailable:
+      description: |
+        Service momentanément indisponible pour cette liaison (v15), réessayer plus tard :
+        - `SCHEMA_UPGRADE_IN_PROGRESS` : la base de l'entreprise est en cours de migration ;
+        - `SCHEMA_UPGRADE_FAILED` : la dernière migration de la base de l'entreprise a échoué ;
+        - `RATE_LIMIT_UNAVAILABLE` : sur les routes limitées en débit, compteurs inaccessibles (la requête
+          est refusée, jamais laissée passer) ;
+        - `SERVICE_CAPACITY_REACHED` : sur les routes qui lisent la base de l'entreprise, plafond de
+          connexions atteint.
+        Chaque opération précise ceux qu'elle peut renvoyer. Jamais sur `POST /link/revoke`, qui ne
+        touche que la base plateforme et n'est pas limitée en débit.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    LinksDisabled:
+      description: |
+        `RESOURCE_NOT_FOUND` : liaisons désactivées (`geststock.integration.links.enabled=false`, valeur
+        par défaut) ; toute la chaîne d'intégration répond comme une route inconnue, avant toute
+        authentification.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    FirewallRejected:
+      description: |
+        Requête refusée par le pare-feu HTTP avant toute route (par exemple caractère de contrôle dans un
+        en-tête, `%00` dans l'URL) : `400` **sans corps** (v15-D2).
+    InternalError:
+      description: |
+        `INTERNAL_ERROR` : erreur inattendue, journalisée côté GestStock sans valeur reçue ; format
+        `ApiError`, y compris sur `/oauth/par` et `/oauth/token`.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ApiError' }
@@ -1059,14 +1258,29 @@ components:
         path: { type: string }
 
     OAuthError:
+      description: |
+        Erreur de `/oauth/par` et `/oauth/token` (RFC 6749 § 5.2), `Cache-Control: no-store`.
+        `error_description` ne reprend jamais une valeur reçue ni un secret.
       type: object
       required: [error]
       properties:
-        error: { type: string, enum: [invalid_request, invalid_client, invalid_grant, unsupported_grant_type, invalid_scope] }
+        error:
+          type: string
+          enum: [invalid_request, invalid_client, invalid_grant, unsupported_grant_type, invalid_scope, temporarily_unavailable]
+          description: '`temporarily_unavailable` (503) : échange du code impossible pour l''instant, code non consommé (v15)'
         error_description: { type: string }
+        code:
+          type: string
+          enum: [LINK_REVOKED]
+          description: |
+            Précision propre à GestStock (v15), présente seulement avec `invalid_grant` sur
+            `client_credentials` quand la liaison est révoquée : le client cesse d'utiliser cette liaison.
 
     PushedAuthorizationRequest:
-      description: Demande d'autorisation déposée par le backend JeCréeMaBoutique (RFC 9126, v14-D1)
+      description: |
+        Demande d'autorisation déposée par le backend JeCréeMaBoutique (RFC 9126, v14-D1). Chaque
+        paramètre une seule fois, dans le corps seulement ; aucun caractère de contrôle (U+0000 à
+        U+001F, U+007F), tabulation et sauts de ligne compris : sinon `invalid_request` (v15).
       type: object
       required: [response_type, redirect_uri, code_challenge, code_challenge_method, scope, state, shop_id, shop_name]
       properties:
@@ -1074,10 +1288,10 @@ components:
         redirect_uri: { type: string, format: uri, description: 'Comparée à l''identique à la liste blanche du client pour l''environnement (v14-D12)' }
         code_challenge: { type: string, minLength: 43, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$', description: 'BASE64URL(SHA-256(code_verifier))' }
         code_challenge_method: { type: string, const: S256 }
-        scope: { type: string, description: 'Portées demandées, séparées par des espaces (valeurs de Scope)' }
+        scope: { type: string, description: 'Portées demandées, séparées par des espaces (valeurs de Scope) ; au moins une, toutes autorisées pour le client, sinon invalid_scope' }
         state: { type: string, minLength: 32, maxLength: 512, description: 'Valeur opaque de JeCréeMaBoutique, renvoyée telle quelle à redirect_uri' }
-        shop_id: { type: string, maxLength: 64, description: 'Identifiant de la boutique (User._id JeCréeMaBoutique) ; jamais un e-mail, un nom ni un slug' }
-        shop_name: { type: string, maxLength: 200, description: Nom affiché sur l'écran de consentement (information seulement) }
+        shop_id: { type: string, minLength: 1, maxLength: 64, description: 'Identifiant de la boutique (User._id JeCréeMaBoutique), non blanc ; jamais un e-mail, un nom ni un slug' }
+        shop_name: { type: string, minLength: 1, maxLength: 200, description: 'Nom affiché sur l''écran de consentement (information seulement), non blanc' }
 
     PushedAuthorizationResponse:
       type: object
@@ -1165,6 +1379,14 @@ components:
             **Évolution sans rupture** : de nouvelles valeurs pourront être ajoutées ; le consommateur
             **tolère une valeur inconnue** (il la traite comme une révocation au motif non précisé).
         companyCode: { type: string, description: 'Code public de l''entreprise (platform.company.code), jamais un nom de base' }
+        companyName:
+          type: [string, 'null']
+          maxLength: 150
+          description: |
+            Nom affichable de l'entreprise (v15) : nom commercial (`platform.company.trade_name`, 150
+            caractères au plus), lu avec la liaison, sans requête de plus ; `null` s'il est vide. Facultatif
+            et seulement affichable : jamais un identifiant (voir `companyCode`). Présent dans toutes les
+            réponses `Link` (échange du code, `GET /link`, `POST /link/revoke`), après les champs existants.
         currency: { type: string, pattern: '^[A-Z]{3}$', examples: [XOF], description: 'Devise de la liaison, code ISO 4217 normalisé depuis platform.company.currency (v11-D6)' }
         externalShopId: { type: string, description: Identifiant de la boutique (User._id JeCréeMaBoutique) }
         scopes:
@@ -1172,15 +1394,21 @@ components:
           items: { $ref: '#/components/schemas/Scope' }
         warehouses:
           type: array
+          description: |
+            Dépôts vendables de la liaison (v11-D8). **Vide** pour une liaison révoquée (réponse de
+            `POST /link/revoke`) et, à l'échange du code seulement, si la base de l'entreprise n'a pas pu
+            être lue (`GET /link` les donnera). Pas de `priority` (v15 : non implémentée, *v14 et
+            antérieures : `priority` entier ≥ 0, facultative*).
           items:
             type: object
+            required: [warehouseId, name, active]
             properties:
               warehouseId: { type: string, format: uuid }
               name: { type: string }
               active: { type: boolean }
-              priority: { type: integer, minimum: 0 }
         settings:
           type: object
+          description: 'Toujours `{}` pour l''instant (v15) : les réglages arrivent avec les lots qui les définissent.'
           properties:
             priceApproval: { type: string, enum: [REQUIRED, NOT_REQUIRED], default: REQUIRED }
             reservationEnabled: { type: boolean }
@@ -1188,7 +1416,7 @@ components:
             partialFulfilment: { type: boolean, default: false }
             reservationTtlSeconds: { type: integer, examples: [1800], description: Lecture seule ; configuré côté serveur (D3) }
         createdAt: { type: string, format: date-time }
-        lastSyncAt: { type: [string, 'null'], format: date-time }
+        lastSyncAt: { type: [string, 'null'], format: date-time, description: 'Toujours null pour l''instant (v15) : renseignée par le lot qui définit la synchronisation' }
         revokedAt: { type: [string, 'null'], format: date-time }
 
     ChangePage:

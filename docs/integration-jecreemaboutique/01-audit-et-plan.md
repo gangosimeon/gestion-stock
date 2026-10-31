@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Version | 14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
-| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 en préparation, **non commencé**, décisions arrêtées (§ 27) ; aucun autre lot commencé. *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
-| Code, bases, déploiements | Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6, § 25.2) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
+| Version | 15 — 2026-10-31 — **lot 2 réalisé, plan et contrat alignés sur le code** (§ 28) : étapes G1 à G15, GA1, GA2, J1 à J5, JA0 et JA1 telles qu'implémentées (le code fait foi), écarts avec v14 relevés, décisions v15-D1 à v15-D6, backlog du lot 3 et checklist de déploiement complétés. Historique : v14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 **réalisé, non déployé** (§ 28) ; aucun autre lot commencé. *v14 : « lot 2 en préparation, non commencé, décisions arrêtées (§ 27) ».* *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
+| Code, bases, déploiements | Lot 2 : branche `feat/integration-lot2` des quatre dépôts (§ 28.2) ; aucun déploiement. Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6, § 25.2) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
 | Secrets | Aucun fichier `.env*` lu ; aucune valeur sensible copiée. Les variables citées le sont par leur **nom**, relevé dans le code. |
 
@@ -1667,4 +1667,178 @@ Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du do
 
 - Aucun code, migration, test ni configuration modifié par ce relevé.
 - Dépôts applicatifs lus seulement.
+- Aucun commit, push ou déploiement.
+
+## 28. Relevé v15 — lot 2 réalisé, plan et contrat alignés sur le code — 2026-10-31
+
+Source : lecture seule des quatre dépôts, branche `feat/integration-lot2` : GestStock backend `8333afd`, gestion-stock `1eac3d9`, JCMB backend `b9ae7b1`, JCMB frontend `a31e644`. **Le code fait foi** : là où il s'écarte de v14, ce relevé et le contrat décrivent le code, et l'écart est listé au § 28.3. Décisions numérotées v15-D1 à v15-D6.
+
+**Applications déployées : aucun effet.** Le lot 2 n'est déployé nulle part ; ce relevé ne modifie que ce document et le contrat.
+
+### 28.1 Journal des changements v14 → v15
+
+| Objet | v14 | v15 |
+|---|---|---|
+| État du lot 2 | En préparation, non commencé | **Réalisé, non déployé** : G1 à G15, GA1, GA2, J1 à J5, JA0, JA1 (§ 28.2) |
+| URL de retour | `redirect_uri?code=…&state=…` ; refus `error=access_denied&state=…` | `iss=geststock-integration` ajouté dans les deux cas (§ 28.3, contrat) |
+| Drapeau de publication | Colonne de `integration_feed_state`, posée dans la transaction d'activation | Table `integration_publication` de la base de l'entreprise, posée **avant** l'activation, attente bornée à 2 s (§ 28.3, § 28.4) |
+| Limitation de `/oauth/par` | 30/min par client | 30/min par IP avant l'authentification **et** 30/min par client après (§ 28.3) |
+| `OAuthError` | Cinq valeurs de `error` | `temporarily_unavailable` ajoutée ; champ `code` (`LINK_REVOKED`) |
+| Codes d'erreur de la chaîne | `INVALID_TOKEN`, `LINK_REVOKED`, `LINK_SUSPENDED`, `INSUFFICIENT_SCOPE` | En plus : `COMPANY_SUSPENDED`, `COMPANY_UNAVAILABLE` (403), `SCHEMA_UPGRADE_IN_PROGRESS`, `SCHEMA_UPGRADE_FAILED` (503) |
+| `Link` | `warehouses[].priority` facultatif ; réglages décrits | `companyName` ajouté ; pas de `priority` ; `settings` `{}` et `lastSyncAt` nul pour l'instant ; `warehouses` vide après révocation |
+| Caractères de contrôle | Non traités | Refusés au format de chaque route ; motif de révocation seul à admettre tabulation et sauts de ligne (G15) |
+| Journaux | Aucun secret | En plus : aucune valeur reçue, même refusée ou illisible, à aucun niveau (G15) |
+| Page de retour JCMB | « Protégée » (`AuthGuard`) | Sans `AuthGuard` : la page traite elle-même l'absence de session, sans emporter le code dans une URL de retour (§ 28.3, § 28.5) |
+| Variables JCMB | Quatre noms (§ 27.6) | Onze noms (§ 28.6) |
+| Décisions | v14-D1 à v14-D18 | v15-D1 à v15-D6 (§ 28.7) |
+
+### 28.2 Étapes réalisées
+
+| Dépôt | Étapes (commits, du plus ancien au plus récent) |
+|---|---|
+| GestStock backend | G1 `9a992ad`, G2 `2f88575`, G5 `b017f36`, G6 `73a7a54`, G3 `8f70a93`, G7 `2b25ff6`, G8 `df0a0b0`, G9 `acda59e`, G10 `74c2c09`, G4a `954b88b`, G4b `024f8a7`, G11 `67aa2b7`, G12 `3f4d0e4`, G13 `a4a2d7b` et `68474fe`, G14 `a50d5ec`, G15 `8333afd` (plus `5d7b059`, stabilisation d'un test du lot 1) |
+| gestion-stock (Angular GestStock) | GA1 `67ed527`, en-têtes de sécurité `cd743ff`, GA2 `1eac3d9` |
+| JCMB backend | J1 `d1412ce`, J2 `c33d467`, J3 `1afa191`, J4 `efb0c0b`, J5 `b9ae7b1` |
+| JCMB frontend | JA0 `c354fff`, JA1 `a31e644` |
+
+Chaque étape a été livrée tests d'abord (échec de comportement constaté avant la modification), suites complètes vertes ; côté GestStock, tests d'intégration sur PostgreSQL 17 (Testcontainers) seulement.
+
+### 28.3 Écarts entre v14 et le code (le code fait foi)
+
+| # | v14 | Code | Écrit en v15 |
+|---|---|---|---|
+| E1 | v14-D11 : drapeau dans une colonne de `integration_feed_state`, posé **dans** la transaction d'activation | Table `integration_publication` (migration V051) ; drapeau posé **avant** l'activation (transaction de la base de l'entreprise), puis activation sur la base plateforme ; échec du passage : `503 temporarily_unavailable`, code non consommé ; activation non aboutie : drapeau resynchronisé | § 28.4 ; contrat `/oauth/token` |
+| E2 | `/oauth/par` limité par client seulement | Deux compteurs : par IP avant l'authentification du client (30/min), par client après (30/min) ; idem `/oauth/token` (10/min) | Contrat `TooManyRequests`, `/oauth/par`, `/oauth/token` |
+| E3 | Retour `code`, `state` ; refus `error`, `state` | `iss=geststock-integration` ajouté dans les deux cas (RFC 9207) ; identifiant fixe, pas une URL | Contrat `/oauth/par` (écart assumé avec la RFC 9207, qui prévoit une URL d'émetteur) |
+| E4 | Liaisons `PENDING` expirées révoquées au dépôt PAR | Au dépôt PAR **et** à l'approbation, avant la création de la nouvelle liaison en attente | Contrat `/oauth/par` |
+| E5 | « Liaison révoquée : 401 `LINK_REVOKED` » pour toute requête | Avec un jeton : `401 LINK_REVOKED` ; `client_credentials` : `400 invalid_grant` avec `code = LINK_REVOKED` ; l'échange du code ne renvoie jamais ce `code` (`invalid_grant` seul) | Contrat `/oauth/token`, `/link/revoke`, `OAuthError` |
+| E6 | v14-D1 : page de retour JCMB « protégée » (`AuthGuard`) | Route `/integrations/geststock/callback` sans `AuthGuard` : sans session, message « reconnectez-vous puis recommencez » et lien vers la connexion **sans** URL de retour (le code n'y part pas) | § 28.5 |
+| E7 | § 27.5 : « clé AES absente ⇒ refus de démarrer » (JCMB) | Configuration JCMB validée à la **première utilisation** (comme `JWT_SECRET` et `MONGODB_URI`) : clé absente ou invalide ⇒ `503 INTEGRATION_MISCONFIGURED` sur les routes, aucun appel à GestStock | § 28.5 ; à trancher au lot 3 si le refus au démarrage reste voulu (§ 28.8) |
+| E8 | Point de cette rédaction : « dépendance `warehouse:read` pour les portées concernées » | **Aucune portée d'intégration ne dépend de `warehouse:read`** (portées : `x-required-scopes` du contrat). Seul lien relevé : l'écran GA2 lit `GET /api/warehouses` (`warehouse:read`) pour proposer les dépôts à la réactivation ; seul le rôle ADMIN a `integration:manage` (v14-D7), et il a aussi `warehouse:read` | § 28.4 ; contrat inchangé sur ce point |
+
+### 28.4 GestStock tel que réalisé
+
+**Chaîne d'intégration** (`/api/integration/v1/**`, G6, G7) : refus dans l'ordre suspension (`403 LINK_SUSPENDED`), entreprise non active (`403 COMPANY_SUSPENDED` si l'entreprise est suspendue, `COMPANY_UNAVAILABLE` sinon), base de l'entreprise en migration (`503 SCHEMA_UPGRADE_IN_PROGRESS`, `SCHEMA_UPGRADE_FAILED` après un échec), portée (`403 INSUFFICIENT_SCOPE`). `POST /link/revoke` ne touche que la base plateforme : ni contrôle d'entreprise ni contrôle de migration. Les routes du client (`/oauth/par`, `/oauth/token`) exigent l'en-tête Basic et ignorent tout jeton Bearer.
+
+**Audit** (G12, G14) : table `platform.integration_audit_log` ; actions `LINK_REQUEST_APPROVED`, `LINK_REQUEST_DENIED`, `LINK_ACTIVATED`, `LINK_SUSPENDED`, `LINK_REACTIVATED`, `LINK_REVOKED`, `CODE_REPLAY_DETECTED`, `CODE_EXCHANGE_REJECTED`, `CLIENT_AUTHENTICATION_FAILED`, **`LINK_SECRET_ROTATED`** (rotation demandée par la boutique) et **`LINK_SECRET_PROMOTED`** (secret en attente devenu courant, avec sa cause : premier usage ou ancien secret expiré). Approbation, refus, suspension, réactivation et révocation sont aussi copiés dans le journal de l'entreprise. Aucun secret, code, `request_uri` ni en-tête `Authorization` ; le motif libre de révocation n'apparaît que dans l'audit.
+
+**Drapeau de publication** (G13, E1) : chaque transaction qui publie lit le drapeau une seule fois avec `FOR SHARE`, verrou gardé jusqu'à sa fin. Le passage à vrai prend d'abord `LOCK TABLE … IN EXCLUSIVE MODE` (file équitable : les ventes qui arrivent derrière attendent, l'activation n'est pas affamée), avec `lock_timeout` et `statement_timeout` de **2 s** (`geststock.integration.publication.lock-timeout`, de 1 ms à 1 min). Au-delà, l'échange du code répond `503 temporarily_unavailable` sans consommer le code. Retrait à la révocation de la dernière liaison active ou suspendue ; la suspension n'arrête pas la publication.
+
+**Rotation du secret** (G14) : `POST /link/secret` ; secret en attente gardé à côté du secret courant ; promotion au premier usage du nouveau, ou ancien refusé au-delà de 24 h ; comparaison en temps constant ; 5 rotations par heure et par liaison.
+
+**G15** :
+
+- `Link.companyName` : nom commercial (`platform.company.trade_name`, 150 caractères au plus), lu par la requête qui relit déjà la liaison à chaque appel (et, à l'échange du code, par celle qui lit déjà le code de l'entreprise) ; nul s'il est vide ; ajouté après les champs existants.
+- Caractères de contrôle (U+0000 à U+001F, U+007F) refusés dans tout champ texte reçu par les routes d'intégration et les écrans de liaison : formulaires OAuth (`invalid_request`, noms de paramètres compris), corps JSON et variables de chemin (`VALIDATION_FAILED`), identifiants Basic (`401 invalid_client`). Tabulation et sauts de ligne permis dans le seul motif de `POST /link/revoke`. Rien n'est enregistré ni audité, sauf l'échec d'authentification du client (v15-D1).
+- Fuites de journaux fermées, à tout niveau : validation `@Valid` des corps faite avant celle de Spring et sans la valeur refusée ; `toString` des corps masqués ; corps JSON illisible résolu sans journal (`400 MALFORMED_REQUEST` inchangé) ; logger `org.springframework.web.method.HandlerMethod` limité à INFO (v15-D4) ; nom de paramètre OAuth refusé par le pare-feu traité en `invalid_request` (500 auparavant).
+
+**Écrans** (GA1, GA2) : consentement `/integrations/jecreemaboutique/authorize` (`client_id`, `request_uri` seuls lus dans l'URL) ; « Paramètres → Boutique en ligne » (`integration:manage`) : liste, suspension, réactivation (dépôts reconfirmés, lus par `GET /api/warehouses`, E8), révocation. En-têtes de sécurité du frontend appliqués à toutes les pages (`cd743ff`).
+
+**Noms fixés à l'implémentation** (§ 27.6, « restent à nommer ») : clé de signature des jetons de liaison `geststock.integration.links.token.keys` et `current-kid` ; en-tête d'IP `geststock.integration.client-ip-header` (variable `GESTSTOCK_INTEGRATION_CLIENT_IP_HEADER` en production ; **nom de l'en-tête à confirmer en I1**) ; liste blanche des `redirect_uri` : table `platform.integration_client_redirect_uri`.
+
+### 28.5 JeCréeMaBoutique tel que réalisé
+
+**J1 — chiffrement** : AES-256-GCM, format `v1.<keyId>.<iv>.<tag>.<ciphertext>`, données associées liaison + boutique ; anciennes clés pour le déchiffrement seulement ; aucune clé égale à un autre secret de l'application.
+
+**J2 — modèles** : `geststocklinks` (index unique partiel sur la boutique pour les liaisons non révoquées, secret chiffré jamais sérialisé) ; demandes d'autorisation (`state` haché, vérificateur, durée de vie **10 min**, index TTL de nettoyage, consommation atomique à usage unique) ; `scripts/migrate-geststock-link.mjs`.
+
+**J3 — client GestStock** : PAR, échange du code (vérification de `iss`), jeton de liaison en mémoire (un seul appel pour des demandes simultanées, renouvelé dans sa dernière minute), `GET /link`, révocation ; redirections jamais suivies ; réessai d'un `503` émis par GestStock avant tout traitement du code (`temporarily_unavailable`, `RATE_LIMIT_UNAVAILABLE`), 3 tentatives au plus ; erreurs typées.
+
+**J4 — routes** (Bearer de la boutique ; interrupteur désactivé : `404 INTEGRATION_DISABLED` ; erreurs `{ success: false, message, code }`, `Cache-Control: no-store`) :
+
+| Route | Limite par boutique | Boutique approuvée exigée | Succès |
+|---|---|---|---|
+| `POST /api/integrations/geststock/start` | 5 / 10 min | Oui | `201` : `authorizationUrl` seulement |
+| `POST /api/integrations/geststock/complete` | 10 / 10 min | Oui | `201` : vue de la liaison |
+| `GET /api/integrations/geststock/link` | 30 / min | Non | `200` : `{ link, refreshed, stale }` |
+| `POST /api/integrations/geststock/revoke` | 5 / 10 min | Non | `200` : `{ link, revoked }` |
+
+Codes d'erreur : `INTEGRATION_DISABLED` 404 ; `UNAUTHENTICATED` 401 ; `ADMIN_FORBIDDEN` 403 ; `SHOP_NOT_ELIGIBLE` 403 ; `RATE_LIMITED` 429 (limiteur JCMB, fermé en cas de panne) ; `RATE_LIMIT_UNAVAILABLE` 503 ; `INVALID_REQUEST` 400 ; `TOO_MANY_PENDING_REQUESTS` 429 (**3 demandes en cours au plus** par boutique) ; `ALREADY_LINKED` 409 ; `AUTHORIZATION_REQUEST_INVALID` 400 ; `INVALID_ISSUER` 400 ; `AUTHORIZATION_REJECTED` 400 ; `LINK_REVOKED` 409 ; `LINK_SAVE_FAILED` 500 ; `GESTSTOCK_UNAVAILABLE` 503 ; `GESTSTOCK_RATE_LIMITED` 429 ; `GESTSTOCK_ERROR` 502 ; `GESTSTOCK_REVOCATION_REJECTED` 502 ; `INTEGRATION_MISCONFIGURED` 503 ; `LINK_SECRET_UNREADABLE` 500 ; `INTERNAL_ERROR` 500. Les `429 RATE_LIMITED` et `GESTSTOCK_RATE_LIMITED` portent toujours `Retry-After` (60 s si GestStock n'en donne pas, J5), exposé au navigateur par le CORS de l'API (`Access-Control-Expose-Headers: Retry-After`, `next.config.mjs`).
+
+Règles :
+
+- **Consultation** : état relu chez GestStock s'il date de plus d'**une minute** ; GestStock injoignable : état local rendu, signalé « non actualisé » (`stale`), sans erreur ; liaison révoquée chez GestStock : révoquée ici aussi.
+- **Compensation** : liaison activée chez GestStock mais non enregistrée ici (ou réponse inattendue) : révocation immédiate chez GestStock avec un motif constant, puis `LINK_SAVE_FAILED` ou `GESTSTOCK_ERROR`.
+- **Révocation : GestStock d'abord**, puis localement (secret effacé, boutique libérée) ; déjà révoquée chez GestStock : même issue ; GestStock injoignable : aucune modification locale et erreur réessayable ; corps refusé par GestStock (`400`) : `502 GESTSTOCK_REVOCATION_REJECTED`. Motif facultatif, 500 caractères au plus, sans caractère de contrôle.
+- **`companyName`** (J5) : nettoyé par le client (texte seulement, caractères de contrôle retirés, 150 caractères au plus, tronqué sans couper un caractère), enregistré à la création et mis à jour au rafraîchissement ; **un nul reçu conserve le nom déjà connu** (GestStock ne renvoie nul que pour un nom vide ou illisible) ; borne du modèle comptée en caractères.
+
+**JA0** : tests unitaires du frontend JCMB avec Vitest et jsdom (v15-D5) ; construction toujours hors du dépôt (`dist/` versionné, v15-D6).
+
+**JA1** : section « GestStock » de `/profile` (masquée pour l'administrateur et si l'intégration est désactivée) ; navigation vers l'écran d'autorisation seulement si son origine est exactement l'origine GestStock configurée. Page de retour **`/integrations/geststock/callback`** (à reporter dans `GESTSTOCK_REDIRECT_URI` et dans les `redirect_uri` du client chez GestStock) : `code`, `state`, `iss` et `error` retirés de l'URL avant tout traitement ; un seul `POST complete` par `state` ; refus et paramètres invalides sans appel ; `Referrer-Policy: no-referrer` par une balise `meta` pendant l'affichage (en-tête de déploiement recommandé, § 28.9) ; aucune valeur dans la console ; aucune mesure d'audience dans l'application. Polices Google chargées sur toutes les pages (origine seule envoyée, jamais l'URL) : hébergement local facultatif (§ 28.8).
+
+### 28.6 Variables JCMB (complète le § 27.6)
+
+| Nom | Rôle |
+|---|---|
+| `GESTSTOCK_INTEGRATION_ENABLED` | `true` pour activer ; sinon routes en `404` et section masquée |
+| `GESTSTOCK_LINK_ENCRYPTION_KEY` | Clé AES-256-GCM courante (32 octets, Base64), seule à chiffrer ; VPS seulement |
+| `GESTSTOCK_LINK_ENCRYPTION_KEY_ID` | Identifiant de la clé courante (1 à 32 caractères `A-Z a-z 0-9 _ -`) |
+| `GESTSTOCK_LINK_ENCRYPTION_OLD_KEYS` | Anciennes clés, déchiffrement seulement (`id1:base64,id2:base64`, facultatif) |
+| `GESTSTOCK_API_ORIGIN` | Origine du backend GestStock sur Vercel (jamais le relais Render, v14-D8) |
+| `GESTSTOCK_FRONTEND_ORIGIN` | Origine du frontend GestStock (écran d'autorisation) |
+| `GESTSTOCK_CLIENT_ID`, `GESTSTOCK_CLIENT_SECRET` | Client JCMB de l'environnement (v14-D3) |
+| `GESTSTOCK_REDIRECT_URI` | URL de la page de retour, identique caractère par caractère à la liste blanche GestStock |
+| `GESTSTOCK_ISSUER` | `iss` attendu au retour (défaut `geststock-integration`) |
+| `GESTSTOCK_SCOPES` | Restriction facultative des portées demandées (sous-ensemble des portées du contrat) |
+
+Frontend JCMB : `geststockOrigin` dans `environment.ts` et `environment.prod.ts` (origine attendue de l'écran d'autorisation), à aligner sur `GESTSTOCK_FRONTEND_ORIGIN`.
+
+### 28.7 Décisions v15
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| **v15-D1** | Identifiant client illisible | `401 invalid_client` (RFC 6749 § 5.2) plutôt que `400` ; l'échec reste **audité** (`CLIENT_AUTHENTICATION_FAILED`, G12) sans aucune partie de la valeur reçue, et compte dans le limiteur par IP |
+| **v15-D2** | Requête refusée par le pare-feu HTTP | `400` **sans corps** conservé (`%00` dans l'URL, caractère de contrôle dans un en-tête) : refus avant toute route, comportement commun à toute l'application |
+| **v15-D3** | UUID du JSON | Tolérance de Jackson conservée : caractères de contrôle de début et de fin retirés (`"<uuid>\u0000"` désigne `<uuid>`, enregistré sans le caractère) ; au milieu : `400 MALFORMED_REQUEST`. Les variables de chemin, elles, sont strictes |
+| **v15-D4** | Journaux de Spring MVC | Logger `org.springframework.web.method.HandlerMethod` limité à INFO (sur le modèle de `org.postgresql`) : il cite la valeur reçue en DEBUG et les arguments en TRACE ; son seul WARN reste visible |
+| **v15-D5** | Tests du frontend JCMB | Vitest et jsdom (`@angular/build:unit-test`) |
+| **v15-D6** | `dist/` du frontend JCMB | Laissé versionné en attendant la vérification de la construction Render ; aucune construction dans le dépôt (sortie hors du dépôt) |
+
+### 28.8 Backlog du lot 3
+
+| Point | Origine |
+|---|---|
+| Route interne du cron Vercel (métriques, purge) | v14-D16 |
+| Nettoyage global des liaisons `PENDING` expirées | v14-D2 |
+| Permission `integration:price-approve` | v14-D7 |
+| Exposition des métriques du flux sans jauges en mémoire par instance | § 26.10 |
+| Révocation de la liaison au bannissement d'une boutique JCMB | v15 |
+| Part JCMB de la rotation du secret de liaison (appel de `POST /link/secret`, rechiffrement) | G14 |
+| Refus de démarrer du backend JCMB si la configuration de l'intégration est invalide (E7), si voulu | v15 |
+| Hébergement local des polices du frontend JCMB (facultatif) | JA1 |
+| Retrait de `tsconfig.tsbuildinfo` du suivi Git (JCMB backend) | J1 à J5 |
+| `dist/` du frontend JCMB : retrait du suivi ou maintien, selon la construction Render | v15-D6 |
+
+### 28.9 Checklist de déploiement (complète les §§ 26.9 et 27.7)
+
+| # | Contrôle | Origine |
+|---|---|---|
+| R3 | Construction Render du frontend JCMB vérifiée (`dist/` versionné utilisé ou non) | v15-D6 |
+| N2 | Version de Node fixée sur Render pour les projets JCMB (les dépendances de construction et de test, dont jsdom, imposent une version minimale de Node ; JA0 a dû choisir jsdom 26 pour cette raison) | JA0 |
+| RP | En-tête `Referrer-Policy: no-referrer` sur `/integrations/geststock/*` du frontend JCMB (en plus de la balise `meta`) | JA1 |
+| U2 | `redirect_uri` de production identique **caractère par caractère** des deux côtés : `GESTSTOCK_REDIRECT_URI` (JCMB) et `platform.integration_client_redirect_uri` (GestStock) | v14-D12, JA1 |
+| O1 | Origine GestStock de production : `GESTSTOCK_FRONTEND_ORIGIN` (backend JCMB) et `geststockOrigin` (frontend JCMB) identiques ; `GESTSTOCK_API_ORIGIN` vers Vercel | JA1, v14-D8 |
+| I1 | En-tête d'IP posé par Vercel vérifié sur une prévisualisation avec un `X-Forwarded-For` falsifié ; son nom dans `GESTSTOCK_INTEGRATION_CLIENT_IP_HEADER` (**à confirmer en I1**) | v14-D8 |
+| K3 | Clés de production : signature des `pageToken` (`geststock.integration.page-token.*`), signature des jetons de liaison (`geststock.integration.links.token.*`, distincte de `GESTSTOCK_JWT_SECRET`), chiffrement JCMB (`GESTSTOCK_LINK_ENCRYPTION_KEY`, `_KEY_ID`), en-tête d'IP. Côté GestStock, `ProductionSafetyCheck` refuse le démarrage si la clé `pageToken` manque avec la publication activée, ou si la clé des jetons de liaison ou l'en-tête d'IP manquent avec les liaisons activées ; côté JCMB, contrôle à la première utilisation (E7) | v12-D7, v13-D5, v14-D17 |
+
+### 28.10 Risques acceptés
+
+v13-D7 (comportements existants de JCMB conservés, § 26.7) et v13-D8 (risques acceptés le 2026-10-29, § 26.8) : **inchangés**.
+
+### 28.11 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- **En-tête et `info`** : routes du lot 2 décrites telles qu'implémentées ; principes : compteurs du limiteur, formats d'erreur (dont `400` sans corps du pare-feu), caractères de contrôle ; décisions v15 ; bloc `x-decisions.v15`.
+- **`/oauth/par`** : corps de formulaire seulement, sans paramètre dans l'URL ni répété ; caractères de contrôle ; `scope` et `invalid_scope` ; révocation `EXPIRED` aussi à l'approbation ; compteurs par IP et par client ; URL de retour avec `iss` (écart assumé avec la RFC 9207) ; `401` avec `WWW-Authenticate: Basic`.
+- **`/oauth/token`** : `LINK_REVOKED` sur `client_credentials` ; `503` sous deux formats (`RATE_LIMIT_UNAVAILABLE`, `temporarily_unavailable` avec code non consommé) ; compteurs par IP et par client.
+- **`GET /link`**, **`POST /link/secret`** et routes à venir : `503 ServiceUnavailable` (`SCHEMA_UPGRADE_*`, `RATE_LIMIT_UNAVAILABLE`) ; **`Forbidden`** : `COMPANY_SUSPENDED`, `COMPANY_UNAVAILABLE`.
+- **`POST /link/revoke`** : corps facultatif, motif de 500 caractères au plus (tabulation et sauts de ligne permis), `400` (`VALIDATION_FAILED`, `MALFORMED_REQUEST`), `warehouses` vide, base plateforme seulement.
+- **`OAuthError`** : `temporarily_unavailable`, `code` (`LINK_REVOKED`) ; **`BadRequest`** : `VALIDATION_FAILED`, `MALFORMED_REQUEST` ; **`TooManyRequests`** : deux compteurs ; **`clientBasic`** : encodage RFC 6749 § 2.3.1, en-tête illisible ; **`linkToken`** : en-tête d'IP à confirmer en I1.
+- **`PushedAuthorizationRequest`** : `shop_id` et `shop_name` non blancs ; **`Link`** : `companyName`, `warehouses` sans `priority`, `settings` `{}` et `lastSyncAt` nul pour l'instant.
+- **Réponses complètes des cinq routes du lot 2** (vérifiées dans le code) : `404 RESOURCE_NOT_FOUND` (liaisons désactivées, `LinksDisabled`), `500 INTERNAL_ERROR` (`InternalError`), `400` sans corps du pare-feu (`FirewallRejected`) ; `POST /link/revoke` : `403 INSUFFICIENT_SCOPE` et `415 UNSUPPORTED_MEDIA_TYPE`, **aucun `503`** (ni limiteur, ni base de l'entreprise) ; `GET /link` : `503` `SCHEMA_UPGRADE_*` ou `SERVICE_CAPACITY_REACHED`, jamais `RATE_LIMIT_UNAVAILABLE` ; `POST /link/secret` : `503` `RATE_LIMIT_UNAVAILABLE` ou `SCHEMA_UPGRADE_*`.
+
+Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du dossier, **inchangés**) : **0 erreur, 0 avertissement** ; 2 exceptions ciblées, déjà justifiées (§ 22.4), toujours utilisées ; YAML valide (clés dupliquées refusées) ; 44 `$ref` distinctes, toutes résolues ; 17 chemins.
+
+### 28.12 Ce qui n'a pas été fait
+
+- Aucun code, migration, test ni configuration modifié par ce relevé ; dépôts applicatifs lus seulement.
 - Aucun commit, push ou déploiement.
