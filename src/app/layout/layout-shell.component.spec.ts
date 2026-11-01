@@ -6,7 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { MatSidenav } from '@angular/material/sidenav';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
@@ -104,6 +104,27 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
 
   it('« Boutique en ligne » : masquée sans integration:manage, même avec settings:manage', () => {
     expect(setup(false, ['settings:manage', 'user:manage', 'company:manage']).navLabels()).not.toContain('Boutique en ligne');
+  });
+
+  it('une seule entrée active : « Boutique en ligne » (/settings/online-shop) n’allume pas « Paramètres »', async () => {
+    const { fixture } = setup(false, ['settings:manage', 'integration:manage', 'product:read']);
+    const router = TestBed.inject(Router);
+    const active = async (url: string) => {
+      await router.navigateByUrl(url);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return fixture.debugElement
+        .queryAll(By.css('.nav-item--active .nav-item__label'))
+        .map((e) => (e.nativeElement as HTMLElement).textContent?.trim());
+    };
+
+    expect(await active('/settings/online-shop')).toEqual(['Boutique en ligne']);
+    expect(await active('/settings')).toEqual(['Paramètres']);
+    // Sous-pages de « Paramètres » (/settings redirige vers /settings/invoice) : « Paramètres » reste allumé.
+    expect(await active('/settings/invoice')).toEqual(['Paramètres']);
+    expect(await active('/settings/invoice?onglet=logo')).toEqual(['Paramètres']);
+    // Les autres entrées restent actives sur leurs sous-pages (comportement inchangé).
+    expect(await active('/products/42')).toEqual(['Produits']);
   });
 
   it('« Boutique en ligne » : route /settings/online-shop protégée par integration:manage', () => {

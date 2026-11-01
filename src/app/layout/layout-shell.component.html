@@ -37,7 +37,7 @@
         @for (item of visibleNavItems$ | async; track item.route) {
           <a class="nav-item"
              [routerLink]="item.route"
-             routerLinkActive="nav-item--active"
+             [class.nav-item--active]="item.route === activeRoute()"
              [matTooltip]="collapsed && !isMobile ? item.label : ''"
              matTooltipPosition="right"
              (click)="onNavigate()">

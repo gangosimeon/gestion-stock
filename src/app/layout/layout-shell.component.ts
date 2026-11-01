@@ -1,9 +1,9 @@
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { BehaviorSubject, Observable, catchError, combineLatest, map, of, shareReplay, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, filter, map, of, shareReplay, startWith, switchMap, tap } from 'rxjs';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, DestroyRef, inject, ViewChild, ViewEncapsulation } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -41,7 +41,6 @@ export interface NavItem {
     AsyncPipe,
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
@@ -62,6 +61,7 @@ export class LayoutShellComponent {
   private readonly warehouseCtx = inject(WarehouseContextService);
   private readonly cashRegister = inject(CashRegisterFacade);
   private readonly brandingService = inject(BrandingService);
+  private readonly router = inject(Router);
 
   /** Marque de l'entreprise connectée (logo et nom dans la barre latérale). */
   readonly branding$ = this.brandingService.branding$;
@@ -166,6 +166,29 @@ export class LayoutShellComponent {
     route: `/${section}`,
     permissions: ROUTE_PERMISSIONS[section]
   }));
+
+  /**
+   * Entrée allumée : la plus précise dont l'adresse contient l'adresse courante, une seule à la fois.
+   * « Paramètres » (/settings) reste allumé sur ses sous-pages (/settings/invoice) mais pas sur
+   * « Boutique en ligne » (/settings/online-shop), entrée plus précise.
+   */
+  readonly activeRoute = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.activeRouteFor(this.router.url))
+    ),
+    { initialValue: this.activeRouteFor(this.router.url) }
+  );
+
+  activeRouteFor(url: string): string | null {
+    const path = url.split(/[?#]/)[0];
+    return (
+      this.navItems
+        .map((item) => item.route)
+        .filter((route) => path === route || path.startsWith(`${route}/`))
+        .sort((a, b) => b.length - a.length)[0] ?? null
+    );
+  }
 
   readonly visibleNavItems$ = this.currentUser$.pipe(
     map((user) =>
