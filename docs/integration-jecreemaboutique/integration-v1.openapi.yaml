@@ -217,6 +217,13 @@ info:
       approved: [v16-D1, v16-D2, v16-D3, v16-D4]
       hosting: 'GestStock : backend Render (remplace Vercel), base Neon ; le reste inchangé'
       backgroundTasks: 'route interne protégée appelée par un cron externe au processus (purge, métriques, nettoyage des liaisons PENDING expirées) ; aucun @Scheduled en production'
+      g16:
+        implemented: 'GET /catalog/changes (backend GestStock, lot 3, étape G16)'
+        decided: 'revue G16 du 2026-11-02 : événements AVAILABILITY servis seulement avec la portée stock:read (filtre de la liaison, lastSeq avance quand même)'
+        contractChanges:
+          - 'GET /catalog/changes : portée et filtre ; format des paramètres ; 400 INVALID_PARAMETER (vide, non entier, hors int64, répété, refusé par le pare-feu) et 400 sans corps du pare-feu ; 404 LinksDisabled ; 500 InternalError ; 503 détaillé ; 429 compté par liaison ; Cache-Control: no-store ; HEAD implicite'
+          - 'ChangeEventBase.data : omis (jamais null) pour un événement sans état'
+          - 'AvailabilityChangeEvent : servi seulement avec stock:read'
       d2b: 'non retenue : un changement du prix de référence ne suspend jamais un prix approuvé (alerte referenceChangedSinceApproval seulement)'
       contractChanges:
         - 'serveur décrit sur Render ; en-tête d''IP posé par le proxy de l''hébergeur, à confirmer en I1'
@@ -583,7 +590,17 @@ paths:
 
         `limit` (P5) : 100 par défaut, 500 au plus ; une valeur hors bornes est refusée (400
         `VALIDATION_FAILED`) ; une valeur non numérique ou `after` absent : 400 `INVALID_PARAMETER`
-        (décision v11-D3).
+        (décision v11-D3). Format accepté (G16) : entier décimal, signe `+` ou `-` facultatif, sans espace
+        ni décimale ; chaque paramètre au plus une fois. Les autres paramètres de la query sont ignorés.
+
+        **Portée et filtre (G16, revue du 2026-11-02)** : portée `catalog:read` ; catalogue actif entier
+        de l'entreprise (Q2), sans sélection de produits par liaison. Les événements `AVAILABILITY`
+        (quantités par dépôt) ne sont servis qu'aux liaisons qui ont **aussi** `stock:read`, la portée de
+        `GET /availability` ; sans elle, ils sont écartés par le filtre de la liaison, examinés quand même
+        (`lastSeq` avance, P1). Tous les autres types, connus ou non, sont servis.
+
+        Réponses : `Cache-Control: no-store` (chaîne d'intégration). `HEAD` est servi implicitement comme
+        `GET`, sans corps : il compte dans la limite de débit et attribue les `seq` comme un `GET`.
 
         Livraison au moins une fois : le consommateur applique chaque événement de manière idempotente
         et ignore un événement dont la `version` est inférieure ou égale à la dernière appliquée **pour
@@ -622,12 +639,19 @@ paths:
           description: |
             Deux codes, distingués par le champ `code` de `ApiError` (décision v11-D3) :
             `VALIDATION_FAILED` : valeur hors bornes (`after` < 0, `limit` hors de 1..500), paramètre
-            fautif dans `errors` ; `INVALID_PARAMETER` : `after` ou `limit` non numérique, ou `after` absent.
+            fautif dans `errors` ; `INVALID_PARAMETER` : `after` absent ; `after` ou `limit` vide, non
+            entier ou hors de l'intervalle d'un entier 64 bits (« Paramètre invalide : … ») ; répété
+            (« Paramètre répété : … ») ; nom ou valeur refusés par le pare-feu HTTP à la lecture
+            (« Paramètre refusé. »). Le message nomme le paramètre, jamais la valeur reçue ; aucune
+            valeur dans les journaux. Une requête refusée par le pare-feu avant toute route (`%00` dans le
+            chemin, caractère de contrôle dans un en-tête) reçoit un `400` **sans corps**
+            (`FirewallRejected`, v15-D2).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ApiError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/LinksDisabled' }
         '409':
           description: |
             `code = CURSOR_AHEAD` (v11-D2) : `after` est supérieur au dernier `seq` attribué ; arrêter la
@@ -646,8 +670,16 @@ paths:
               schema: { $ref: '#/components/schemas/ApiError' }
         '429':
           $ref: '#/components/responses/TooManyRequests'
-          description: Plus de 120 requêtes par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable)
-        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+          description: |
+            Plus de 120 requêtes par minute pour la liaison (C1, v13-D4 ; valeur de départ, configurable).
+            Compteur par liaison, compté après l'autorisation (une liaison suspendue ne consomme pas son
+            quota) et avant la lecture des paramètres (une requête aux paramètres invalides compte).
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+          description: |
+            `RATE_LIMIT_UNAVAILABLE` (compteurs inaccessibles : rien n'est servi), `SCHEMA_UPGRADE_IN_PROGRESS`,
+            `SCHEMA_UPGRADE_FAILED` ou `SERVICE_CAPACITY_REACHED`
 
   /catalog/changes/ack:
     post:
@@ -1457,7 +1489,7 @@ components:
         operation: { type: string, enum: [UPSERT, ARCHIVE] }
         occurredAt: { type: string, format: date-time, description: 'Informatif : heure de début de la transaction qui a écrit l''événement. Ne sert jamais à ordonner : l''ordre repose uniquement sur seq (v11-D5)' }
         data:
-          description: 'État de l''objet ; son schéma est fixé par chaque variante (discriminée par type). Obligatoire pour UPSERT, facultatif pour ARCHIVE.'
+          description: 'État de l''objet ; son schéma est fixé par chaque variante (discriminée par type). Obligatoire pour UPSERT, facultatif pour ARCHIVE : un événement sans état est servi sans le champ data (omis, jamais null) (G16).'
       if:
         properties:
           operation: { const: UPSERT }
@@ -1537,7 +1569,8 @@ components:
             fusionnés en un seul (le plus grand `seq`). Raison : deux transactions concurrentes tenant
             des verrous différents (par exemple deux ventes du même produit dans deux dépôts) peuvent
             chacune calculer un agrégat qui ignore l'autre ; une valeur figée à l'écriture pourrait être
-            fausse.
+            fausse. Servi seulement aux liaisons qui ont la portée `stock:read` (G16) ; écarté sinon,
+            `lastSeq` avançant quand même.
           properties:
             type: { const: AVAILABILITY }
             data: { $ref: '#/components/schemas/Availability' }
