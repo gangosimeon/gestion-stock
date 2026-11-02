@@ -1883,11 +1883,11 @@ Source : décisions du responsable du 2026-11-02 ; lecture seule du backend Gest
 
 | # | Question | Proposition | À trancher avant |
 |---|---|---|---|
-| Q1 | Fournisseur du cron (v16-D2) et authentification de la route interne | **[Proposé]** planificateur hors du service backend (par exemple un workflow GitHub Actions `schedule`, ou un Cron Job Render) ; jeton dédié en en-tête, propre au cron, comparé en temps constant, distinct des jetons utilisateurs et de liaison ; route hors de `/api/integration/v1/**` | G20 |
-| Q2 | Filtre par liaison (`ChangeFilter`) | **[Proposé]** catalogue actif entier de l'entreprise (aucune sélection de produits par liaison en v1) ; `ChangeFilter.ALL` conservé, documenté comme décision | G16 |
-| Q3 | Consommateur JCMB | **[Proposé]** conteneur dédié sur le VPS (v13-D3 inchangé) ; à confirmer : le backend JCMB est toujours sur le VPS | J7 |
-| Q4 | Champ `stock` des produits JCMB synchronisés au lot 3 | **[Proposé]** inchangé au lot 3 (géré par la boutique) ; remplacé par la disponibilité au lot 4 (§ 7) | J6 |
-| Q5 | Prix d'un produit synchronisé jamais approuvé | Règle du § 5.1 (visible, non commandable, « Prix en attente de validation ») ; **[Proposé]** appliquée côté JCMB dès le lot 3 | J6 |
+| Q1 | Fournisseur du cron (v16-D2) et authentification de la route interne | **[Validé 2026-11-02] workflow GitHub Actions `schedule`** (précision de 5 à 15 min, suffisante pour la purge et les mesures ; jeton dans les secrets GitHub). **[Proposé]** jeton dédié en en-tête, propre au cron, comparé en temps constant, distinct des jetons utilisateurs et de liaison ; route hors de `/api/integration/v1/**` | G20 |
+| Q2 | Filtre par liaison (`ChangeFilter`) | **[Validé 2026-11-02]** catalogue actif entier de l'entreprise (aucune sélection de produits par liaison en v1) ; `ChangeFilter.ALL` conservé | G16 |
+| Q3 | Consommateur JCMB | **[Validé 2026-11-02]** conteneur dédié sur le VPS, distinct du conteneur Next.js (v13-D3 inchangé) | J7 |
+| Q4 | Champ `stock` des produits JCMB synchronisés au lot 3 | **[Validé 2026-11-02]** inchangé au lot 3 (géré par la boutique) ; remplacé par la disponibilité au lot 4 (§ 7) | J6 |
+| Q5 | Prix d'un produit synchronisé jamais approuvé | **[Validé 2026-11-02]** règle du § 5.1 appliquée côté JCMB dès le lot 3 : visible, non commandable, « Prix en attente de validation » | J6 |
 | Q6 | Refus de démarrer du backend JCMB si la configuration de l'intégration est invalide (E7) | **[Proposé]** non : contrôle à la première utilisation conservé | — |
 
 ### 29.5 Étapes du lot 3 (ordre proposé)
