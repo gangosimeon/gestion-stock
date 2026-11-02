@@ -211,9 +211,19 @@ info:
         - 'caractères de contrôle refusés (invalid_request, VALIDATION_FAILED, 401 invalid_client) ; tabulation et sauts de ligne permis dans le seul motif de révocation ; 400 MALFORMED_REQUEST pour un JSON illisible ; 400 sans corps pour une requête refusée par le pare-feu'
         - 'limiteur de /oauth/par et /oauth/token : compteur par IP avant l''authentification du client et compteur par client après ; en-tête d''IP de confiance à confirmer en I1'
         - 'routes du lot 2 : toute réponse que le code peut émettre est déclarée (404 RESOURCE_NOT_FOUND si les liaisons sont désactivées, 500 INTERNAL_ERROR, 400 sans corps du pare-feu ; POST /link/revoke : 403 INSUFFICIENT_SCOPE et 415 UNSUPPORTED_MEDIA_TYPE, aucun 503 ; GET /link : 503 SERVICE_CAPACITY_REACHED)'
+    v16:
+      date: '2026-11-02'
+      source: 'plan § 29 (hébergement sur Render, préparation du lot 3)'
+      approved: [v16-D1, v16-D2, v16-D3, v16-D4]
+      hosting: 'GestStock : backend Render (remplace Vercel), base Neon ; le reste inchangé'
+      backgroundTasks: 'route interne protégée appelée par un cron externe au processus (purge, métriques, nettoyage des liaisons PENDING expirées) ; aucun @Scheduled en production'
+      d2b: 'non retenue : un changement du prix de référence ne suspend jamais un prix approuvé (alerte referenceChangedSinceApproval seulement)'
+      contractChanges:
+        - 'serveur décrit sur Render ; en-tête d''IP posé par le proxy de l''hébergeur, à confirmer en I1'
+        - 'aucune route ajoutée ni modifiée'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
-    description: 'Backend GestStock hébergé sur Vercel (v13-D1), appelé directement, jamais à travers le relais nginx du frontend Render (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
+    description: 'Backend GestStock hébergé sur Render (v16-D1 ; v13-D1 : Vercel), appelé directement, jamais à travers le relais nginx du frontend (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
     variables:
       geststockApiOrigin:
         default: https://geststock-backend.invalid
@@ -1080,8 +1090,9 @@ components:
         plus.
         Origine (v13-D5, v14-D8) : liste blanche facultative de l'IP du VPS JeCréeMaBoutique, activable
         par configuration, **en plus** de l'authentification (jamais à sa place). L'IP est lue dans un
-        **seul en-tête configurable posé par Vercel**, jamais dans `X-Forwarded-For` brut. Nom de cet
-        en-tête : **à confirmer en I1** (vérification sur un déploiement de prévisualisation Vercel) ;
+        **seul en-tête configurable posé par le proxy de l'hébergeur** (Render depuis v16-D1 ; v14 :
+        Vercel), jamais dans `X-Forwarded-For` brut. Nom de cet en-tête : **à confirmer en I1**
+        (vérification avec un `X-Forwarded-For` falsifié) ;
         réglage `geststock.integration.client-ip-header` (variable
         `GESTSTOCK_INTEGRATION_CLIENT_IP_HEADER` en production), obligatoire quand les liaisons sont
         activées (v15). L'IP sert aussi au compteur de débit par IP de `/oauth/par` et `/oauth/token`.

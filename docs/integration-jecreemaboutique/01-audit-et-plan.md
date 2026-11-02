@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Version | 15 — 2026-10-31 — **lot 2 réalisé, plan et contrat alignés sur le code** (§ 28) : étapes G1 à G15, GA1, GA2, J1 à J5, JA0 et JA1 telles qu'implémentées (le code fait foi), écarts avec v14 relevés, décisions v15-D1 à v15-D6, backlog du lot 3 et checklist de déploiement complétés. Historique : v14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
-| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 **réalisé, non déployé** (§ 28) ; aucun autre lot commencé. *v14 : « lot 2 en préparation, non commencé, décisions arrêtées (§ 27) ».* *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
+| Version | 16 — 2026-11-02 — **hébergement sur Render, préparation du lot 3** (§ 29) : backend GestStock sur Render (v16-D1), tâches de fond par route interne et cron externe (v16-D2), D2b non retenue (v16-D3), critères d'entrée du lot 3 constatés, points ouverts Q1 à Q6, ordre des étapes, backlog et checklist corrigés. Historique : v15 — 2026-10-31 — **lot 2 réalisé, plan et contrat alignés sur le code** (§ 28) : étapes G1 à G15, GA1, GA2, J1 à J5, JA0 et JA1 telles qu'implémentées (le code fait foi), écarts avec v14 relevés, décisions v15-D1 à v15-D6, backlog du lot 3 et checklist de déploiement complétés. Historique : v14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 **réalisé, déployé selon le responsable** (§ 29.1) ; lot 3 en préparation (§ 29), aucune étape commencée. *v15 : « lot 2 réalisé, non déployé ; aucun autre lot commencé ».* *v14 : « lot 2 en préparation, non commencé, décisions arrêtées (§ 27) ».* *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
 | Code, bases, déploiements | Lot 2 : branche `feat/integration-lot2` des quatre dépôts (§ 28.2) ; aucun déploiement. Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6, § 25.2) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
 | Secrets | Aucun fichier `.env*` lu ; aucune valeur sensible copiée. Les variables citées le sont par leur **nom**, relevé dans le code. |
@@ -537,14 +537,14 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 |---|---|---|---|
 | D1 | Prix au POS : option (a), prix relu côté serveur depuis l'instantané approuvé | **Validé** (compatibilité vérifiée § 5.1) | — |
 | D2 | Approbation obligatoire par défaut, permission `integration:price-approve` (ADMIN) | **Validé** | — |
-| D2b | Suspension automatique d'un prix approuvé si le prix de référence varie au-delà d'un seuil | Ouvert (non retenu par défaut) | Lot 3 |
+| D2b | Suspension automatique d'un prix approuvé si le prix de référence varie au-delà d'un seuil | **Tranché (v16-D3) : non retenue**, alerte seulement *— v15 : « Ouvert (non retenu par défaut) »* | — |
 | D3 | Réservation : 30 min, configurable serveur, bornes 5 min – 24 h | **Validé** (bornes proposées) | — |
 | D4 | Commande multi-dépôts : une vente par dépôt | Ouvert | Lots 5-6 |
 | D5 | Rétention outbox : 90 jours minimum, acquittement requis | **Validé** sous réserve de validation technique | — |
 | D6 | Seuil de disponibilité « périmée » | Ouvert | Lot 4 |
 | D7 | MongoDB Atlas avant production ; offre | Ouvert *— v13-D1 : production sur Atlas confirmée ; offre et sauvegardes restent à vérifier* | Lot 7 |
 | D8 | URL backends et callbacks | **Ouvert** : candidates U1-U7 § 0 *— v13-D1 : hébergeurs confirmés ; URL publiques et callbacks à fixer* | Lot 2 |
-| D9 | Hébergement du backend GestStock et tâches planifiées | **Tranché (v13-D1, v13-D2)** : backend sur Vercel ; cron Vercel appelant une route interne protégée (conception lots 2-3) *— v12 : « Ouvert : options § 13 »* | Lots 2-3, 6 |
+| D9 | Hébergement du backend GestStock et tâches planifiées | **Tranché (v16-D1, v16-D2)** : backend sur Render ; route interne protégée appelée par un cron externe au processus (fournisseur : Q1, § 29.4) *— v13 : « backend sur Vercel ; cron Vercel appelant une route interne protégée »* *— v12 : « Ouvert : options § 13 »* | Lots 2-3, 6 |
 | D10 | Permission de traitement des commandes en ligne (`online-order:process`) | Ouvert (proposé) | Lot 5 |
 | D11 | Conservation des commandes en ligne et des données client | Ouvert *— seul point de C8 encore ouvert ; données transmises fixées par v13-D5 : nom, téléphone, adresse pour une livraison, pas d'e-mail* | Lot 5 |
 
@@ -1841,4 +1841,113 @@ Lint (`@redocly/cli` 2.72.1, `redocly.yaml` et `.redocly.lint-ignore.yaml` du do
 ### 28.12 Ce qui n'a pas été fait
 
 - Aucun code, migration, test ni configuration modifié par ce relevé ; dépôts applicatifs lus seulement.
+- Aucun commit, push ou déploiement.
+
+## 29. Relevé v16 — hébergement sur Render, préparation du lot 3 — 2026-11-02
+
+Source : décisions du responsable du 2026-11-02 ; lecture seule du backend GestStock (`feat/integration-lot2`, `8333afd`) et du backend JCMB (`b9ae7b1`). Décisions numérotées v16-D1 à v16-D4 ; les points marqués **[Proposé]** ou **[Ouvert]** restent à approuver avant l'étape qui en dépend.
+
+**Applications déployées : aucun effet.** Ce relevé ne modifie que ce document et le contrat.
+
+### 29.1 Décisions v16
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| **v16-D1** | Hébergement du backend GestStock (fait communiqué par le responsable) | Spring Boot sur **Render** (service web), base **Neon** ; remplace Vercel (v13-D1). Le lot 2 est déployé selon le responsable ; les contrôles du § 28.9 ne sont pas vérifiés par ce relevé. Frontends (Render), backend JCMB (VPS) et base JCMB (Atlas) : inchangés |
+| **v16-D2** | Tâches de fond (purge du flux, métriques, nettoyage des liaisons `PENDING` expirées) | Conception de v13-D2 **conservée** : une **route interne protégée**, appelée par un **cron externe au processus** ; traitement court (borné en durée et en volume), repris en cas d'interruption, rejouable sans effet en double. Raison : le service Render peut s'endormir sans trafic (offre gratuite) ou tourner sur plusieurs instances ; un `@Scheduled` n'y est pas fiable. Les tâches `@Scheduled` du lot 1 restent désactivées en production (T1 inchangé) |
+| **v16-D3** | D2b — suspension automatique d'un prix approuvé | **Non retenue.** Un changement du prix de référence ne retire jamais un prix approuvé de la vente : alerte seulement (`ChannelPrice.referenceChangedSinceApproval`, avis au commerçant et à l'approbateur, § 5.1) |
+| **v16-D4** | Démarrage du lot 3 | Par ce relevé (documentaire) ; les étapes suivent l'ordre du § 29.5, chacune après que les points du § 29.4 dont elle dépend ont été tranchés |
+
+### 29.2 Conséquences de v16-D1 sur les décisions antérieures
+
+| Sujet | Avant | v16 |
+|---|---|---|
+| v13-D2 « aucun processus permanent » | Backend serverless | Processus permanent, mais ni toujours éveillé ni forcément unique : les règles de v13-D2 (aucun état en mémoire pour les compteurs ni pour les tâches) **restent valables** |
+| Compteurs en mémoire, jauges du lot 1 | Exclus (Vercel) | **Toujours exclus** (plusieurs instances possibles) ; dette « métriques sans jauges en mémoire » (§ 26.10) maintenue |
+| Neon, trafic applicatif | Pooler recommandé (nombre d'instances serverless) ; N1 avant usage | **[Proposé]** hôte **direct** pour tout le trafic (pool de connexions du processus, peu d'instances) ; N1 sans objet tant que le pooler n'est pas utilisé ; P8 inchangée |
+| En-tête d'IP réelle (v14-D8, I1) | Posé par Vercel | **À établir sur Render** : identifier l'en-tête que le proxy de Render pose ou écrase, puis vérifier qu'une valeur falsifiée par le client n'est pas reprise ; son nom dans `GESTSTOCK_INTEGRATION_CLIENT_IP_HEADER` |
+| `GESTSTOCK_API_ORIGIN` (JCMB) | Origine Vercel, jamais le relais nginx du frontend | Origine du **service backend Render**, jamais le relais du frontend (règle v14-D8 inchangée) |
+| Cron | Cron Vercel | Cron externe au processus (§ 29.4, Q1) |
+
+### 29.3 État des critères d'entrée du lot 3 (§ 25.4), constaté dans le code
+
+| # | Critère | État au 2026-11-02 |
+|---|---|---|
+| 1 | P0-5 sur la route (base primaire, ni cache ni réplica) | À prouver avec les routes HTTP du flux (G16) |
+| 2 | Tests HTTP des codes `INVALID_PAGE_TOKEN`, `SNAPSHOT_EXPIRED`, `CURSOR_AHEAD`, `CURSOR_EXPIRED`, `VALIDATION_FAILED`, `INVALID_PARAMETER` | À écrire (G16, G18) ; codes déjà levés par `ChangeFeedService` et `SnapshotService` |
+| 3 | `LinkRef`, `ChangeFilter`, `AckSource`, `WarehouseScope` réels | `WarehouseScope` : **fait** (`LinkWarehouseScope`, G4a). `LinkRef` : identifiant opaque, à alimenter par la liaison authentifiée (G16). `ChangeFilter` : `ALL` (Q2). `AckSource` : `NoAcknowledgements` (G17) |
+| 4 | Publication conditionnée à une liaison active | **Fait** (G13, table `integration_publication`) |
+| 5 | Republication de la disponibilité au changement de type de dépôt | Sans objet tant que le périmètre ne filtre pas par type (`LinkWarehouseScope` filtre par liaison et par activité) ; à revoir au lot 4 |
+
+### 29.4 Points ouverts du lot 3
+
+| # | Question | Proposition | À trancher avant |
+|---|---|---|---|
+| Q1 | Fournisseur du cron (v16-D2) et authentification de la route interne | **[Proposé]** planificateur hors du service backend (par exemple un workflow GitHub Actions `schedule`, ou un Cron Job Render) ; jeton dédié en en-tête, propre au cron, comparé en temps constant, distinct des jetons utilisateurs et de liaison ; route hors de `/api/integration/v1/**` | G20 |
+| Q2 | Filtre par liaison (`ChangeFilter`) | **[Proposé]** catalogue actif entier de l'entreprise (aucune sélection de produits par liaison en v1) ; `ChangeFilter.ALL` conservé, documenté comme décision | G16 |
+| Q3 | Consommateur JCMB | **[Proposé]** conteneur dédié sur le VPS (v13-D3 inchangé) ; à confirmer : le backend JCMB est toujours sur le VPS | J7 |
+| Q4 | Champ `stock` des produits JCMB synchronisés au lot 3 | **[Proposé]** inchangé au lot 3 (géré par la boutique) ; remplacé par la disponibilité au lot 4 (§ 7) | J6 |
+| Q5 | Prix d'un produit synchronisé jamais approuvé | Règle du § 5.1 (visible, non commandable, « Prix en attente de validation ») ; **[Proposé]** appliquée côté JCMB dès le lot 3 | J6 |
+| Q6 | Refus de démarrer du backend JCMB si la configuration de l'intégration est invalide (E7) | **[Proposé]** non : contrôle à la première utilisation conservé | — |
+
+### 29.5 Étapes du lot 3 (ordre proposé)
+
+Même règle qu'au lot 2 : un commit par étape, tests écrits d'abord (échec de comportement constaté avant la modification), retour arrière = revert, plus le script U s'il y a une migration ; numéros de migration attribués à l'implémentation. GestStock : tests d'intégration sur PostgreSQL 17 (Testcontainers) seulement.
+
+| Ordre | Étape | Contenu | Tests d'abord |
+|---|---|---|---|
+| 1 | G16 | `GET /catalog/changes` (`catalog:read`) : `LinkRef` = liaison authentifiée, filtre Q2, 120/min par liaison (v13-D4) ; P0-5 | `INVALID_PARAMETER`, `VALIDATION_FAILED`, `CURSOR_AHEAD`, `CURSOR_EXPIRED` ; liaison de A sans donnée de B ; portée absente ⇒ 403 ; 121ᵉ appel ⇒ 429 |
+| 2 | G17 | `POST /catalog/changes/ack` ; `AckSource` réel (plus petit `seq` acquitté par les liaisons actives) ; purge en une transaction par lot de suppression (dette v12-D6) | Rien de purgé au-delà de l'acquittement le plus bas ; acquittement en recul ou au-delà de `lastSeq` refusé ; liaison révoquée hors calcul |
+| 3 | G18 | `GET /catalog/snapshot` (60/min par liaison) | `INVALID_PAGE_TOKEN`, `SNAPSHOT_EXPIRED` ; `pageToken` d'une autre liaison refusé ; devise figée |
+| 4 | G19 | `GET /catalog/products/{productId}/image` | Produit d'une autre entreprise ⇒ 404 ; empreinte et version cohérentes avec l'événement `PRODUCT_IMAGE` |
+| 5 | G20 | Route interne et cron (v16-D2, Q1) : purge, mesures du flux, révocation `EXPIRED` des liaisons `PENDING` expirées (nettoyage global, v14-D2) | Sans jeton du cron ⇒ 401 ; jeton utilisateur ou de liaison refusé ; deux exécutions ⇒ même état ; traitement borné |
+| 6 | G21 | Permission `integration:price-approve` (migration d'entreprise V + U), ADMIN par défaut (v14-D7) | Comptes de permissions (`SchemaConventionsIT`, `PermissionCatalogIT`, `RolePermissionMatrixIT`, `RoleApiIT`, `RoleRepositoryIT`) ; `MigrationRollbackIT` |
+| 7 | G22 | `channel_price` (V + U) ; `POST /prices/proposals` (`price:propose`, `Idempotency-Key`) ; `GET /prices` ; décisions d'approbation ; concurrence C6 ; alerte de changement du prix de référence (v16-D3) | Proposition concurrente ⇒ `SUPERSEDED` ; `422 PRICE_VERSION_MISMATCH` ; rejeu idempotent ; décision sur une proposition déjà décidée ⇒ conflit ; aucun prix approuvé modifié par un changement du prix de référence |
+| 8 | GA3 | Angular GestStock : approbation et refus des prix (motif obligatoire), avis de changement du prix de référence | Masqué sans `integration:price-approve` ; refus sans motif impossible |
+| 9 | G23 | `GET /catalog/products/search` (`catalog:match`) | Pagination ; produits d'une autre entreprise absents |
+| JCMB | J6 | Identifiants externes des produits et catégories (`external.source`, `external.id`, `external.version`), index unique `{shopId, external.source, external.id}`, `scripts/migrate-external-ids.mjs` ; champs GestStock en lecture seule (API) | Écriture d'un champ GestStock refusée ; association en double refusée sans modification |
+| JCMB | J7 | Modèle `syncstates` et consommateur (Q3) : catégories avant produits, `updateOne` conditionné par la version, registre des événements appliqués, curseur avancé **après** application, remise à zéro (`CURSOR_AHEAD`, v11-D11) | Rejeu sans effet ; événement plus ancien ignoré ; interruption entre application et curseur sans perte ; type inconnu ignoré |
+| JCMB | J8 | Instantané initial et réconciliation | Catalogue identique après synchronisation et après réconciliation ; aucun champ boutique modifié |
+| JCMB | J9 | Images : traitement séparé, par empreinte | Image inchangée non retéléchargée |
+| JCMB | J10 | Suppressions (§ 5.3) : catégorie contenant des produits synchronisés ⇒ 409 ; produit synchronisé : masquer ou détacher ; produit désactivé chez GestStock ⇒ archivé | `deleteCategory`, `deleteProduct` |
+| JCMB | J11 | Rapprochement assisté et propositions de prix | Différences affichées avant confirmation ; association concurrente refusée |
+| JCMB | J12 | Restes du lot 2 : part JCMB de la rotation du secret (`POST /link/secret`, rechiffrement) ; révocation de la liaison au bannissement d'une boutique (`app/api/admin/shops/[id]/toggle-ban`) | Ancien secret plus utilisé après la rotation ; bannissement ⇒ liaison révoquée chez GestStock puis localement |
+| JCMB | JA2 | Angular JCMB : statut de synchronisation, rapprochement, champs GestStock en lecture seule, « Prix en attente de validation » | Tests Vitest |
+
+### 29.6 Backlog du lot 3 (remplace le § 28.8)
+
+| Point | Origine | Étape |
+|---|---|---|
+| Route interne et cron (métriques, purge) | v14-D16, v16-D2 | G20 |
+| Nettoyage global des liaisons `PENDING` expirées | v14-D2 | G20 |
+| Permission `integration:price-approve` | v14-D7 | G21 |
+| Exposition des métriques du flux sans jauges en mémoire par instance | § 26.10 | G20 |
+| Révocation de la liaison au bannissement d'une boutique JCMB | v15 | J12 |
+| Part JCMB de la rotation du secret de liaison | G14 | J12 |
+| Refus de démarrer du backend JCMB si la configuration est invalide (E7) | v15 | Q6 |
+| Hébergement local des polices du frontend JCMB (facultatif) | JA1 | — |
+| Retrait de `tsconfig.tsbuildinfo` du suivi Git (JCMB backend) | J1 à J5 | — |
+| `dist/` du frontend JCMB : retrait du suivi ou maintien | v15-D6 | R3 |
+
+### 29.7 Checklist de déploiement (complète et corrige le § 28.9)
+
+| # | Contrôle | Origine |
+|---|---|---|
+| I1 | En-tête d'IP réelle **posé par Render** identifié et vérifié avec un `X-Forwarded-For` falsifié ; son nom dans `GESTSTOCK_INTEGRATION_CLIENT_IP_HEADER` | v14-D8, v16-D1 |
+| O1 | `GESTSTOCK_API_ORIGIN` (JCMB) = origine du service backend **Render** ; `GESTSTOCK_FRONTEND_ORIGIN` et `geststockOrigin` identiques | JA1, v16-D1 |
+| P8 | `GESTSTOCK_DB_URL`, `GESTSTOCK_PLATFORM_DB_URL` et `GESTSTOCK_PROVISIONER_DB_URL` au format `jdbc:postgresql://hôte/base?sslmode=require` : hôte direct sans `-pooler`, aucun identifiant dans l'URL, aucun paramètre propre à `psql` (`channel_binding`) | v11-D12, v16 |
+| PORT | Port d'écoute aligné sur celui attendu par Render (`GESTSTOCK_SERVER_PORT`) | v16-D1 |
+| T1 | Tâches `@Scheduled` désactivées en production tant que la route interne et le cron ne sont pas livrés (G20) | v13-D2, v16-D2 |
+| N1 | Sans objet tant que le pooler Neon n'est pas utilisé (§ 29.2) | v16 |
+
+### 29.8 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- Hébergement : serveur décrit sur Render (v16-D1) ; en-tête d'IP posé par le proxy de Render, à confirmer en I1.
+- Bloc `x-decisions.v16`.
+- Aucune route ajoutée ni modifiée : les routes du lot 3 restent décrites telles que proposées, à aligner sur le code étape par étape.
+
+### 29.9 Ce qui n'a pas été fait
+
+- Aucun code, migration, test ni configuration modifié ; dépôts applicatifs lus seulement.
+- Aucune vérification du déploiement Render (§ 28.9, § 29.7) ; aucun accès à Neon ni à Render.
 - Aucun commit, push ou déploiement.
