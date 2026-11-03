@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Version | 16 — 2026-11-02 — **hébergement sur Render, préparation du lot 3** (§ 29) : backend GestStock sur Render (v16-D1), tâches de fond par route interne et cron externe (v16-D2), D2b non retenue (v16-D3), critères d'entrée du lot 3 constatés, points ouverts Q1 à Q6, ordre des étapes, backlog et checklist corrigés. Historique : v15 — 2026-10-31 — **lot 2 réalisé, plan et contrat alignés sur le code** (§ 28) : étapes G1 à G15, GA1, GA2, J1 à J5, JA0 et JA1 telles qu'implémentées (le code fait foi), écarts avec v14 relevés, décisions v15-D1 à v15-D6, backlog du lot 3 et checklist de déploiement complétés. Historique : v14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
-| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 **réalisé, déployé selon le responsable** (§ 29.1) ; lot 3 en préparation (§ 29), aucune étape commencée. *v15 : « lot 2 réalisé, non déployé ; aucun autre lot commencé ».* *v14 : « lot 2 en préparation, non commencé, décisions arrêtées (§ 27) ».* *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
+| Version | 17 — 2026-11-02, complétée le 2026-11-03 (G17 réalisée, § 30.10) — **acquittement du flux et purge, conception G17** (§ 30) : décisions de la revue G16 (disponibilité réservée à `stock:read`, paramètre refusé par le pare-feu), décisions G17 v17-D3 à v17-D16 (acquittements dans la base de l'entreprise, liaison sans acquittement bloquante, `409 CURSOR_AHEAD`, 60 appels par minute avant la lecture du corps, `seq` strict, plafond `last_seq` lu avant la liste des liaisons, lots autonomes et durée bornée), démonstration de l'activation pendant une purge corrigée après revue contradictoire et test de concurrence exigé avant toute purge réelle ; notes datées aux § 5.6, § 11 et § 20.5. Historique : v16 — 2026-11-02 — **hébergement sur Render, préparation du lot 3** (§ 29) : backend GestStock sur Render (v16-D1), tâches de fond par route interne et cron externe (v16-D2), D2b non retenue (v16-D3), critères d'entrée du lot 3 constatés, points ouverts Q1 à Q6, ordre des étapes, backlog et checklist corrigés. Historique : v15 — 2026-10-31 — **lot 2 réalisé, plan et contrat alignés sur le code** (§ 28) : étapes G1 à G15, GA1, GA2, J1 à J5, JA0 et JA1 telles qu'implémentées (le code fait foi), écarts avec v14 relevés, décisions v15-D1 à v15-D6, backlog du lot 3 et checklist de déploiement complétés. Historique : v14 — 2026-10-29 — **décisions du lot 2** (§ 27) : parcours de liaison par demande déposée de serveur à serveur (PAR) et retour par une page Angular JCMB protégée, unicité côté boutique, deux niveaux d'identifiants, jeton `iss`/`typ`, secret SHA-256 et rotation, `integration:manage` pour ADMIN seulement, IP réelle derrière Vercel, retour arrière plateforme, suspension avec motif, drapeau de publication, ordre des étapes et du déploiement. Historique : v13 — 2026-10-29 — **hébergement réel, C1 et C8 tranchées, préparation du lot 2** (§ 26) : hébergement confirmé (GestStock sur Vercel et Neon, JCMB sur VPS et Atlas), tâches planifiées par cron Vercel, consommation du flux par interrogation depuis le VPS et webhook retiré de la v1, limitation de débit (C1), jeton de liaison, secret, idempotence, limites de commande et données client (C8, sauf conservation), sécurité des routes d'intégration, comportements JCMB conservés, risques acceptés. Historique : v12 — 2026-10-29 — **clôture du lot 1, C3 validée (porte de sortie du Lot 1, 2026-10-29)** (§ 25) : preuves de la porte de sortie, lot 1 terminé et non déployé, décisions des étapes 7 à 9, publication conditionnée à une liaison active, critères d'entrée du lot qui expose le flux en HTTP, dette rattachée, checklist du premier déploiement. Historique : v11 — 2026-10-29 — décisions des étapes 4a à 4c du lot 1 (§ 24) : réparation de l'état du flux et invariant de purge, `409 CURSOR_AHEAD`, deux codes `400` sur `/catalog/changes`, type d'événement inconnu servi tel quel, `occurredAt` informatif, `currency` et `imageSha256` retirés de `Product`, devise ISO 4217 et `perWarehouse` (C8 tranché sur ces points), forme de l'instantané, retour arrière de V048 destructif, P8 devenue règle de déploiement ; état du lot 1 (étapes 1 à 6 du plan d'exécution réalisées, C3 non validée). Historique : v10 — décisions Q1 à Q7 (§ 22) : conventions de schéma (clé `uuid`, `write_id` unique, `object_version`), permissions `integration:*` au lot 2, **lot 1 sans route HTTP**, numéros de migration non fixés, métriques sans exposition, remplissage `product_image_generation`, contrat conforme au lint Redocly (0 erreur) ; constats annexes (§ 23). Historique : v9 — décisions v9-D1 (`410 CURSOR_EXPIRED`), v9-D2 (`pageToken` ≤ 512), v9-D3 (portes du lot 1) (§ 21) ; **C3 : approuvée — conception détaillée approuvée — validation technique prévue en sortie du lot 1** ; entrée dans le lot 1 satisfaite sur le plan documentaire, **démarrage non autorisé** ; C1 et C8 ouvertes. Historique : v8 conception détaillée C3/C7, décisions P0 à P8 (§ 20), point bloquant C7 résolu sur le plan documentaire (P7) ; v7 décisions de contrat C2 à C7 (§ 19) ; v6 contrat corrigé (E3) et documents indexés (E5) ; plan A–E (§ 18) ; constat Atlas (§ 5.5) |
+| Statut | **Proposition soumise à approbation.** Lot 1 **terminé, non déployé** (§ 25.2) ; C3 validée (porte de sortie du Lot 1, 2026-10-29) ; C1 tranchée, C8 tranchée sauf la durée de conservation des données client (§ 26) ; lot 2 **réalisé, déployé selon le responsable** (§ 29.1) ; lot 3 en cours : G16 réalisée et revue ; G17 **réalisée et vérifiée, non déployée** (§ 30.10), purge réelle toujours désactivée. *v17 (première rédaction) : « G17 conçue et non commencée (§ 30) ».* *v16 : « lot 3 en préparation (§ 29), aucune étape commencée ».* *v15 : « lot 2 réalisé, non déployé ; aucun autre lot commencé ».* *v14 : « lot 2 en préparation, non commencé, décisions arrêtées (§ 27) ».* *v11 : « Lot 1 en cours » ; v10 : « Aucun lot d'implémentation n'est commencé. »* |
 | Code, bases, déploiements | Lot 2 : branche `feat/integration-lot2` des quatre dépôts (§ 28.2) ; aucun déploiement. Lot 1 : code, migrations et tests dans le dépôt backend, branche `feat/integration-lot1` (§ 24.6, § 25.2) ; **aucune modification** de la production ni de l'hébergement, **aucun déploiement**. Documents : ce fichier et `integration-v1.openapi.yaml`. Seule base créée hors tests : `geststock_restore_lot0`, sur le PostgreSQL **local** d'essai (§ 17). *v10 : « Aucune modification du code, des migrations… »* |
 | Périmètre audité | `gestionStock/backend`, `gestionStock/gestion-stock`, `burkina-shop-angular20/backend-gestion-boutique`, `burkina-shop-angular20/gestion-boutique` |
 | Secrets | Aucun fichier `.env*` lu ; aucune valeur sensible copiée. Les variables citées le sont par leur **nom**, relevé dans le code. |
@@ -263,6 +263,8 @@ Aucun paiement en ligne dans le code audité. S'il est ajouté : notifications a
 **Constat contradictoire (v5, non tranché)** : `backend-gestion-boutique/docker-compose.yml` déclare le service `mongodb` (`mongo:7-jammy`) « dev uniquement » et indique (ligne 14) qu'**en production MongoDB est remplacé par Atlas** (`MONGODB_URI`). Les versions précédentes de ce document supposaient une instance Docker en production. Il s'agit d'un commentaire de configuration, **pas d'une preuve** ; la valeur de `MONGODB_URI` en production n'a pas été lue (fichier `.env` exclu). Conséquences si Atlas est confirmé : D7 porte sur l'offre et non sur la migration ; transactions disponibles si l'offre fournit un jeu de réplicas ; la restauration de production relève des sauvegardes Atlas et le test local (§ 18.3) ne valide que les outils et le format. Vérification sûre : lecture par le responsable de l'hôte de `MONGODB_URI` (sans copier sa valeur) ou de la console Atlas — **autorisation requise**.
 
 ### 5.6 Conservation des événements de synchronisation — D5 [Validé : 90 jours minimum]
+
+*Note v17 (2026-11-02) : règle de purge précisée au § 30.4 (liaisons actives ou suspendues de l'entreprise, liaison sans acquittement bloquante, liaisons révoquées exclues, plafond `last_seq` lu en premier, lots autonomes) ; les « points ouverts rattachés à C8 » ci-dessous sur l'exclusion des liaisons révoquées et les liaisons inactives sont tranchés par v17-D4, v17-D5 et § 30.4. Texte d'origine conservé.*
 
 - **Périmètre** : la règle vise uniquement `integration_outbox` (événements de synchronisation). `audit_log`, ventes, commandes et réservations **ne sont pas** purgés par cette règle ; toute rétention les concernant demande une analyse distincte.
 - **Condition de purge** (les deux à la fois) : événement plus ancien que **90 jours** **et** `seq` inférieur au plus petit curseur **acquitté** par toutes les liaisons actives ou suspendues. JCMB acquitte son curseur après application (`POST …/changes/ack`, à créer dans le contrat).
@@ -540,7 +542,7 @@ Règles communes : un lot = une branche dédiée, testé en environnement isolé
 | D2b | Suspension automatique d'un prix approuvé si le prix de référence varie au-delà d'un seuil | **Tranché (v16-D3) : non retenue**, alerte seulement *— v15 : « Ouvert (non retenu par défaut) »* | — |
 | D3 | Réservation : 30 min, configurable serveur, bornes 5 min – 24 h | **Validé** (bornes proposées) | — |
 | D4 | Commande multi-dépôts : une vente par dépôt | Ouvert | Lots 5-6 |
-| D5 | Rétention outbox : 90 jours minimum, acquittement requis | **Validé** sous réserve de validation technique | — |
+| D5 | Rétention outbox : 90 jours minimum, acquittement requis | **Validé** sous réserve de validation technique *— v17 (2026-11-02) : règle de purge et acquittement conçus au § 30 ; validation technique au test de concurrence de G17 (§ 30.7)* | — |
 | D6 | Seuil de disponibilité « périmée » | Ouvert | Lot 4 |
 | D7 | MongoDB Atlas avant production ; offre | Ouvert *— v13-D1 : production sur Atlas confirmée ; offre et sauvegardes restent à vérifier* | Lot 7 |
 | D8 | URL backends et callbacks | **Ouvert** : candidates U1-U7 § 0 *— v13-D1 : hébergeurs confirmés ; URL publiques et callbacks à fixer* | Lot 2 |
@@ -998,7 +1000,7 @@ Justification de l'événement mince : deux transactions concurrentes tenant des
 ### 20.5 Nouveaux points ouverts, rattachés à C8 (non décidés)
 
 - **Curseur antérieur à la purge** : **principe approuvé (v9-D1, § 21)** — `410 CURSOR_EXPIRED`, repère de purge durable, instantané complet puis reprise depuis `asOfSeq`. **Restent ouvertes (C8)** : durée de rétention et règle de purge. *v8 : « [Hypothèse non approuvée] — à lire comme non approuvée jusqu'à décision » (réponse présente dans l'OpenAPI depuis la v1).*
-- **Calcul de la purge** : exclusion des liaisons révoquées et traitement des liaisons inactives, pour qu'une liaison qui n'acquitte plus ne bloque pas la purge.
+- **Calcul de la purge** : exclusion des liaisons révoquées et traitement des liaisons inactives, pour qu'une liaison qui n'acquitte plus ne bloque pas la purge. *— v17 (2026-11-02) : tranché au § 30.4 ; liaisons révoquées exclues ; une liaison active ou suspendue qui n'acquitte plus bloque la purge, sans exclusion automatique, jusqu'à sa révocation (v17-D4, v17-D5).*
 
 ### 20.6 Ce qui n'a pas été fait
 Aucun code, migration, test, configuration ni secret créé ou modifié ; aucune table ni aucun index créé ; index Git inchangé (la v6 reste indexée) ; aucun commit, push ou déploiement ; lot 1 non démarré ; **C3 non validée** ; validation complète OpenAPI 3.1 non exécutée (E2 non autorisé).
@@ -1951,3 +1953,228 @@ Même règle qu'au lot 2 : un commit par étape, tests écrits d'abord (échec d
 - Aucun code, migration, test ni configuration modifié ; dépôts applicatifs lus seulement.
 - Aucune vérification du déploiement Render (§ 28.9, § 29.7) ; aucun accès à Neon ni à Render.
 - Aucun commit, push ou déploiement.
+
+## 30. Relevé v17 — acquittement du flux et purge (conception G17) — 2026-11-02
+
+Source : audit de conception G17 (lecture seule du backend GestStock : `OutboxPurge`, `AckSource`, `SnapshotService`, `FeedSequencer`, `OAuthService`, `LinkPublication`), revue contradictoire du même jour et décisions du responsable du 2026-11-02. Décisions numérotées v17-D1 à v17-D16 ; tout point marqué **[Proposé]** n'est pas tranché. **Aucune implémentation autorisée par ce relevé** : G17 commence après validation de ce document, tests d'abord.
+
+**Applications déployées : aucun effet.** Ce relevé ne modifie que ce document et le contrat.
+
+*Révision du 2026-11-02 après revue contradictoire* : faille de la première démonstration du § 30.5 corrigée (les éléments de la borne étaient lus à des instants différents ; v17-D11) ; décisions v17-D12 à v17-D16 ajoutées ; numéros de migration retirés ; propositions séparées des décisions.
+
+### 30.1 Décisions de la revue G16 (2026-11-02)
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| **v17-D1** | Événements `AVAILABILITY` dans le flux | Servis seulement aux liaisons qui ont la portée `stock:read` (celle de `GET /availability`) ; `catalog:read` seule ne divulgue aucune quantité. Filtre de la liaison (`ChangeFilter`) : un événement écarté est examiné et fait avancer `lastSeq` (P1). **Règle équivalente pour l'instantané (G18)** : section `availability` servie seulement avec `stock:read` (`SnapshotService.read` n'a pas encore de filtre ; un produit absent de la section est dans son état initial, v12-D3 b) |
+| **v17-D2** | Paramètre refusé par le pare-feu HTTP (hors intégration, toute l'application) | Refus pendant la lecture des arguments : `400 INVALID_PARAMETER` « Paramètre refusé. », sans journal (auparavant `500` et journal ERROR citant le nom, constaté sur `GET /api/audit-logs`) ; refus avant toute route : `400` sans corps (v15-D2), sans journal ni page d'erreur ; logger `org.springframework.web.servlet.DispatcherServlet` limité à INFO (en DEBUG, il lit les paramètres et fait dépendre la réponse du niveau de journal ; en TRACE, il écrit la query). **Limite assumée** : en DEBUG et TRACE, Tomcat et Spring Security écrivent la ligne de requête de toute requête ; ces niveaux ne sont jamais activés en production |
+
+### 30.2 Décisions G17
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| **v17-D3** (G17-1) | Stockage des acquittements | Base de **chaque entreprise**, table `integration_link_ack` (§ 30.6). Raison : acquittements, flux et purge dans la même base, cohérents après une restauration de la base de l'entreprise |
+| **v17-D4** (G17-2) | Liaison active ou suspendue sans acquittement | **Bloque toute la purge** de l'entreprise (protège une liaison qui récupère encore son état initial) |
+| **v17-D5** (G17-3) | Liaison qui n'acquitte plus | Aucune exclusion automatique ; abandon par une **révocation explicite et journalisée** (D5, audit `LINK_REVOKED`) ; alerte sur l'âge de l'acquittement par liaison avec les métriques (G20) |
+| **v17-D6** (G17-4) | `seq` supérieur au dernier `seq` attribué | `409 CURSOR_AHEAD`, comme `GET /catalog/changes` (l'ébauche du contrat prévoyait `422`) |
+| **v17-D7** (G17-5) | Limite de débit | Compteur propre à l'acquittement : **60 appels par minute et par liaison**, configurable ; distinct du compteur du flux |
+| **v17-D8** (G17-6) | Contrôle du `seq` réellement servi à la liaison | **Aucun** : il imposerait une écriture à chaque lecture ; un acquittement trop en avance ne fait perdre des événements qu'à la liaison fautive (la purge suit le plus petit acquittement) |
+| **v17-D9** (G17-7) | Événements sans `seq` | **Conservés en G17** (règle existante inchangée), y compris après la révocation de la dernière liaison : ils peuvent alors s'accumuler (la publication est arrêtée, v12-D4, mais ceux déjà écrits et jamais lus restent) jusqu'à la décision prévue en G20, avec les métriques |
+| **v17-D10** | Purge par lots autonomes (dette v12-D6) | § 30.4 |
+| **v17-D11** | Plafond de la borne (correction de la revue) | La purge lit `last_seq` dans la base de l'entreprise **avant** de lire la liste des liaisons dans la base plateforme ; cette valeur est un **plafond immuable** du passage. La borne ne dépasse jamais ce plafond (§ 30.4, § 30.5) |
+| **v17-D12** | `seq` mal typé | **Refus strict en `400`** : chaîne, décimal, booléen, `null`, valeur hors des entiers 64 bits, objet ou tableau ; aucune conversion implicite (§ 30.3) |
+| **v17-D13** | Acquittement inférieur ou égal à la valeur enregistrée, y compris sous le repère de purge | **Accepté** : `200`, `acknowledgedSeq` = valeur réellement enregistrée, jamais de recul ; la lecture suivante du flux garde son comportement (`410 CURSOR_EXPIRED` si `after` est sous le repère) |
+| **v17-D14** | Ordre de la limite de débit | La limite est appliquée **avant l'analyse du corps** ; un appel refusé reçoit `429 RATE_LIMITED` avec `Retry-After` (conventions de G16) ; un corps illisible compte donc dans la limite |
+| **v17-D15** | Migration | Migration d'entreprise, **numéro attribué à l'implémentation** (Q4), et script de retour associé. Le retour arrière supprime les acquittements : par sécurité, la purge reste bloquée pour les liaisons actives ou suspendues jusqu'à leurs nouveaux acquittements (v17-D4) |
+| **v17-D16** | Durée d'un passage de purge | Nombre maximal de lots et durée maximale **configurables** ; la durée est vérifiée **entre** deux lots : un lot commencé est mené à son terme, jamais interrompu par la limite ; aucun nouveau lot ne commence après le dépassement ; chaque lot validé reste acquis et le passage suivant reprend depuis le repère |
+
+### 30.3 Acquittement : `POST /catalog/changes/ack`
+
+- Portée `catalog:read` ; liaison **exclusivement** celle du jeton authentifié, entreprise courante celle de la liaison (chaîne d'intégration, G6, G7) ; aucun identifiant de liaison ni d'entreprise lu dans la requête.
+- Statuts de liaison (chaîne existante) : inconnue, d'un autre client ou en attente : `401 INVALID_TOKEN` ; révoquée : `401 LINK_REVOKED` ; suspendue : `403 LINK_SUSPENDED` (v14-D10), son dernier acquittement reste enregistré et continue de compter dans la purge (D5).
+- **Ordre de traitement** (v17-D14) : chaîne de sécurité, puis limite de débit, puis lecture du corps, puis validation, puis enregistrement. Spring MVC lit un paramètre `@RequestBody` **avant** d'appeler la méthode du contrôleur : pour respecter cet ordre, le corps devra être lu par la méthode elle-même, après la limite (mécanisme à réaliser à l'implémentation, comme la lecture manuelle des paramètres de G16). Le type de contenu est donc contrôlé par la route (`415`) ; la route ne doit **pas** déclarer `consumes` : la chaîne d'intégration ne trouverait alors aucune règle pour un autre type de contenu et répondrait `403` au lieu de `415` (`IntegrationSecurityConfig.ScopedEndpoints`, lu le 2026-11-02).
+- **Corps** (v17-D12), objet JSON `{"seq": <entier>}` :
+
+  | Corps reçu | Réponse |
+  |---|---|
+  | `seq` entier de 0 à 2⁶³ − 1 | Traité |
+  | `seq` absent ou `null` | `400 VALIDATION_FAILED`, champ `seq` dans `errors` |
+  | `seq` entier négatif | `400 VALIDATION_FAILED`, champ `seq` dans `errors` |
+  | `seq` chaîne, décimal (`1.5`, `1.0`), booléen, objet, tableau, ou entier hors des 64 bits | `400 MALFORMED_REQUEST` |
+  | Corps absent, vide, illisible, ou autre chose qu'un objet JSON | `400 MALFORMED_REQUEST` |
+  | Corps de plus de 1 024 octets | `413 CONTENT_TOO_LARGE` (choix E2, § 30.10 ; RFC 9110 § 15.5.14, comme `FILE_TOO_LARGE`) |
+  | Type de contenu absent, ou autre que `application/json` (paramètres comme `charset` admis) | `415 UNSUPPORTED_MEDIA_TYPE` |
+
+  Le message nomme le champ, jamais la valeur reçue ; aucune valeur dans les journaux (G15). Champs inconnus : ignorés (choix effectif E1, § 30.10 ; *première rédaction : [Proposé]*) ; un objet sans `seq` (`{"autre": 1}`) répond donc `VALIDATION_FAILED` sur `seq`. Répartition des deux codes vérifiée par `CatalogAckRouteIT` (§ 30.10).
+- Enregistrement : une seule instruction atomique, `acknowledged_seq = greatest(valeur enregistrée, seq reçu)` ; un acquittement ne recule jamais ; un `seq` inférieur ou égal à la valeur enregistrée, même sous le repère de purge, répond `200` avec la valeur enregistrée (v17-D13) ; rejouer l'appel donne le même résultat.
+- `seq` supérieur au `last_seq` du flux : `409 CURSOR_AHEAD` (v17-D6), rien n'est enregistré.
+- Limite : v17-D7 ; compteurs inaccessibles : `503 RATE_LIMIT_UNAVAILABLE`, rien n'est enregistré.
+- **[Proposé] Règle du consommateur** (JCMB) : n'acquitter que des événements appliqués, jamais avant la fin de l'instantané initial.
+
+### 30.4 Purge
+
+**Calcul de la borne d'un passage**, dans cet ordre (v17-D11) :
+
+1. **Plafond** : lire `last_seq` dans la base de l'entreprise (`integration_feed_state`). Cette valeur, notée `P`, est conservée sans changement pendant tout le passage.
+2. **Liaisons** : lire dans la base plateforme les liaisons `ACTIVE` ou `SUSPENDED` de l'**entreprise courante** (contexte d'entreprise du passage), après l'étape 1. Les liaisons révoquées sont exclues ; leurs lignes d'acquittement sont ignorées.
+3. **Acquittements** : `AckSource` lit, dans la base de l'entreprise, les acquittements de ces liaisons et renvoie l'un de trois cas (au lieu d'un `OptionalLong`) :
+
+   | Cas | Liaisons `ACTIVE` ou `SUSPENDED` | Limite `A` |
+   |---|---|---|
+   | Aucune liaison | aucune (dernière liaison révoquée, v12-D4) | pas de limite d'acquittement |
+   | Bloquée | au moins une sans acquittement (v17-D4) | **rien n'est purgeable** ; le passage s'arrête |
+   | Acquittée | toutes ont un acquittement | `A` = plus petit acquittement |
+
+4. **Borne** `B` = le minimum de : `P` ; `MAX(seq) − 1` (v11-D1 : l'événement de plus grand `seq` est conservé) ; premier `seq` de moins de 90 jours − 1 (D5) ; `A` s'il existe. `B` n'est jamais relevée pendant le passage. Si `B ≤ repère`, rien n'est purgeable.
+
+**Bornes incluses** : un passage ne supprime que les événements séquencés tels que **`repère < seq ≤ B`**, dans l'ordre des `seq` (préfixe contigu, v12-D3 d) ; un événement sans `seq` n'est jamais supprimé (v17-D9). Le repère `purged_through_seq` est le plus haut `seq` supprimé ; après chaque lot validé, **repère = plus petit `seq` restant − 1** (v11-D1), et il ne recule jamais. Exemple : avec un acquittement `A`, la purge peut aller jusqu'à `A` inclus ; le repère vaut alors au plus `A`, et une lecture avec `after = A` reste acceptée (égalité, v9-D1).
+
+**Lots autonomes (v17-D10, v17-D16)** :
+
+1. Chaque lot a sa transaction courte : verrou de la ligne d'état du flux (`FOR UPDATE`, `lock_timeout`), suppression d'au plus `batch-size` événements (les plus petits `seq` de l'intervalle), mise à jour du repère au plus grand `seq` supprimé, dans la **même** transaction.
+2. Erreur pendant un lot : **retour arrière complet de ce lot** ; les lots déjà validés restent acquis ; le passage s'arrête ; le suivant recalcule sa borne et reprend depuis le repère, sans doublon ni perte.
+3. Aucun verrou conservé entre deux lots (le séquenceur, en `SKIP LOCKED`, n'est retardé que le temps d'un lot).
+4. Nombre maximal de lots et durée maximale **configurables** ; la durée est vérifiée entre deux lots (v17-D16).
+5. **Simulation** : même ordre de lecture, même plafond, même borne, mêmes critères de sélection ; elle compte les événements éligibles et les lots qui seraient faits, sans rien supprimer ni avancer le repère. Elle **ne reproduit pas** la prise de verrou ni ses délais (`lock_timeout`).
+6. Purge désactivée et en simulation par défaut (inchangé) ; G17 n'active pas la purge.
+
+### 30.5 Activation d'une liaison pendant une purge
+
+**Exigence** (précision du responsable) : une liaison activée pendant une purge ne perd aucun événement dont elle a besoin. Elle doit être **démontrée par un test d'intégration** sur le fonctionnement réel de l'activation et de l'instantané ; tant qu'elle ne l'est pas, la purge réelle n'est pas autorisée.
+
+**Faits du code (lecture seule, 2026-11-02)** :
+
+- L'instantané fixe `asOfSeq` = `last_seq`, lu dans la transaction de sa première page, après un passage du séquenceur (`SnapshotService.read`).
+- `last_seq` ne décroît jamais : le séquenceur l'augmente ; la réparation (§ 24.2) le recrée à `MAX(seq)`, et l'événement de plus grand `seq` n'est jamais purgé.
+- Tout `seq` attribué est inférieur ou égal à `last_seq` ; un acquittement aussi (refusé au-delà, v17-D6).
+- L'activation (`OAuthService.exchangeCode`) lève d'abord le drapeau de publication (base de l'entreprise), puis active la liaison (base plateforme).
+
+**Faille de la première rédaction** : elle supposait la borne lue à un seul instant. Or la liste des liaisons (base plateforme) et les acquittements (base de l'entreprise) sont lus séparément. Contre-exemple : la purge lit la liste sans L ; L est activée et lit sa première page (`asOfSeq` = 100) ; une autre liaison acquitte 150 ; la purge lit ensuite les acquittements et obtient une borne de 150 : les événements 101 à 150, nécessaires à L, deviennent supprimables. La règle des 90 jours rend ce cas improbable, sans le rendre impossible.
+
+**Démonstration corrigée** (v17-D11). Instants :
+
+| Instant | Événement |
+|---|---|
+| `tL` | la purge lit `last_seq` : plafond `P = last_seq(tL)` |
+| `tR` (> `tL`) | la purge lit la liste des liaisons `ACTIVE` ou `SUSPENDED` |
+| `tA` (> `tR`) | la purge lit les acquittements |
+| `t0` | L est activée (commit dans la base plateforme) |
+| `t1` (> `t0`) | L lit sa première page d'instantané : `asOfSeq = last_seq(t1)` |
+
+| Cas | Ce que voit la purge | Pourquoi L ne perd rien |
+|---|---|---|
+| `t0 ≤ tR` | L, sans acquittement (L n'a pas encore pu acquitter, ou son premier acquittement est postérieur à sa première page) | Si L n'a pas d'acquittement à `tA` : purge bloquée (v17-D4). Si L a déjà acquitté `a` à `tA` : `a` ≥ son `asOfSeq` (règle du consommateur) et la borne ≤ `a`, et rien de ce que L a encore à lire n'est au-dessous ; si L acquitte trop tôt, le risque est le sien seul (v17-D8) |
+| `t0 > tR` | pas L | L a été activée après `tR`, donc après `tL` ; sa première page est lue à `t1 > t0 > tL` ; `last_seq` ne décroissant pas, `asOfSeq = last_seq(t1) ≥ last_seq(tL) = P`. La borne étant ≤ `P`, tout `seq` supprimé est ≤ `P` ≤ `asOfSeq` : aucun événement postérieur à l'instantané de L n'est supprimé, et sa lecture du flux depuis `asOfSeq` ne reçoit pas `410` (repère ≤ `P` ≤ `asOfSeq`) |
+
+**Conditions d'implémentation** dont dépend la garantie : (a) `P` lu **avant** la liste des liaisons, dans une instruction distincte validée avant la lecture de la liste ; (b) borne ≤ `P`, calculée une fois par passage et jamais relevée ; (c) acquittement refusé au-delà de `last_seq` ; (d) `last_seq` jamais décroissant ; (e) liaison active ou suspendue sans acquittement bloquante.
+
+**Statut** : démonstration **théorique**, fondée sur la lecture du code ; elle **ne vaut pas garantie** tant que le test de concurrence (§ 30.7, test 1) ne passe pas. Si ce test échoue, une protection transactionnelle ou une synchronisation entre activation et purge est requise avant toute purge réelle. *— 2026-11-03 : test écrit, rouge sur l'algorithme du lot 1, vert sur l'implémentation G17 (§ 30.10). La garantie est démontrée pour le scénario reproduit ; la purge réelle reste désactivée et son activation relève de G20.*
+
+**Restauration d'une base d'entreprise** : flux et acquittements sont restaurés ensemble ; une liaison créée après la sauvegarde n'a pas d'acquittement dans la base restaurée et bloque la purge (sans danger) ; une liaison révoquée depuis est exclue par son statut.
+
+### 30.6 Table des acquittements (conventions)
+
+- Table `integration_link_ack` de la base de l'entreprise ; migration d'entreprise, **numéro attribué à l'implémentation**, et script de retour associé (v17-D15). *— Attribués le 2026-11-03 : `V052__integration_link_ack.sql` et `db/rollback/U052__integration_link_ack.sql`.*
+- Colonnes : `link_id uuid` **clé primaire** (une ligne par liaison) ; `acknowledged_seq bigint NOT NULL` avec `CHECK (acknowledged_seq >= 0)` ; `acknowledged_at timestamptz NOT NULL`.
+- **Aucune clé étrangère** vers la base plateforme (autre base), comme `integration_link_warehouse.link_id` (v11-D8).
+- Commentaires sur la table et sur chaque colonne ; conventions vérifiées par `SchemaConventionsIT`.
+- Les lignes des liaisons révoquées sont conservées et ignorées par la purge (§ 30.4, étape 2).
+- `acknowledged_at` est mis à jour à chaque acquittement accepté, même sans progression (choix effectif E4, § 30.10).
+- Retour arrière : destructif, sans danger (v17-D15).
+
+### 30.7 Étape G17 (après validation de ce relevé)
+
+**Tests bloquants avant toute autorisation de purge réelle**, dans cet ordre ; le test 1 est le **premier écrit** de G17 :
+
+1. **Concurrence activation, instantané, purge** : reproduit le contre-exemple du § 30.5 avec des points d'arrêt pilotés par le test (lecture du plafond, lecture de la liste des liaisons, activation réelle, première page réelle d'instantané, acquittement d'une autre liaison, lecture des acquittements, suppression) ; échoue si la borne n'est pas plafonnée par `P`.
+2. **Plafond** : la borne ne dépasse jamais `last_seq` lu avant la liste des liaisons.
+3. **Curseur de l'instantané** : après la suppression, la lecture du flux depuis `asOfSeq` répond `200`, jamais `410`.
+4. **Repère après chaque lot** : égal au plus petit `seq` restant − 1 après chaque commit ; jamais en recul.
+5. **Reprise après interruption** : lot en erreur annulé seul, lots précédents acquis, passage suivant sans doublon ni perte ; limites de lots et de durée (lot commencé mené à son terme).
+6. **Isolation entre entreprises** : l'acquittement de A n'écrit que dans la base de A ; la purge de B ignore les liaisons et acquittements de A.
+7. **Simulation** : même borne et même nombre d'événements éligibles que la suppression, sans suppression ni avancée du repère.
+
+**Autres tests d'abord** :
+
+| Contenu | Tests |
+|---|---|
+| Migration d'entreprise et script de retour (§ 30.6) | Conventions de schéma ; aller-retour ; purge bloquée après le retour arrière |
+| `POST /catalog/changes/ack` (§ 30.3) | Montée, jamais de recul, rejeu ; chaque ligne du tableau des corps ; `409` ; `401` (révoquée) ; `403` (suspendue, sans portée) ; `429` au 61ᵉ appel, corps illisible compté ; `503` ; acquittements simultanés : le plus grand l'emporte ; aucune valeur dans les journaux |
+| `AckSource` (§ 30.4) | Aucune liaison ; liaison sans acquittement ; plus petit acquittement ; révoquée ignorée ; suspendue comptée ; entreprise courante seulement |
+| Bornes de la purge | `repère < seq ≤ B` ; 90 jours ; plus grand `seq` conservé ; événements sans `seq` conservés ; séquenceur bloqué au plus un lot |
+| Contrat | Route classée parmi les routes de liaison (`OpenApiDocumentationIT`) ; portée couverte (`EndpointSecurityCoverageIT`) ; lint |
+
+Hors G17 : route interne et cron, métriques et alertes (G20) ; événements sans `seq` après la dernière révocation (G20, v17-D9) ; filtre de l'instantané (G18, v17-D1).
+
+### 30.8 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- `POST /catalog/changes/ack` réécrit (§ 30.3) : `409 CURSOR_AHEAD` au lieu de `422` ; ordre de traitement et limite avant le corps ; tableau des corps refusés ; `400`, `401`, `403`, `404`, `415`, `429`, `500`, `503` détaillés ; `acknowledgedSeq` obligatoire.
+- `GET /catalog/changes` : phrase « rétention et règle de purge : ouvertes (C8) » remplacée par un renvoi à D5 et au § 30.4.
+- Bloc `x-decisions.v17`, décisions et propositions séparées.
+
+### 30.9 Ce qui n'a pas été fait
+
+- Aucun code, migration, test ni configuration modifié ; dépôts applicatifs lus seulement.
+- Les tests du § 30.7 ne sont pas écrits : ils font partie de G17.
+- Aucun commit, push ou déploiement.
+
+*Ce § 30.9 décrit l'état du relevé avant l'implémentation ; l'état au 2026-11-03 est au § 30.10.*
+
+### 30.10 G17 réalisée (2026-11-03)
+
+Backend GestStock, branche `feat/integration-lot2`, sur `b940204` ; **non commité au moment de cette rédaction, non déployé**. Purge réelle toujours **désactivée** et en **simulation** par défaut.
+
+**Composants**
+
+| Élément | Rôle |
+|---|---|
+| `V052__integration_link_ack.sql`, `db/rollback/U052__integration_link_ack.sql` | Table `integration_link_ack` (§ 30.6) ; retour arrière destructif, sans danger (v17-D15) |
+| `AckFloor` (nouveau) | Limite des acquittements, trois cas : `NoLink`, `Blocked`, `Acknowledged(seq)` |
+| `AckSource` (modifié) | Renvoie un `AckFloor` (remplace l'`OptionalLong` du lot 1) ; `NoAcknowledgements` supprimé |
+| `RetainedLinks` (nouveau) | Liaisons `ACTIVE` ou `SUSPENDED` de l'entreprise, lues dans la base plateforme ; composant distinct, observable par les tests |
+| `LinkAcknowledgements` (nouveau) | Acquittement atomique (`greatest`), jamais en recul ; `CURSOR_AHEAD` au-delà de `last_seq` ; lecture des acquittements d'un ensemble de liaisons |
+| `LinkAckSource` (nouveau) | `AckSource` réelle : entreprise du contexte (refus sans contexte), liaisons, puis acquittements |
+| `OutboxPurge` (modifié) | Plafond `P` lu en premier, puis `AckSource`, puis borne calculée une fois ; un lot par transaction ; limites de lots et de durée ; simulation identique |
+| `PurgeReport`, `IntegrationPurgeProperties` (modifiés) | Champs `ceilingSeq`, `floor`, `batches` ; réglages `max-batches` (100 par défaut) et `max-duration` (30 s par défaut) |
+| `CatalogChangesController` (modifié) | Route `POST /catalog/changes/ack` (§ 30.3) ; contrôle de débit commun aux deux routes |
+| `IntegrationRateLimitProperties` (modifié) | Réglage `catalog-ack-per-link` (60 par défaut) |
+
+**Borne et lots, tels qu'implémentés** : conformes aux § 30.4 et v17-D11. `P` est lu par une instruction distincte, hors transaction, avant l'appel à `AckSource` ; la borne est calculée dans une transaction en lecture seule et n'est plus relevée ; chaque lot ouvre sa transaction (verrou de la ligne d'état avec `lock_timeout`, suppression, repère), et une erreur l'annule seul puis arrête le passage, l'exception remontant à l'appelant ; la durée maximale est vérifiée avant chaque lot sauf le premier.
+
+**Choix de l'implémentation** (non tranchés par v17-D1 à v17-D16 ; arrêtés le 2026-11-03 selon les bonnes pratiques, à la demande du responsable) :
+
+| # | Choix [Approuvé] | Raison |
+|---|---|---|
+| E1 | Champs inconnus du corps de l'acquittement **ignorés** ; un objet sans `seq` répond `VALIDATION_FAILED` sur `seq` | Comportement du reste de l'API ; évolution du client sans rupture ; la rigueur porte sur `seq` (type, clé répétée). Était [Proposé] |
+| E2 | Corps de l'acquittement limité à **1 024 octets** ; au-delà : **`413 CONTENT_TOO_LARGE`** (nouveau code d'erreur) | Le corps attendu tient en quelques dizaines d'octets et il est lu par la route (v17-D14). RFC 9110 § 15.5.14 et convention de l'API (`FILE_TOO_LARGE`, `413`) : un corps trop grand n'est pas un corps mal formé. *Première implémentation : `400 MALFORMED_REQUEST`, corrigée le 2026-11-03 (rouge constaté : `400` au lieu de `413`)* |
+| E3 | `max-duration` nulle : le **premier lot a toujours lieu**, puis le passage s'arrête | Conséquence directe de v17-D16 (durée vérifiée entre deux lots, lot commencé mené à son terme) : une durée nulle signifie « un lot par passage » ; la refuser n'apporterait rien |
+| E4 | `acknowledged_at` mis à jour à **chaque acquittement accepté**, même sans progression | Mesure la dernière activité de la liaison : une liaison active dans une entreprise sans nouvel événement réacquitte la même valeur et ne doit pas paraître à l'arrêt. Le **retard** (écart `last_seq` − acquittement, âge du plus ancien événement non acquitté) se calcule séparément à partir des `seq` et de `created_at`, pour les métriques de G20 (v17-D5) |
+
+**Rouge de comportement constaté avant la modification**
+
+| Tests | Rouge | Après |
+|---|---|---|
+| `CatalogAckRouteIT` (11 tests à ce moment) et le cas 503 | `403` (route absente) | Verts |
+| `OutboxPurgeIT` (7 tests), sur l'algorithme du lot 1 adapté aux nouveaux types | Pas de plafond, une seule transaction, pas de limites de lots ni de durée | Verts |
+| `PurgeActivationRaceIT`, sur les vrais composants | `P` non lu, borne 7, événements 6 et 7 supprimés, repère 7, `CURSOR_EXPIRED` pour L | Vert |
+
+**Test de concurrence** (`PurgeActivationRaceIT`, § 30.7, test 1) : tout réel (purge en mode `DELETE` sur la base Testcontainers, `RetainedLinks` espionné pour arrêter la purge juste après sa lecture réelle de la liste, activation, première page d'instantané, acquittement enregistré dans la table). Résultats vérifiés sur les données : `P` = 5 ; `asOfSeq` de L = 5 ; acquittement de l'autre liaison = 8 ; borne = 5 ; événements 6, 7 et 8 conservés ; repère = 5 ; lecture de L depuis 5 sans `410` ; passage suivant bloqué (L visible sans acquittement), rien supprimé. Synchronisation par verrous à compte, sans délai arbitraire ; événements antidatés de 100 jours pour écarter la règle des 90 jours.
+
+**Autres tests** : `CatalogAckRouteIT` (13 tests, deux entreprises réelles : montée et non-recul, rejeu, acquittement sous le repère, `409`, corps stricts, `415`, statuts de liaison, isolation, limite de 60 avec corps illisibles comptés, 20 acquittements simultanés, journaux ; le 13ᵉ, ajouté à la clôture documentaire, vérifie la limite de 1 024 octets et les champs inconnus ignorés : écrit d'abord comme test de caractérisation, puis modifié pour E2, avec un rouge constaté — `400` au lieu de `413` — avant la correction), `LinkAckSourceIT` (4 tests), `OutboxPurgeIT` (13 tests dont 6 nouveaux : plafond, aucune liaison et purge bloquée, limite de lots, durée nulle, lot en erreur annulé seul puis reprise, simulation identique), `IntegrationRateLimitUnavailableIT` (cas 503 de l'acquittement), `OpenApiDocumentationIT`, `SchemaConventionsIT` (nouvelle table), `MigrationRollbackIT` (aller-retour avec U052).
+
+**`./mvnw verify` complet** (Docker, Testcontainers PostgreSQL 17), trois passages :
+
+| Passage | Tests unitaires | Tests d'intégration | Résultat |
+|---|---|---|---|
+| 1 | 281, aucun échec | 1 209 ; 4 erreurs ; 2 ignorés | `PublicationFlagTimeoutIT` : conteneur `postgres:17-alpine` non démarré (contexte non chargé) ; relancée seule, la classe passe (4 sur 4) |
+| 2 | 281, aucun échec | 1 209 ; 1 échec ; 2 ignorés | `AppointmentApiIT` : transaction expirée après un blocage d'environ 5 minutes, hors du périmètre de G17 ; vert aux passages 1 et 3 |
+| 3 | 281, aucun échec | 1 209 ; **aucun échec ni erreur** ; 2 ignorés | **BUILD SUCCESS** |
+
+Les échecs des passages 1 et 2 sont attribués à l'infrastructure locale (Docker, ressources de la machine) ; cette attribution n'est pas prouvée. Les 2 tests ignorés sont ceux qui ne s'exécutent qu'à la demande.
+
+**Limites connues**
+
+- Le temps d'attente du séquenceur pendant un lot (au plus un lot, en `SKIP LOCKED`) n'est **pas mesuré** par un test.
+- La purge réelle n'a été exécutée que sur la base de test ; son déclenchement en production (route interne et cron), les métriques et l'alerte d'âge des acquittements relèvent de G20.
+- Événements sans `seq` après la révocation de la dernière liaison : conservés (v17-D9), décision en G20.
+- **[Proposé]** Règle du consommateur (n'acquitter que des événements appliqués, jamais avant la fin de l'instantané initial) : à reprendre côté JCMB (J7).
