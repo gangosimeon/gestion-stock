@@ -284,7 +284,7 @@ info:
           - 'G20-D3 : exécution synchrone et bornée ; budget à fixer après vérification du délai HTTP de Render'
           - 'G20-D6 : cron toutes les 15 minutes ; à confirmer (ponctualité du cron GitHub)'
         deferred:
-          - 'G20-D8 : suppression des demandes et codes d''autorisation anciens (irréversible)'
+          - 'G20-D8 : suppression des demandes et codes d''autorisation anciens (irréversible) ; tranchée le 2026-11-03 (plan § 36) : aucune suppression de données en production'
         consequencesForThisContract:
           - 'aucune route : POST /internal/integration/maintenance est une route interne, hors /api/integration/v1, non destinée à JeCréeMaBoutique'
           - 'v17-D9 tranché par G20-D9 : sans liaison active ou suspendue, les événements sans seq sont séquencés par la maintenance puis soumis à la règle des 90 jours'

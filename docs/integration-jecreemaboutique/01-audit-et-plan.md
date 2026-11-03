@@ -2306,7 +2306,7 @@ Conception validée après trois audits en lecture seule (conception, complémen
 | **G20-D5** | Mode de la purge | **`SIMULATION`** en production jusqu'à ce que J7 envoie des acquittements ; passage en `DELETE` par une décision séparée, après observation des rapports de simulation | [Approuvé] |
 | **G20-D6** | Fréquence | Toutes les 15 minutes | Principe [Approuvé] ; **valeur à confirmer** (ponctualité du cron GitHub, § 33.8) ; ne concerne que G20e |
 | **G20-D7** | Mesures | Calculées par chaque passage à partir des données en base, sans jauge en mémoire ; mesures d'entreprise et de liaison **séparées** (§ 33.5) | [Approuvé], corrigé (double comptage retiré) |
-| **G20-D8** | Demandes et codes anciens | **Reportée** : décision séparée, irréversible, sans effet sur le reste de G20 (§ 33.7) | En audit |
+| **G20-D8** | Demandes et codes anciens | **Reportée** : décision séparée, irréversible, sans effet sur le reste de G20 (§ 33.7) | En audit *— tranchée le 2026-11-03 : aucune suppression (§ 36)* |
 | **G20-D9** | Événements sans `seq` sans aucune liaison (v17-D9) | Quand l'entreprise n'a **aucune** liaison active ou suspendue, la maintenance appelle le séquenceur **avant** la purge ; la règle commune des 90 jours s'applique ensuite ; jamais d'événement sans `seq` supprimé | [Approuvé], hypothèses H1 à H6 en tests (§ 33.6) |
 | **G20-D10** | Anciennes tâches | `OutboxPurgeJob` et `FeedMetricsJob` retirés, remplacés par la route | [Approuvé] |
 | **G20-D11** | Réponse | Rapport agrégé (§ 33.4) : aucun identifiant ni nom d'entreprise, de liaison ou de boutique, aucun secret, message d'exception, requête ni chemin | [Approuvé] |
@@ -2600,3 +2600,25 @@ Backend GestStock, branche `feat/integration-lot2`, commit `e2701cd` ; **non pou
 
 - G20f-2 (D6 ci-dessus) ; G20e ; D8 ; aucun déploiement, aucun push.
 - Branche déployée par Render : à vérifier par le responsable du déploiement (supposée `main`).
+
+## 36. D8 tranchée — aucune suppression de données en production — 2026-11-03
+
+Décision du responsable du projet : **« je ne veux pas de suppression des données en production, ce qui est en ligne doit marcher correctement »**. Elle tranche G20-D8 (§ 33.7) et s'impose à tout le lot 3.
+
+### 36.1 Décision [Approuvé]
+
+| # | Objet | Décision |
+|---|---|---|
+| **G20-D8** | Demandes et codes d'autorisation anciens | **Aucune suppression** : demandes (décidées ou non, refusées), codes, liaisons révoquées, dépôts et acquittements des liaisons révoquées sont conservés. Volume faible (§ 33.7) ; la conservation ne gêne aucun traitement |
+| **D8-1** | Règle générale | Aucune suppression de données métier ou d'historique en production ; toute évolution est additive (migrations avec annulation, rien de destructif) et préserve le comportement de ce qui est en ligne |
+| **D8-2** | Purge du flux | Reste en **`SIMULATION`** (G20-D5) ; le passage en `DELETE` n'a lieu que par une décision explicite du responsable du projet, jamais par défaut ni par une seule étape d'implémentation |
+
+### 36.2 Suppressions existantes dans le code de l'intégration (relevé du 2026-11-03)
+
+| Code | Ce qui est supprimé | Sur `main` (en ligne) | Statut |
+|---|---|---|---|
+| `OutboxPurge` | Événements du flux au-delà de la rétention | Oui (lot 1) : **désactivée et en simulation par défaut**, aucune configuration ne l'active dans `application.yml` | Conforme à D8-2 ; à vérifier sur Render : aucune variable `GESTSTOCK_INTEGRATION_PURGE_*` ne doit l'activer |
+| `RateLimiter` | Compteurs de débit des fenêtres expirées (données techniques, sans valeur métier) | Non (lot 2) | Conservé : compteurs éphémères, nécessaires à la limite de débit ; pas une donnée métier |
+| `LinkWarehouses.replace`, `remove` | Dépôts d'une liaison remplacés à l'approbation ou retirés après une approbation qui n'aboutit pas | Non (lot 2) | Conservé : remplacement du périmètre d'une liaison, pas une perte d'historique (l'audit trace les dépôts approuvés) |
+
+Option d'observation (compter, sans rien supprimer, les données qui auraient été supprimables) : non retenue à ce stade, faute de besoin ; pourra être reprise si les volumes le justifient.
