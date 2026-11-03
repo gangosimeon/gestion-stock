@@ -2279,14 +2279,14 @@ Comparer `imageSha256` du flux à l'empreinte détenue avant de télécharger ; 
 
 ## 33. Relevé G20 — maintenance de l'intégration (route interne et cron) — 2026-11-03
 
-Conception validée après trois audits en lecture seule (conception, complément sécurité et fiabilité, cohérence), **approuvée partiellement le 2026-11-03**. Aucun code écrit à la date de ce relevé. Remplace la ligne G20 du § 29.5 et précise Q1 (§ 29.4), T1 (§ 29.7), v17-D5 et v17-D9 (§ 30.2).
+Conception validée après trois audits en lecture seule (conception, complément sécurité et fiabilité, cohérence), **approuvée partiellement le 2026-11-03**. Aucun code écrit à la date de ce relevé. *— G20a à G20d réalisées le même jour : § 34.* Remplace la ligne G20 du § 29.5 et précise Q1 (§ 29.4), T1 (§ 29.7), v17-D5 et v17-D9 (§ 30.2).
 
 ### 33.1 Constats (audit du 2026-11-03)
 
 | Élément | Constat |
 |---|---|
-| Purge (`OutboxPurge`, G17) | Faite, désactivée et en simulation par défaut ; déclenchée seulement par `OutboxPurgeJob` (`@Scheduled`, désactivée, exclue de la production par v16-D2) |
-| Mesures (`FeedMetrics`) | Événements sans `seq` par entreprise seulement, en jauges en mémoire (exclues par v16-D2) ; aucune mesure par liaison |
+| Purge (`OutboxPurge`, G17) | Faite, désactivée et en simulation par défaut ; déclenchée seulement par `OutboxPurgeJob` (`@Scheduled`, désactivée, exclue de la production par v16-D2) *— G20b : `OutboxPurgeJob` retiré, purge déclenchée par la maintenance, en simulation par défaut* |
+| Mesures (`FeedMetrics`) | Événements sans `seq` par entreprise seulement, en jauges en mémoire (exclues par v16-D2) ; aucune mesure par liaison *— G20c : jauges et tâche retirées, mesures de la maintenance (`FeedHealth`)* |
 | Consommateur JCMB (J7) | **N'existe pas** : aucune liaison n'acquitte, donc la purge réelle ne supprimerait rien dans une entreprise liée (v17-D4) |
 | Ordre des entreprises | `CompanyDirectory.activeTenants()` trie par numéro : ordre fixe |
 | Pool de la base plateforme | 5 connexions par défaut (`GESTSTOCK_PLATFORM_DB_POOL_SIZE`) |
@@ -2357,7 +2357,7 @@ Conception validée après trois audits en lecture seule (conception, complémen
 ```
 
 - `status` : `COMPLETED` (toutes les entreprises à visiter l'ont été), `PARTIAL` (budget épuisé, `remaining` > 0), `FAILED` (bail perdu, ou erreur générale avant toute entreprise).
-- `alerts` : regroupées par type et gravité (`WARNING`, `CRITICAL`), avec un nombre. Types : `NO_FIRST_ACK`, `NO_ACTIVITY`, `CONSUMER_STALLED`, `PURGE_BLOCKED_BY_SUSPENSION` (liaisons) ; `UNSEQUENCED_EVENTS`, `COMPANY_ERROR`, `COMPANY_INTERRUPTED` (entreprises) ; `LOCK_WAIT` (attente du verrou d'un lot au-delà de 1 s, mesurée dans `PurgeReport`).
+- `alerts` : regroupées par type et gravité (`WARNING`, `CRITICAL`), avec un nombre. Types : `NO_FIRST_ACK`, `NO_ACTIVITY`, `CONSUMER_STALLED`, `PURGE_BLOCKED_BY_SUSPENSION` (liaisons) ; `UNSEQUENCED_EVENTS`, `COMPANY_ERROR`, `COMPANY_INTERRUPTED` (entreprises) ; `LOCK_WAIT` (attente du verrou d'un lot au-delà de 1 s, mesurée dans `PurgeReport`). *— G20d : `CLEANUP_ERROR` en plus (§ 34.2, G20d-E4).*
 - `authFailures` : échecs vus par **cette instance** depuis le passage précédent.
 - Le workflow échoue si une alerte `CRITICAL` est présente ou si le statut vaut `FAILED` ; `409` n'est pas un échec.
 - Erreurs `401`, `404`, `409`, `429` au format `ApiError` standard, `path` = `/internal/integration/maintenance`.
@@ -2367,7 +2367,7 @@ Conception validée après trois audits en lecture seule (conception, complémen
 
 | Niveau | Mesure | Définition |
 |---|---|---|
-| Entreprise | Événements sans `seq` | Nombre et âge du plus ancien (`FeedMetrics.UNSEQUENCED`, existante) |
+| Entreprise | Événements sans `seq` | Nombre et âge du plus ancien (`FeedMetrics.UNSEQUENCED`, existante ; *G20c : `FeedHealth.UNSEQUENCED`*) |
 | Entreprise | Flux | `last_seq`, repère de purge |
 | Liaison | Événements séquencés non acquittés | Nombre de `seq` supérieurs à son acquittement |
 | Liaison | Âge du plus ancien non acquitté | `min(created_at)` des `seq` supérieurs à son acquittement ; nul si rien n'est en attente |
@@ -2454,5 +2454,116 @@ Chaque sous-lot : tests écrits d'abord (échec de comportement constaté), `./m
 
 ### 33.12 Ce qui n'a pas été fait
 
-- Aucun code, test, migration ni workflow ; aucune vérification sur GitHub, Render ou Neon.
+- Aucun code, test, migration ni workflow ; aucune vérification sur GitHub, Render ou Neon. *— État après G20a à G20d : § 34.9.*
 - D8 non tranchée ; valeurs de D3 et D6 non fixées.
+
+## 34. G20a à G20d réalisées — maintenance de l'intégration — 2026-11-03
+
+Backend GestStock, branche `feat/integration-lot2`, commits `060a7ce` (G20a), `db8ecff` (G20b), `72002a7` (G20c) et `1b4b253` (G20d) ; **non poussé, non déployé**. Reste **G20e** (workflow GitHub, documentation d'exploitation), qui attend les valeurs de D3 et D6 (§ 33.9). D8 reste reportée. Complète le § 33, qui reste le relevé de conception.
+
+### 34.1 Ce qui existe
+
+| Sous-lot | Livré |
+|---|---|
+| **G20a** | Chaîne de sécurité `/internal/**` ; secret du cron vérifié par son empreinte SHA-256 en temps constant, deux empreintes acceptées pendant une rotation ; `POST /internal/integration/maintenance` : `404` si désactivée, `401`, `429` au-delà de 6 appels authentifiés par minute, `409 MAINTENANCE_IN_PROGRESS` ; échecs d'authentification comptés en mémoire (WARN aux paliers 1, 10, 100…) ; bail à génération et état par entreprise (migration plateforme V004, annulation U004) ; `ProductionSafetyCheck` (maintenance activée sans empreinte : démarrage refusé) |
+| **G20b** | Orchestration d'un passage : ordre G20-D13, budget global sur une horloge monotone, entreprises en migration sautées, séquencement sans liaison (G20-D9), purge dans le mode configuré, interruptible avant chaque lot (bail et budget) ; façade `FeedMaintenance` ; retrait d'`OutboxPurgeJob` |
+| **G20c** | Mesures calculées à chaque passage à partir des données en base (`FeedHealth`, `RetainedLinks.states`) ; règles d'alerte (`MaintenanceAlerts`) et seuils configurables ; attente du verrou d'un lot de purge (`PurgeReport.maxLockWaitMs`) ; retrait de `FeedMetrics`, `FeedMetricsJob`, `IntegrationScheduling` et `IntegrationMetricsProperties` : **le backend n'a plus aucune tâche planifiée** (G20-D10) |
+| **G20d** | Révocation globale (`EXPIRED`, auteur système, copie dans le journal de l'entreprise) des liaisons en attente expirées, avec la règle de l'expiration par boutique ; au plus 500 par passage |
+
+### 34.2 Décisions prises à l'implémentation
+
+Validées sous-lot par sous-lot après un audit en lecture seule ; elles précisent le § 33 sans le contredire.
+
+| # | Objet | Décision [Approuvé] |
+|---|---|---|
+| **G20b-A** | Accès au flux | Une façade publique étroite (`FeedMaintenance`) ; la purge et le séquenceur restent internes au flux |
+| **G20b-B** | Purge interruptible | Bail vérifié avant chaque lot, le premier compris ; budget vérifié à partir du deuxième lot ; un lot commencé est validé. Plafond `P` lu avant les liaisons, borne calculée une fois, préfixe contigu et repère lu sous verrou : inchangés (G17). La sécurité des données ne dépend pas du bail |
+| **G20b-C** | Anciennes propriétés | `geststock.integration.purge.enabled` et `geststock.integration.purge.interval` supprimées ; le mode reste `SIMULATION` par défaut |
+| **G20b-D** | Part du budget | Au plus la moitié du budget restant par entreprise, sauf pour la dernière à visiter (l'unique comprise) |
+| **G20b-E** | Statut | `PARTIAL` s'il reste des entreprises ou si une entreprise s'est arrêtée faute de budget ; `FAILED` si le bail est perdu ou si une erreur générale interrompt le passage. Un budget épuisé et un bail perdu ne sont jamais confondus |
+| **G20b-F** | Erreurs et interruptions | Compteurs `errors` et `interrupted` ; alertes en G20c |
+| **G20c-C1** | Mesures | Celles de l'entreprise par la façade du flux, celles des liaisons par la base plateforme ; **chaque âge est calculé par la base qui stocke la date** |
+| **G20c-C2** | Anciennes jauges | Retirées avec leur tâche ; le seuil de 5 min devient celui de `UNSEQUENCED_EVENTS` |
+| **G20c-C3** | Moment des mesures | Après le séquencement et la purge, même si la purge s'est arrêtée faute de budget ; jamais après la perte du bail ; une erreur de mesure met l'entreprise en erreur |
+| **G20c-C4** | Précisions des règles | `COMPANY_INTERRUPTED` : au moins 2 interruptions consécutives au début du passage ; `COMPANY_ERROR` : une par entreprise en erreur dans le passage ; `UNSEQUENCED_EVENTS` : seulement avec au moins une liaison `ACTIVE` ; **`LOCK_WAIT` : `WARNING` au-delà de 1 s** (gravité que le § 33.4 ne fixait pas) |
+| **G20c-C5** | Attente du verrou | Mesurée autour du `FOR UPDATE` de chaque lot ; 0 en simulation ; un dépassement de `lock-timeout` reste une erreur de l'entreprise (G17) |
+| **G20c-C6** | Rapport | `purge.maxLockWaitMs`, `links { active, suspended }`, `alerts` triées par type puis gravité |
+| **G20c-C7** | Seuils | `geststock.integration.maintenance.alerts.*`, valeurs par défaut du § 33.5, validés au démarrage (positifs, `WARNING` inférieur à `CRITICAL`) |
+| **G20c-C8** | Journaux | Un WARN par alerte : identifiants techniques, génération et mesures ; jamais un message d'exception |
+| **G20d-E1** | Règle d'expiration | Une seule règle pour l'expiration par boutique et l'expiration globale (code expiré, ou sans code au-delà de 5 min) ; même trace d'audit |
+| **G20d-E2** | Volume | Au plus 500 par passage (`expired-pending-links-per-pass`), les plus anciennes d'abord ; une liaison en cours d'échange de son code est laissée au passage suivant, sans attente (`FOR UPDATE SKIP LOCKED`) |
+| **G20d-E3** | Place dans le passage | Une fois, après les entreprises, même si le budget est épuisé ; bail vérifié juste avant (perdu : pas de nettoyage, statut `FAILED`) |
+| **G20d-E4** | Échec du nettoyage | Isolé, statut inchangé ; **nouvelle alerte `CLEANUP_ERROR` (`WARNING`)** ; seule la classe de l'erreur est journalisée |
+
+### 34.3 Rapport livré (remplace l'exemple du § 33.4)
+
+```json
+{
+  "status": "COMPLETED",
+  "mode": "SIMULATION",
+  "generation": 42,
+  "durationMs": 18234,
+  "companies": { "active": 7, "visited": 4, "skippedUpgrade": 1, "errors": 0, "interrupted": 0, "remaining": 2 },
+  "purge":     { "eligible": 1200, "deleted": 0, "batches": 2, "blocked": 3, "maxLockWaitMs": 12 },
+  "links":     { "active": 3, "suspended": 1 },
+  "cleanup":   { "expiredPendingLinks": 0 },
+  "alerts":    [ { "type": "NO_ACTIVITY", "severity": "WARNING", "count": 1 } ],
+  "authFailures": { "count": 0, "scope": "INSTANCE" }
+}
+```
+
+Écarts avec le § 33.4 :
+
+- `status` vaut `FAILED` pour une erreur générale à **tout** moment du passage, pas seulement avant la première entreprise. Une entreprise en erreur laisse le passage `COMPLETED`, avec l'alerte `COMPANY_ERROR` (`CRITICAL`), qui fera échouer le workflow (G20e).
+- Types d'alerte, dans l'ordre du rapport : `NO_FIRST_ACK`, `NO_ACTIVITY`, `CONSUMER_STALLED`, `PURGE_BLOCKED_BY_SUSPENSION`, `UNSEQUENCED_EVENTS`, `COMPANY_ERROR`, `COMPANY_INTERRUPTED`, `LOCK_WAIT`, **`CLEANUP_ERROR`** (nouveau, G20d-E4).
+- `links` ne compte que les liaisons des entreprises mesurées par ce passage.
+
+### 34.4 Configuration (valeurs par défaut)
+
+| Propriété | Défaut | Rôle |
+|---|---|---|
+| `geststock.integration.maintenance.enabled` (`GESTSTOCK_MAINTENANCE_ENABLED`) | `false` | Route servie ; sinon `404` |
+| `geststock.integration.maintenance.token-sha256` (`GESTSTOCK_MAINTENANCE_TOKEN_SHA256`) | vide | Empreinte du secret du cron ; obligatoire si la maintenance est activée en production |
+| `geststock.integration.maintenance.previous-token-sha256` (`GESTSTOCK_MAINTENANCE_PREVIOUS_TOKEN_SHA256`) | vide | Seconde empreinte, pendant une rotation seulement |
+| `geststock.integration.maintenance.budget` | `25s` | Budget d'un passage (G20-D3, **à fixer**) ; le bail dure deux fois le budget |
+| `geststock.integration.maintenance.calls-per-window`, `window` | `6`, `1m` | Limite des appels authentifiés |
+| `geststock.integration.maintenance.expired-pending-links-per-pass` | `500` | Liaisons en attente expirées révoquées au plus par passage |
+| `geststock.integration.maintenance.alerts.*` | valeurs du § 33.5 | Seuils des alertes ; `lock-wait-warning` : `1s` |
+| `geststock.integration.purge.mode` | `SIMULATION` | `DELETE` seulement par une décision séparée, après J7 (G20-D5) |
+
+Seules les trois premières ont une variable d'environnement dédiée dans `application.yml` ; les autres se règlent, si besoin, par le nom d'environnement standard de Spring (par exemple `GESTSTOCK_INTEGRATION_MAINTENANCE_BUDGET`).
+
+### 34.5 Écarts trouvés pendant l'implémentation
+
+| Écart | Traitement |
+|---|---|
+| `LinkRegistry.activate` et `revoke` ne touchent pas au drapeau de publication : c'est `OAuthService` qui le lève avant l'activation, et `LinkAudit` qui le resynchronise après une révocation | H5 vérifiée par les tests de G20b sur cet ordre reproduit ; l'ordre réel reste couvert par les tests de G13 |
+| Budget et liste des entreprises impossibles à maîtriser en test | Deux composants internes au paquet : `MaintenanceTicker` (horloge monotone) et `MaintenanceTenants` (entreprises actives) ; en production, l'horloge système et l'annuaire des entreprises |
+| `UPDATE … WHERE id IN (SELECT … LIMIT … FOR UPDATE SKIP LOCKED)` révoquait plus de liaisons que la limite (sous-requête réévaluée) | **Corrigé** avant le commit de G20d : choix des liaisons dans une CTE matérialisée, évaluée une seule fois ; test de la limite |
+| Les commentaires du lot 2 annoncent une « tâche planifiée du lot 3 » pour trois rattrapages : resynchroniser le drapeau de publication de toutes les entreprises, recopier une trace d'audit manquée dans le journal de l'entreprise, réévaluer l'autoriseur (`LinkAuthorizerWatcher`) | **Non traités** : absents du § 33. G20d resynchronise seulement le drapeau des entreprises dont une liaison expire. À rattacher à un sous-lot |
+
+### 34.6 Tests
+
+Chaque sous-lot : tests écrits d'abord, échec de comportement constaté sur des squelettes, puis implémentation et suite complète (Docker, Testcontainers PostgreSQL 17).
+
+- **G20a** : `MaintenanceRouteIT`, `MaintenanceLeaseIT`, `MaintenanceCompaniesIT`, `MaintenanceRateLimitIT`, `MaintenanceDisabledIT`, `MaintenanceRateLimitUnavailableIT`, `IntegrationMaintenancePropertiesTest`, `ProductionMaintenanceSafetyTest` ; schéma plateforme (`PlatformIntegrationSchemaIT`) et chaînes de sécurité (`IntegrationSecurityChainIT`).
+- **G20b** : `FeedMaintenanceIT` (bail perdu avant ou après le premier lot, budget épuisé, simulation, séquencement, deux purges superposées sans bail), `MaintenancePassIT` (budget, ordre, interruptions, erreur isolée, entreprise en migration, bail repris), `MaintenanceActivationRaceIT` (liaison activée pendant un passage : ce que voit l'instantané et ce que protègent les acquittements), `OrphanEventsAndNewLinkIT` (H1 à H6). Suite complète : 289 tests unitaires et 1 277 tests d'intégration, 2 ignorés, au troisième passage ; les deux premiers avaient échoué sur des tests sans rapport avec la maintenance, pendant des suspensions de la machine (« clock leap » de Hikari).
+- **G20c** : `MaintenanceAlertsTest` (une règle de priorité par cas, seuils), `FeedMeasuresIT` (mesures, plans des requêtes, plus aucune tâche planifiée), `MaintenanceAlertsIT` (alertes à travers la route, mesures malgré un budget épuisé, attente du verrou, rapport sans identifiant, message d'exception absent). Suite complète au premier passage : 297 et 1 287, 2 ignorés.
+- **G20d** : `PendingLinkExpiryIT` (règle et trace, idempotence, limite, liaison verrouillée, aucun effet sur la publication ni sur le flux, aucun nettoyage sans bail, échec isolé). Suite complète au premier passage : 297 et 1 293, 2 ignorés.
+
+### 34.7 Risques résiduels
+
+- **Durée du nettoyage non bornée par le budget** : chaque révocation entraîne, après le commit, une copie dans le journal de l'entreprise et une resynchronisation de son drapeau, qui peut attendre jusqu'au délai de verrou du drapeau. Peu de liaisons en attente sont attendues ; à surveiller avec `durationMs`, et à prendre en compte avec D3 et le délai côté client (G20e). La limite par passage peut être abaissée.
+- **Copie d'audit et drapeau « au mieux »** après une révocation : un échec est journalisé, sans reprise (rattrapages du § 34.5).
+- **Dépôts d'une liaison expirée** laissés dans la base de l'entreprise : à rattacher à D8.
+
+### 34.8 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- Aucune route : la route interne reste hors du contrat.
+- Bloc `x-decisions.v17.g20` : état de l'implémentation et décisions de G20a à G20d.
+
+### 34.9 Ce qui n'a pas été fait
+
+- G20e : workflow `integration-maintenance.yml`, documentation d'exploitation (lecture du rapport, conduite par alerte, `CLEANUP_ERROR` comprise), procédure de rotation du secret.
+- Valeurs de D3 et D6 ; vérifications opérationnelles du § 33.9 ; aucun déploiement, aucun push.
+- D8 ; purge en `DELETE` en production (après J7, G20-D5) ; rattrapages du lot 2 (§ 34.5).

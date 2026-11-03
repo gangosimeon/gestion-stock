@@ -290,7 +290,11 @@ info:
           - 'v17-D9 tranché par G20-D9 : sans liaison active ou suspendue, les événements sans seq sont séquencés par la maintenance puis soumis à la règle des 90 jours'
           - 'purge en SIMULATION en production jusqu''à ce que le consommateur (J7) acquitte (G20-D5) ; les acquittements de JeCréeMaBoutique conditionnent la purge réelle'
           - 'alertes de consommateur par liaison (NO_FIRST_ACK, NO_ACTIVITY, CONSUMER_STALLED) calculées à partir de acknowledged_at et des seq non acquittés : JeCréeMaBoutique doit acquitter régulièrement, même sans progression (E4)'
-        implemented: 'non (aucun code à la date du relevé)'
+        implemented: 'G20a à G20d (backend GestStock, lot 3 ; plan § 34), non déployé ; G20e (workflow du cron) à faire'
+        decidedAtImplementation:
+          - 'G20b : purge interruptible avant chaque lot (bail, budget) sans changer les règles de G17 ; au plus la moitié du budget restant par entreprise, sauf la dernière ; budget épuisé (PARTIAL) et bail perdu (FAILED) jamais confondus'
+          - 'G20c : mesures calculées par chaque passage, âges calculés par la base qui stocke la date ; LOCK_WAIT en WARNING au-delà de 1 s'
+          - 'G20d : liaisons en attente expirées révoquées par la maintenance (EXPIRED, au plus 500 par passage) ; alerte CLEANUP_ERROR (WARNING) en cas d''échec'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: 'Backend GestStock hébergé sur Render (v16-D1 ; v13-D1 : Vercel), appelé directement, jamais à travers le relais nginx du frontend (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
