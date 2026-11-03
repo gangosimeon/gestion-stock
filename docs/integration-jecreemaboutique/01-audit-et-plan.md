@@ -2301,10 +2301,10 @@ Conception validée après trois audits en lecture seule (conception, complémen
 |---|---|---|---|
 | **G20-D1** | Authentification du cron | Secret dédié d'au moins 32 octets aléatoires, gardé dans les secrets GitHub ; le backend ne connaît que son empreinte SHA-256 (`GESTSTOCK_MAINTENANCE_TOKEN_SHA256`, seconde empreinte facultative pendant une rotation) ; comparaison en temps constant, **sans accès à la base** | [Approuvé] |
 | **G20-D2** | Route | `POST /internal/integration/maintenance`, hors `/api/**`, **chaîne de sécurité dédiée** : jeton utilisateur et jeton de liaison refusés, ni CORS ni session, `Cache-Control: no-store` ; `404` (comme une route inconnue) si la maintenance est désactivée ; `ProductionSafetyCheck` refuse de démarrer si la maintenance est activée sans empreinte valide. **Hors du contrat d'intégration** (non destinée à JeCréeMaBoutique) | [Approuvé] |
-| **G20-D3** | Exécution | Synchrone et bornée par un budget global ; reprise au passage suivant | Principe [Approuvé] ; **valeur du budget à fixer** après vérification du délai HTTP de Render (§ 33.8) ; valeur de départ configurable : 25 s |
+| **G20-D3** | Exécution | Synchrone et bornée par un budget global ; reprise au passage suivant | Principe [Approuvé] ; **valeur du budget à fixer** après vérification du délai HTTP de Render (§ 33.8) ; valeur de départ configurable : 25 s *— fixée à 25 s, réglable (§ 37)* |
 | **G20-D4** | Passages concurrents | Un seul passage à la fois : bail en base plateforme (D12) ; sinon `409 MAINTENANCE_IN_PROGRESS` ; `concurrency` dans le workflow | [Approuvé] |
 | **G20-D5** | Mode de la purge | **`SIMULATION`** en production jusqu'à ce que J7 envoie des acquittements ; passage en `DELETE` par une décision séparée, après observation des rapports de simulation | [Approuvé] |
-| **G20-D6** | Fréquence | Toutes les 15 minutes | Principe [Approuvé] ; **valeur à confirmer** (ponctualité du cron GitHub, § 33.8) ; ne concerne que G20e |
+| **G20-D6** | Fréquence | Toutes les 15 minutes | Principe [Approuvé] ; **valeur à confirmer** (ponctualité du cron GitHub, § 33.8) ; ne concerne que G20e *— fixée : toutes les 15 minutes, à :07, :22, :37, :52 (§ 37)* |
 | **G20-D7** | Mesures | Calculées par chaque passage à partir des données en base, sans jauge en mémoire ; mesures d'entreprise et de liaison **séparées** (§ 33.5) | [Approuvé], corrigé (double comptage retiré) |
 | **G20-D8** | Demandes et codes anciens | **Reportée** : décision séparée, irréversible, sans effet sur le reste de G20 (§ 33.7) | En audit *— tranchée le 2026-11-03 : aucune suppression (§ 36)* |
 | **G20-D9** | Événements sans `seq` sans aucune liaison (v17-D9) | Quand l'entreprise n'a **aucune** liaison active ou suspendue, la maintenance appelle le séquenceur **avant** la purge ; la règle commune des 90 jours s'applique ensuite ; jamais d'événement sans `seq` supprimé | [Approuvé], hypothèses H1 à H6 en tests (§ 33.6) |
@@ -2622,3 +2622,39 @@ Décision du responsable du projet : **« je ne veux pas de suppression des donn
 | `LinkWarehouses.replace`, `remove` | Dépôts d'une liaison remplacés à l'approbation ou retirés après une approbation qui n'aboutit pas | Non (lot 2) | Conservé : remplacement du périmètre d'une liaison, pas une perte d'historique (l'audit trace les dépôts approuvés) |
 
 Option d'observation (compter, sans rien supprimer, les données qui auraient été supprimables) : non retenue à ce stade, faute de besoin ; pourra être reprise si les volumes le justifient.
+
+## 37. G20e réalisée — workflow du cron et exploitation — 2026-11-03
+
+Backend GestStock, branche `feat/integration-lot2` ; **non poussé, non déployé**. Dernier sous-lot de G20. Le plan le faisait attendre les valeurs de D3 et D6 (§ 33.9) : elles sont fixées ci-dessous à des valeurs prudentes, valables quelle que soit la configuration de l'hébergeur, et **réglables sans changer le code**. Aucune suppression de données (§ 36).
+
+### 37.1 Décisions [Approuvé]
+
+| # | Objet | Décision |
+|---|---|---|
+| **G20-D3** | Budget d'un passage | **25 s** (valeur livrée). Bien en deçà des délais HTTP usuels ; le client attend jusqu'à 120 s par tentative, réveil de l'hébergeur compris. Réglable sur Render (`GESTSTOCK_INTEGRATION_MAINTENANCE_BUDGET`) après les vérifications du § 33.9 |
+| **G20-D6** | Fréquence | **Toutes les 15 minutes**, à :07, :22, :37 et :52 (hors de l'heure pleine, moins exposée aux retards du cron GitHub) ; les seuils des alertes tolèrent un passage manqué |
+| **G20e-1** | Activation | Le workflow ne fait **rien** tant que la variable du dépôt `GESTSTOCK_MAINTENANCE_ENABLED` ne vaut pas `true` : le fusionner ne déclenche aucun appel |
+| **G20e-2** | Secret | Secret GitHub `GESTSTOCK_MAINTENANCE_TOKEN`, transmis à `curl` par l'entrée standard (jamais en argument, jamais affiché) ; adresse en `https` obligatoire |
+| **G20e-3** | Tentatives | 3 tentatives sur `429`, `5xx` et absence de réponse, 30 s d'intervalle ; `401`, `403`, `404` : échec immédiat (configuration) ; `409` : succès (passage déjà en cours) ; `timeout-minutes: 10` ; `concurrency` sans annulation |
+| **G20e-4** | Échec du workflow | Statut `FAILED`, alerte `CRITICAL`, rapport illisible, configuration fausse, backend injoignable ; `PARTIAL` reste un succès (reprise au passage suivant) |
+| **G20e-5** | Lecture du rapport | Affiché tel quel dans le journal du workflow (agrégé, sans identifiant, G20-D11) ; lu avec Python (présent sur les machines GitHub, sans dépendance à installer) |
+
+### 37.2 Livré
+
+| Fichier | Contenu |
+|---|---|
+| Backend : `.github/workflows/integration-maintenance.yml` | Planification, activation par variable, permissions en lecture seule, un passage à la fois |
+| Backend : `scripts/integration/maintenance-pass.sh` | Un passage : appel, tentatives, rapport, code de sortie |
+| Backend : `scripts/integration/maintenance-pass.test.sh` | Vérification hors ligne du script avec un faux `curl` (14 cas, aucun appel réseau) |
+| Backend : `MaintenanceWorkflowTest` | Le workflow relu par SnakeYAML dans la suite Maven : planification, permissions, `concurrency`, activation, délai, secret jamais en argument ni affiché |
+| `02-exploitation-maintenance.md` | Mise en service pas à pas, arrêt, lecture du rapport, conduite par alerte, échecs du workflow, rotation du secret, réglages |
+
+### 37.3 Tests
+
+**Rouge constaté** avant l'écriture du workflow et du script : les 2 tests de `MaintenanceWorkflowTest` et les 14 cas de l'auto-test échouent (fichiers absents). Après : syntaxe vérifiée (`bash -n`, SnakeYAML) ; les 14 cas passent (terminé, partiel, `CRITICAL`, `FAILED`, `409`, `401`, `404`, réveil `503` puis `200`, délai dépassé puis `200`, `429` puis `200`, injoignable, secret absent, adresse sans `https`, réponse illisible ; le secret n'apparaît jamais dans la sortie et n'est jamais un argument de `curl`).
+
+### 37.4 Reste à faire, par le responsable du déploiement
+
+- Vérifications du § 33.9 (délai HTTP de Render, réveil de Render et de Neon, visibilité du dépôt) ; ajuster D3 si besoin.
+- Mise en service : `02-exploitation-maintenance.md`, § 2, après la fusion dans la branche par défaut et le déploiement du lot 2 et du lot 3.
+- Branche déployée par Render et absence de `GESTSTOCK_INTEGRATION_PURGE_MODE=DELETE` à confirmer.

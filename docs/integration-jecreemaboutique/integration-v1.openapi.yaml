@@ -281,8 +281,8 @@ info:
         source: 'plan § 33 (relevé G20, maintenance de l''intégration), approuvé partiellement'
         approved: [G20-D1, G20-D2, G20-D4, G20-D5, G20-D7, G20-D9, G20-D10, G20-D11, G20-D12, G20-D13, G20-D14, G20-D15]
         approvedInPrinciple:
-          - 'G20-D3 : exécution synchrone et bornée ; budget à fixer après vérification du délai HTTP de Render'
-          - 'G20-D6 : cron toutes les 15 minutes ; à confirmer (ponctualité du cron GitHub)'
+          - 'G20-D3 : exécution synchrone et bornée ; budget fixé à 25 s, réglable sans changer le code (plan § 37)'
+          - 'G20-D6 : cron toutes les 15 minutes, à :07, :22, :37 et :52 (plan § 37)'
         deferred:
           - 'G20-D8 : suppression des demandes et codes d''autorisation anciens (irréversible) ; tranchée le 2026-11-03 (plan § 36) : aucune suppression de données en production'
         consequencesForThisContract:
@@ -290,7 +290,7 @@ info:
           - 'v17-D9 tranché par G20-D9 : sans liaison active ou suspendue, les événements sans seq sont séquencés par la maintenance puis soumis à la règle des 90 jours'
           - 'purge en SIMULATION en production jusqu''à ce que le consommateur (J7) acquitte (G20-D5) ; les acquittements de JeCréeMaBoutique conditionnent la purge réelle'
           - 'alertes de consommateur par liaison (NO_FIRST_ACK, NO_ACTIVITY, CONSUMER_STALLED) calculées à partir de acknowledged_at et des seq non acquittés : JeCréeMaBoutique doit acquitter régulièrement, même sans progression (E4)'
-        implemented: 'G20a à G20d (backend GestStock, lot 3 ; plan § 34), non déployé ; G20e (workflow du cron) à faire'
+        implemented: 'G20a à G20f-1 (backend GestStock, lot 3 ; plan § 34, § 35, § 37), non déployé ; workflow du cron inactif tant que GESTSTOCK_MAINTENANCE_ENABLED ne vaut pas true'
         decidedAtImplementation:
           - 'G20b : purge interruptible avant chaque lot (bail, budget) sans changer les règles de G17 ; au plus la moitié du budget restant par entreprise, sauf la dernière ; budget épuisé (PARTIAL) et bail perdu (FAILED) jamais confondus'
           - 'G20c : mesures calculées par chaque passage, âges calculés par la base qui stocke la date ; LOCK_WAIT en WARNING au-delà de 1 s'
