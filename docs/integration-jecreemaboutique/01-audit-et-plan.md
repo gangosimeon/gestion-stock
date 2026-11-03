@@ -2659,3 +2659,29 @@ Backend GestStock, branche `feat/integration-lot2` ; **non poussé, non déploy�
 - Mise en service : `02-exploitation-maintenance.md`, § 2, après la fusion dans la branche par défaut et le déploiement du lot 2 et du lot 3.
 - Mise en production des lots 2 et 3 (déploiement sans effet visible, puis activation fonction par fonction, sans suppression) : `03-mise-en-production-lots-2-3.md`.
 - Branche déployée par Render et absence de `GESTSTOCK_INTEGRATION_PURGE_MODE=DELETE` à confirmer.
+
+## 38. Mise en ligne des lots 2 et 3 — 2026-11-03
+
+Fusion de `feat/integration-lot2` dans `main` (backend et frontend), déployée par Render le 2026-11-03, sans répétition préalable sur une copie Neon (choix du responsable du projet). **Tout est en ligne et désactivé** : aucune variable `GESTSTOCK_INTEGRATION_*` ni `GESTSTOCK_MAINTENANCE_*` n'est définie ; aucune donnée supprimée.
+
+### 38.1 Constats du déploiement
+
+| Point | Constat |
+|---|---|
+| Backend | `main` = `42c4e92` (G20e) ; « Contrôles de production passés » ; démarrage en environ 4 minutes, sans erreur |
+| Base plateforme | V002 à V004 appliquées |
+| Bases d'entreprise | « principale » et « ests » : V049 à V052 appliquées, en v052 |
+| Frontend | Site statique Render (pas de nginx) ; compilation réussie (avertissements CommonJS de `canvg`, antérieurs et sans effet) |
+| Vérifié par le responsable | Connexion, écran « Boutique en ligne » (aucune boutique liée), ventes, stock, factures et PDF, rechargement d'une page interne, déconnexion |
+
+### 38.2 Points relevés
+
+| Point | Suite |
+|---|---|
+| Le frontend étant un site statique, `deploy/` (nginx, en-têtes) n'est pas utilisé en production | En-têtes de l'écran de consentement à déclarer dans Render **avant B1** (`03-mise-en-production-lots-2-3.md`, B0) ; en-têtes du site entier : amélioration séparée, à essayer d'abord en préversion |
+| Bases jointes par l'adresse du pooler Neon (`-pooler`), une avec `channel_binding=require` | Contraire à la recommandation P8 (§ 29.7), antérieur au lot 2, sans erreur constatée ; à revoir si des erreurs de connexion ou de verrou apparaissent |
+| Liaisons fermées (`404`) | « Connecter GestStock » depuis JeCréeMaBoutique échoue tant que B0 à B2 ne sont pas faits : c'est voulu |
+
+### 38.3 Suite
+
+Activation fonction par fonction, quand le responsable le décide : `03-mise-en-production-lots-2-3.md`, § 5 (B0 à B4). La purge reste en simulation (§ 36).

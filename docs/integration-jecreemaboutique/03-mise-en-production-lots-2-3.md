@@ -1,6 +1,6 @@
 # Mise en production des lots 2 et 3 de l'intégration
 
-Ce guide s'adresse à la personne qui déploie le backend GestStock sur Render. Il couvre le passage de `main` (lot 1, en ligne) à la branche `feat/integration-lot2` (lots 2 et 3). La règle du projet s'applique : **aucune suppression de données en production, et ce qui est en ligne doit continuer de marcher** (plan § 36).
+Ce guide s'adresse à la personne qui déploie GestStock sur Render : le backend est un service web (image Docker), le frontend un **site statique** Render (compilation Angular, sans nginx), les bases sont sur Neon. Il couvre le passage de `main` (lot 1, en ligne) à la branche `feat/integration-lot2` (lots 2 et 3). La règle du projet s'applique : **aucune suppression de données en production, et ce qui est en ligne doit continuer de marcher** (plan § 36).
 
 ## 1. Principe : deux temps séparés
 
@@ -49,6 +49,21 @@ Aucune table existante n'est modifiée ni vidée. Pendant sa mise à jour, une e
 Redéployer l'image précédente depuis Render (*Rollback*). Les nouvelles tables restent en place, inutilisées et sans effet : **ne lancez pas** les scripts d'annulation `U0xx`, qui suppriment des tables et sont contraires à la règle du § 36. Avant de compter sur ce retour arrière, vérifiez-le lors de la répétition A4 : l'ancienne version doit démarrer sur une base qui a reçu les nouvelles migrations.
 
 ## 5. Activer (temps B), dans cet ordre
+
+### B0 — En-têtes de l'écran de consentement (site statique du frontend)
+
+Le frontend est un site statique Render : la configuration nginx du dépôt (`deploy/`) **n'y est pas utilisée**. L'écran où une personne autorise une boutique (`/integrations/…`) a besoin de ses propres en-têtes. À déclarer **avant B1**, dans le site statique du frontend, *Settings > Headers* :
+
+| Chemin | En-tête | Valeur | Pourquoi |
+|---|---|---|---|
+| `/integrations/*` | `Referrer-Policy` | `no-referrer` | L'adresse de l'écran porte la demande d'autorisation : elle ne doit jamais partir vers un autre site |
+| `/integrations/*` | `Cache-Control` | `no-store` | L'écran n'est jamais gardé en cache |
+| `/integrations/*` | `X-Frame-Options` | `DENY` | L'écran ne peut pas être affiché dans une page d'un autre site (piège au clic) |
+| `/integrations/*` | `X-Content-Type-Options` | `nosniff` | Le navigateur respecte le type annoncé |
+
+Ces règles ne touchent que `/integrations/*`, qui n'est pas utilisé avant B1 : rien ne change pour le reste du site. Vérification : ouvrir `https://<frontend>/integrations/test` et lire les en-têtes de la réponse dans les outils du navigateur (*Réseau*).
+
+Les autres en-têtes du fichier `deploy/security-headers.conf` (dont la politique de sécurité du contenu, CSP) ne sont pas appliqués au site aujourd'hui, et ne l'étaient pas avant. Les ajouter au site entier est une amélioration à faire **séparément**, d'abord sur un site de préversion : une politique trop stricte peut bloquer des polices, des images ou la génération des PDF.
 
 ### B1 — Liaisons avec les boutiques
 
