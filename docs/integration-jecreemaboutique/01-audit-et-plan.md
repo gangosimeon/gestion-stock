@@ -2657,4 +2657,5 @@ Backend GestStock, branche `feat/integration-lot2` ; **non poussé, non déploy�
 
 - Vérifications du § 33.9 (délai HTTP de Render, réveil de Render et de Neon, visibilité du dépôt) ; ajuster D3 si besoin.
 - Mise en service : `02-exploitation-maintenance.md`, § 2, après la fusion dans la branche par défaut et le déploiement du lot 2 et du lot 3.
+- Mise en production des lots 2 et 3 (déploiement sans effet visible, puis activation fonction par fonction, sans suppression) : `03-mise-en-production-lots-2-3.md`.
 - Branche déployée par Render et absence de `GESTSTOCK_INTEGRATION_PURGE_MODE=DELETE` à confirmer.
