@@ -2540,7 +2540,7 @@ Seules les trois premières ont une variable d'environnement dédiée dans `appl
 | `LinkRegistry.activate` et `revoke` ne touchent pas au drapeau de publication : c'est `OAuthService` qui le lève avant l'activation, et `LinkAudit` qui le resynchronise après une révocation | H5 vérifiée par les tests de G20b sur cet ordre reproduit ; l'ordre réel reste couvert par les tests de G13 |
 | Budget et liste des entreprises impossibles à maîtriser en test | Deux composants internes au paquet : `MaintenanceTicker` (horloge monotone) et `MaintenanceTenants` (entreprises actives) ; en production, l'horloge système et l'annuaire des entreprises |
 | `UPDATE … WHERE id IN (SELECT … LIMIT … FOR UPDATE SKIP LOCKED)` révoquait plus de liaisons que la limite (sous-requête réévaluée) | **Corrigé** avant le commit de G20d : choix des liaisons dans une CTE matérialisée, évaluée une seule fois ; test de la limite |
-| Les commentaires du lot 2 annoncent une « tâche planifiée du lot 3 » pour trois rattrapages : resynchroniser le drapeau de publication de toutes les entreprises, recopier une trace d'audit manquée dans le journal de l'entreprise, réévaluer l'autoriseur (`LinkAuthorizerWatcher`) | **Non traités** : absents du § 33. G20d resynchronise seulement le drapeau des entreprises dont une liaison expire. À rattacher à un sous-lot |
+| Les commentaires du lot 2 annoncent une « tâche planifiée du lot 3 » pour trois rattrapages : resynchroniser le drapeau de publication de toutes les entreprises, recopier une trace d'audit manquée dans le journal de l'entreprise, réévaluer l'autoriseur (`LinkAuthorizerWatcher`) | **Non traités** : absents du § 33. G20d resynchronise seulement le drapeau des entreprises dont une liaison expire. À rattacher à un sous-lot *— G20f-1 : drapeau et autoriseur traités, copie de l'audit reportée (§ 35)* |
 
 ### 34.6 Tests
 
@@ -2567,3 +2567,36 @@ Chaque sous-lot : tests écrits d'abord, échec de comportement constaté sur de
 - G20e : workflow `integration-maintenance.yml`, documentation d'exploitation (lecture du rapport, conduite par alerte, `CLEANUP_ERROR` comprise), procédure de rotation du secret.
 - Valeurs de D3 et D6 ; vérifications opérationnelles du § 33.9 ; aucun déploiement, aucun push.
 - D8 ; purge en `DELETE` en production (après J7, G20-D5) ; rattrapages du lot 2 (§ 34.5).
+
+## 35. G20f-1 réalisée — rattrapages du lot 2 par la maintenance — 2026-11-03
+
+Backend GestStock, branche `feat/integration-lot2`, commit `e2701cd` ; **non poussé, non déployé**. Sous-lot ajouté au § 33.8 après l'audit des rattrapages promis par les commentaires du lot 2 (§ 34.5), approuvé le 2026-11-03 à la condition de ne casser ni perdre aucune donnée : aucune migration, aucune suppression. Le code modifié du lot 2 n'est pas sur `main` (lot 1 seulement) : rien n'est changé en production.
+
+### 35.1 Constat : course dans la resynchronisation du drapeau de publication
+
+`LinkPublication.synchronize` lisait les liaisons dans la base plateforme **avant** de prendre le verrou du drapeau. L'échange du code lève le drapeau puis active la liaison : une resynchronisation entre les deux (révocation d'une autre liaison de l'entreprise, expiration d'une liaison en attente par G20d) lisait « aucune liaison », puis baissait le drapeau juste avant l'activation. La nouvelle liaison active ne recevait plus aucun changement. Fenêtre de quelques millisecondes, existante depuis le lot 2, rendue plus fréquente par G20d. **Reproduite par un test** avant la correction.
+
+### 35.2 Décisions [Approuvé]
+
+| # | Objet | Décision |
+|---|---|---|
+| **G20f-D1** | Ordre | Les liaisons sont lues **une fois le verrou exclusif du drapeau obtenu** (`PublicationFlag.synchronize`) : resynchronisation et échange du code sont strictement ordonnés |
+| **G20f-D2** | Échange possible | Une liaison en attente dont le code est encore utilisable (non utilisé, expiré depuis moins d'une minute) compte comme liée : le drapeau peut rester levé quelques minutes de trop, sans danger (événements en trop, séquencés puis purgés) |
+| **G20f-D3** | Échange en échec | La resynchronisation qui suit ignore la liaison de l'échange : le drapeau revient à sa valeur, comme au lot 2 (test G13 inchangé) |
+| **G20f-D4** | Drapeau par la maintenance | Pour chaque entreprise visitée, avant le flux : drapeau **levé** s'il est baissé alors qu'une liaison est active ou suspendue, alerte `PUBLICATION_FLAG_RAISED` (`CRITICAL` : des changements ont pu ne pas être publiés, la boutique doit relire un instantané) ; **jamais baissé** ; aucun verrou si rien n'est à faire (les ventes ne sont pas ralenties) |
+| **G20f-D5** | Personnes responsables | Réévaluation de G4b pour chaque entreprise visitée, après le drapeau : liaison suspendue (`AUTHORIZER_LOST_ACCESS`, réactivable, trace d'audit du lot 2) si sa responsable a perdu ses droits ; alerte `LINK_SUSPENDED_LOST_ACCESS` (`WARNING`) ; idempotente |
+| **G20f-D6** | Copie de l'audit (G20f-2) | **Reportée** : il faudrait une migration plateforme (marque de copie) ; enjeu faible (la trace de référence existe) ; à décider avec D8 |
+
+### 35.3 Tests
+
+**Rouge de comportement constaté avant la correction** : 4 échecs, dont la course (le drapeau baissé alors que l'activation est validée pendant l'attente du verrou).
+
+- `PublicationFlagIT` (3 tests de plus) : resynchronisation pendant un échange, attente du verrou puis activation vue, code expiré au-delà de la marge ; le test du lot 2 sur l'échange en échec passe sans modification.
+- `MaintenanceCatchUpIT` (4 tests) : drapeau levé une fois avec l'alerte, jamais baissé, responsable sans droits (liaison suspendue une fois, trace d'audit), responsable avec ses droits (liaison active).
+- Base commune des tests de la maintenance : les liaisons de test ont un vrai responsable (administrateur créé puis supprimé par chaque test).
+- Les 423 tests des liaisons et de la maintenance, puis `./mvnw verify` complet au premier passage : 297 tests unitaires et 1 300 tests d'intégration, aucun échec ni erreur, 2 ignorés : **BUILD SUCCESS**.
+
+### 35.4 Ce qui n'a pas été fait
+
+- G20f-2 (D6 ci-dessus) ; G20e ; D8 ; aucun déploiement, aucun push.
+- Branche déployée par Render : à vérifier par le responsable du déploiement (supposée `main`).

@@ -295,6 +295,7 @@ info:
           - 'G20b : purge interruptible avant chaque lot (bail, budget) sans changer les règles de G17 ; au plus la moitié du budget restant par entreprise, sauf la dernière ; budget épuisé (PARTIAL) et bail perdu (FAILED) jamais confondus'
           - 'G20c : mesures calculées par chaque passage, âges calculés par la base qui stocke la date ; LOCK_WAIT en WARNING au-delà de 1 s'
           - 'G20d : liaisons en attente expirées révoquées par la maintenance (EXPIRED, au plus 500 par passage) ; alerte CLEANUP_ERROR (WARNING) en cas d''échec'
+          - 'G20f-1 (plan § 35) : drapeau de publication resynchronisé sous son verrou, un échange de code possible le garde levé ; la maintenance le lève s''il manque (alerte PUBLICATION_FLAG_RAISED, CRITICAL : la boutique relit un instantané) et réévalue les personnes responsables (LINK_SUSPENDED_LOST_ACCESS)'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: 'Backend GestStock hébergé sur Render (v16-D1 ; v13-D1 : Vercel), appelé directement, jamais à travers le relais nginx du frontend (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
