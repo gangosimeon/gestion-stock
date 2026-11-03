@@ -2276,3 +2276,183 @@ Comparer `imageSha256` du flux à l'empreinte détenue avant de télécharger ; 
 ### 32.7 Ce qui n'a pas été fait
 
 - Aucun déploiement, aucun push ; le backend de G19 n'est pas commité au moment de cette rédaction.
+
+## 33. Relevé G20 — maintenance de l'intégration (route interne et cron) — 2026-11-03
+
+Conception validée après trois audits en lecture seule (conception, complément sécurité et fiabilité, cohérence), **approuvée partiellement le 2026-11-03**. Aucun code écrit à la date de ce relevé. Remplace la ligne G20 du § 29.5 et précise Q1 (§ 29.4), T1 (§ 29.7), v17-D5 et v17-D9 (§ 30.2).
+
+### 33.1 Constats (audit du 2026-11-03)
+
+| Élément | Constat |
+|---|---|
+| Purge (`OutboxPurge`, G17) | Faite, désactivée et en simulation par défaut ; déclenchée seulement par `OutboxPurgeJob` (`@Scheduled`, désactivée, exclue de la production par v16-D2) |
+| Mesures (`FeedMetrics`) | Événements sans `seq` par entreprise seulement, en jauges en mémoire (exclues par v16-D2) ; aucune mesure par liaison |
+| Consommateur JCMB (J7) | **N'existe pas** : aucune liaison n'acquitte, donc la purge réelle ne supprimerait rien dans une entreprise liée (v17-D4) |
+| Ordre des entreprises | `CompanyDirectory.activeTenants()` trie par numéro : ordre fixe |
+| Pool de la base plateforme | 5 connexions par défaut (`GESTSTOCK_PLATFORM_DB_POOL_SIZE`) |
+| Liaisons en attente expirées | Révoquées (`EXPIRED`, audit système) seulement pour la même boutique, lors d'une nouvelle demande (v14-D2) ; aucun nettoyage global |
+| Demandes et codes d'autorisation | Jamais nettoyés ; `integration_authorization_code` → demande et → liaison en `ON DELETE RESTRICT` ; le code **utilisé** sert à détecter le rejeu (`CODE_REPLAYED`, v14-D14) |
+| Route interne, chaîne `/internal/**`, bail | N'existent pas |
+| Authentification OAuth | `ClientAuthenticationFilter` écrit une ligne d'audit **par échec** (risque existant, hors G20, § 33.9) |
+
+### 33.2 Décisions
+
+| # | Objet | Décision | État |
+|---|---|---|---|
+| **G20-D1** | Authentification du cron | Secret dédié d'au moins 32 octets aléatoires, gardé dans les secrets GitHub ; le backend ne connaît que son empreinte SHA-256 (`GESTSTOCK_MAINTENANCE_TOKEN_SHA256`, seconde empreinte facultative pendant une rotation) ; comparaison en temps constant, **sans accès à la base** | [Approuvé] |
+| **G20-D2** | Route | `POST /internal/integration/maintenance`, hors `/api/**`, **chaîne de sécurité dédiée** : jeton utilisateur et jeton de liaison refusés, ni CORS ni session, `Cache-Control: no-store` ; `404` (comme une route inconnue) si la maintenance est désactivée ; `ProductionSafetyCheck` refuse de démarrer si la maintenance est activée sans empreinte valide. **Hors du contrat d'intégration** (non destinée à JeCréeMaBoutique) | [Approuvé] |
+| **G20-D3** | Exécution | Synchrone et bornée par un budget global ; reprise au passage suivant | Principe [Approuvé] ; **valeur du budget à fixer** après vérification du délai HTTP de Render (§ 33.8) ; valeur de départ configurable : 25 s |
+| **G20-D4** | Passages concurrents | Un seul passage à la fois : bail en base plateforme (D12) ; sinon `409 MAINTENANCE_IN_PROGRESS` ; `concurrency` dans le workflow | [Approuvé] |
+| **G20-D5** | Mode de la purge | **`SIMULATION`** en production jusqu'à ce que J7 envoie des acquittements ; passage en `DELETE` par une décision séparée, après observation des rapports de simulation | [Approuvé] |
+| **G20-D6** | Fréquence | Toutes les 15 minutes | Principe [Approuvé] ; **valeur à confirmer** (ponctualité du cron GitHub, § 33.8) ; ne concerne que G20e |
+| **G20-D7** | Mesures | Calculées par chaque passage à partir des données en base, sans jauge en mémoire ; mesures d'entreprise et de liaison **séparées** (§ 33.5) | [Approuvé], corrigé (double comptage retiré) |
+| **G20-D8** | Demandes et codes anciens | **Reportée** : décision séparée, irréversible, sans effet sur le reste de G20 (§ 33.7) | En audit |
+| **G20-D9** | Événements sans `seq` sans aucune liaison (v17-D9) | Quand l'entreprise n'a **aucune** liaison active ou suspendue, la maintenance appelle le séquenceur **avant** la purge ; la règle commune des 90 jours s'applique ensuite ; jamais d'événement sans `seq` supprimé | [Approuvé], hypothèses H1 à H6 en tests (§ 33.6) |
+| **G20-D10** | Anciennes tâches | `OutboxPurgeJob` et `FeedMetricsJob` retirés, remplacés par la route | [Approuvé] |
+| **G20-D11** | Réponse | Rapport agrégé (§ 33.4) : aucun identifiant ni nom d'entreprise, de liaison ou de boutique, aucun secret, message d'exception, requête ni chemin | [Approuvé] |
+| **G20-D12** | Bail | Bail à génération (*fencing token*) dans `platform.integration_maintenance_lease` (§ 33.3), vérifié avant chaque entreprise et chaque lot ; durée de vie égale à deux fois le budget ; toutes les heures viennent de PostgreSQL. **La sécurité des données ne dépend pas du bail** (règles de G17) : il n'évite que le travail en double | [Approuvé] |
+| **G20-D13** | Ordre de passage | État conservé par entreprise : tentative, fin, résultat, interruptions consécutives ; **une seule** reprise prioritaire après interruption, puis ordre par tentative la plus ancienne ; part maximale du budget seulement s'il reste d'autres entreprises (§ 33.3) | [Approuvé], corrigé (une entreprise interrompue ne reste plus en tête) |
+| **G20-D14** | Échecs d'authentification | **Aucune écriture en base** sur un échec : compteur en mémoire de l'instance (observation, pas limite de sécurité) ; WARN aux paliers 1, 10, 100, 1 000… ; seuls les appels authentifiés passent par la limite en base (6 par minute, une clé globale) | [Approuvé], corrigé (un compteur en base épuisait le pool plateforme) |
+| **G20-D15** | Définitions, priorité et seuils des alertes | § 33.5. *Numérotée D16 pendant l'audit ; il n'y a pas de G20-D16.* | [Approuvé] |
+
+### 33.3 Bail et ordre de passage
+
+**Ordre des contrôles d'un appel** : maintenance désactivée → `404` ; secret absent ou faux → `401` (compteur en mémoire, aucune base) ; plus de 6 appels authentifiés par minute → `429` ; bail déjà pris → `409` ; sinon passage.
+
+**Bail** (`platform.integration_maintenance_lease`, une seule ligne : `generation`, `owner` tiré à chaque passage, `acquired_at`, `expires_at`, `released_at`) :
+
+- **prendre** : une seule mise à jour conditionnelle (`released_at` renseigné ou `expires_at <= now()`), qui incrémente `generation` ; aucune ligne modifiée ⇒ `409` ;
+- **vérifier** avant chaque entreprise et chaque lot (`generation` identique et `expires_at > now()`) ; échec ⇒ arrêt du passage, statut `FAILED` ;
+- **prolonger** entre deux entreprises, jamais un bail déjà expiré ;
+- **libérer** par génération : un ancien propriétaire ne peut ni libérer ni prolonger le bail d'un passage plus récent ;
+- la fenêtre entre la vérification et la validation d'un lot (deux bases, aucune transaction commune) reste ouverte et sans danger : chaque lot reverrouille l'état du flux, et chaque borne reste au plus égale à son propre plafond `P` (G17).
+
+**État par entreprise** (`platform.integration_maintenance_company`, clé étrangère vers l'entreprise, supprimée avec elle) :
+
+| Colonne | Écrite |
+|---|---|
+| `last_started_at`, `last_started_generation` | **Au début** du traitement de l'entreprise |
+| `last_completed_at`, `last_outcome` (`OK`, `PARTIAL`, `SKIPPED_UPGRADE`, `ERROR`) | **À la fin**, quel que soit le résultat |
+| `consecutive_interruptions` | +1 quand la tentative précédente a commencé sans se terminer (`last_completed_at` vide ou antérieur à `last_started_at`) ; remise à 0 à chaque fin |
+
+**Ordre** : d'abord les entreprises interrompues **une seule fois** (reprise rapide) ; puis `last_started_at NULLS FIRST`, numéro. Interrompue deux fois de suite : file normale et alerte `COMPANY_INTERRUPTED`. Une entreprise dont le schéma est en migration ou en échec (`TenantSchemaRegistry` : `UPGRADING`, `FAILED`) est sautée (`SKIPPED_UPGRADE`). Une erreur sur une entreprise n'empêche pas les suivantes. **Part maximale du budget par entreprise** (valeur de départ : la moitié) appliquée seulement s'il reste d'autres entreprises à visiter ; la dernière, ou l'unique, peut utiliser tout le budget restant.
+
+**Traitement d'une entreprise** : (1) aucune liaison active ou suspendue ⇒ séquenceur (D9) ; (2) `OutboxPurge.run()` de G17, inchangé, dans le mode configuré ; (3) mesures (§ 33.5).
+
+### 33.4 Rapport (D11)
+
+```json
+{
+  "status": "COMPLETED",
+  "mode": "SIMULATION",
+  "generation": 42,
+  "durationMs": 18234,
+  "companies": { "active": 7, "visited": 4, "skippedUpgrade": 1, "errors": 0, "interrupted": 0, "remaining": 2 },
+  "purge":     { "eligible": 1200, "deleted": 0, "batches": 2, "blocked": 3, "maxLockWaitMs": 12 },
+  "links":     { "active": 3, "suspended": 1 },
+  "cleanup":   { "expiredPendingLinks": 0 },
+  "alerts":    [ { "type": "NO_ACTIVITY", "severity": "WARNING", "count": 1 } ],
+  "authFailures": { "count": 0, "scope": "INSTANCE" }
+}
+```
+
+- `status` : `COMPLETED` (toutes les entreprises à visiter l'ont été), `PARTIAL` (budget épuisé, `remaining` > 0), `FAILED` (bail perdu, ou erreur générale avant toute entreprise).
+- `alerts` : regroupées par type et gravité (`WARNING`, `CRITICAL`), avec un nombre. Types : `NO_FIRST_ACK`, `NO_ACTIVITY`, `CONSUMER_STALLED`, `PURGE_BLOCKED_BY_SUSPENSION` (liaisons) ; `UNSEQUENCED_EVENTS`, `COMPANY_ERROR`, `COMPANY_INTERRUPTED` (entreprises) ; `LOCK_WAIT` (attente du verrou d'un lot au-delà de 1 s, mesurée dans `PurgeReport`).
+- `authFailures` : échecs vus par **cette instance** depuis le passage précédent.
+- Le workflow échoue si une alerte `CRITICAL` est présente ou si le statut vaut `FAILED` ; `409` n'est pas un échec.
+- Erreurs `401`, `404`, `409`, `429` au format `ApiError` standard, `path` = `/internal/integration/maintenance`.
+- Journaux de Render : identifiants techniques, type d'alerte et génération ; une erreur n'y apparaît que par sa classe, jamais par son message ; jamais le secret ni l'en-tête `Authorization`.
+
+### 33.5 Mesures et alertes (D7, D15)
+
+| Niveau | Mesure | Définition |
+|---|---|---|
+| Entreprise | Événements sans `seq` | Nombre et âge du plus ancien (`FeedMetrics.UNSEQUENCED`, existante) |
+| Entreprise | Flux | `last_seq`, repère de purge |
+| Liaison | Événements séquencés non acquittés | Nombre de `seq` supérieurs à son acquittement |
+| Liaison | Âge du plus ancien non acquitté | `min(created_at)` des `seq` supérieurs à son acquittement ; nul si rien n'est en attente |
+| Liaison | Retard de séquence | `last_seq − acknowledged_seq` (indicatif : compte aussi les événements filtrés) |
+| Liaison | Dernière activité | `acknowledged_at` (mis à jour à chaque acquittement, E4) |
+
+Les volumes de plusieurs liaisons ne sont **jamais additionnés** ; les événements sans `seq` ne sont comptés qu'au niveau de l'entreprise.
+
+**Priorité, au plus une alerte de consommateur par liaison** (première règle qui s'applique) :
+
+1. liaison **suspendue** : aucune alerte de consommateur ; `PURGE_BLOCKED_BY_SUSPENSION` (`WARNING`) au-delà de 30 jours de suspension ;
+2. aucune ligne d'acquittement : `NO_FIRST_ACK`, `WARNING` au-delà de 1 h après `activated_at`, `CRITICAL` au-delà de 24 h ;
+3. aucun événement séquencé en attente : aucune alerte ;
+4. `acknowledged_at` plus vieux que 1 h : `NO_ACTIVITY`, `WARNING` ; `CRITICAL` au-delà de 6 h ;
+5. sinon, plus ancien non acquitté au-delà de 6 h : `CONSUMER_STALLED`, `WARNING` ; `CRITICAL` au-delà de 24 h.
+
+Au niveau de l'entreprise, `UNSEQUENCED_EVENTS` (`WARNING` au-delà de 5 min, seulement avec une liaison active) peut coexister avec une alerte de liaison : un consommateur arrêté n'attribue plus de `seq`, la règle 3 ne déclenche alors rien et `UNSEQUENCED_EVENTS` prend le relais. `COMPANY_ERROR` et `COMPANY_INTERRUPTED` (`CRITICAL`) coexistent avec tout. Seuils configurables ; ils tolèrent un passage du cron manqué.
+
+### 33.6 Événements sans `seq` et nouvelle liaison (D9)
+
+Une entreprise sans liaison n'écrit aucun événement (G13) : les événements orphelins viennent d'une liaison révoquée dont le consommateur ne lisait plus. Le séquencement, puis la purge des 90 jours, ne peuvent pas nuire à une liaison activée ensuite : son `asOfSeq` est au moins égal au plafond `P` de tout passage qui ne la voit pas, la borne ne dépasse jamais `P`, et les événements au plus égaux à `asOfSeq` sont couverts par son instantané.
+
+Hypothèses à garantir par les tests :
+
+- **H1** : en mode « aucune liaison », le séquencement a lieu **avant** la lecture de `P` ;
+- **H2** : `P` est lu avant `RetainedLinks` (prouvé par `PurgeActivationRaceIT`) ;
+- **H3** : `last_seq` ne diminue jamais ;
+- **H4** : `asOfSeq` est lu après le séquenceur ;
+- **H5** : le drapeau de publication est levé avant l'activation (G13) ;
+- **H6** : le séquencement n'a lieu que si **aucune** liaison active ou suspendue n'existe au moment de la vérification.
+
+### 33.7 D8 reportée — éléments de la future décision
+
+| Données | Supprimable | Raison |
+|---|---|---|
+| Demandes jamais décidées, expirées depuis plus de 90 jours | Oui | Ni code ni liaison ; l'audit n'enregistre que des décisions |
+| Demandes refusées (`DENIED`) de plus de 90 jours | Oui | Refus déjà dans l'audit (`LINK_REQUEST_DENIED`) |
+| Demandes et codes d'une liaison révoquée depuis plus de 90 jours | Avec réserve | Perte du lien demande → liaison, absent ailleurs ; code supprimé avant la demande (`RESTRICT`) |
+| Codes des liaisons actives ou suspendues | **Non** | Détection du rejeu (v14-D14) |
+| Codes des liaisons en attente | **Non** | Utilisés par `EXPIRE_STALE_PENDING` |
+
+Volume faible (quelques lignes par liaison) : le report ne bloque rien.
+
+### 33.8 Sous-lots
+
+| Sous-lot | Contenu | Tests d'abord | Bloqué par |
+|---|---|---|---|
+| **G20a** | Chaîne `/internal/**`, secret (D1, D14), limite des appels authentifiés, bail (D12), migration plateforme V + U (bail et état des entreprises), `ProductionSafetyCheck` ; route qui ne fait encore aucun travail | `401` sans secret ou avec un secret faux ; jeton utilisateur ou de liaison refusé ; rotation à deux valeurs ; `404` si désactivée ; `429` ; 1 000 échecs simultanés : aucune écriture en base, au plus 4 WARN, le vrai cron passe pendant la rafale ; aucun secret dans les journaux ; bail : deux appels simultanés (un `409`), bail expiré pendant qu'un ancien passage est arrêté (l'ancien s'arrête avant son lot suivant), ancien propriétaire sans effet, prolongation d'un bail expiré refusée ; migration : conventions, aller-retour V → U → V | — |
+| **G20b** | Orchestration : ordre (D13), budget et part par entreprise, entreprises sautées, séquencement sans liaison (D9), purge en `SIMULATION` par défaut, retrait d'`OutboxPurgeJob` (D10) | Interrompue une fois : première au passage suivant ; deux fois : file normale et `COMPANY_INTERRUPTED` ; trois entreprises, budget pour une : chacune en trois passages ; entreprise unique : tout le budget ; erreur isolée ; entreprise en migration sautée ; deux passages superposés sans bail : aucune règle de G17 violée ; `OrphanEventsAndNewLinkIT` (H1 à H6) ; `PurgeActivationRaceIT` reproduit à travers la route | — |
+| **G20c** | Mesures et alertes (D7, D15), attente du verrou dans `PurgeReport`, rapport (D11), retrait de `FeedMetricsJob` (D10) | Un cas par règle de priorité ; liaison suspendue et entreprise sans activité : aucune alerte ; événements sans `seq` comptés une fois pour deux liaisons ; `UNSEQUENCED_EVENTS` et `NO_ACTIVITY` ensemble ; schéma du rapport sans identifiant ; message d'exception marqué absent de la réponse et des journaux | — |
+| **G20d** | Révocation globale (`EXPIRED`, audit système) des liaisons en attente expirées | Idempotence ; une entrée d'audit par liaison ; aucun effet sur la publication ni sur la purge | — (D8 hors périmètre) |
+| **G20e** | Workflow GitHub `integration-maintenance.yml` (`concurrency`, `timeout-minutes`, nouvelles tentatives limitées), documentation d'exploitation (lecture du rapport, conduite par alerte), procédure de rotation du secret | Syntaxe vérifiée hors ligne | Valeurs de D3 et D6 |
+| (après J7) | Purge en `DELETE` en production | — | Décision séparée (D5) |
+
+Chaque sous-lot : tests écrits d'abord (échec de comportement constaté), `./mvnw verify` complet, un commit, arrêt pour revue. Numéro de migration attribué à l'implémentation.
+
+### 33.9 Vérifications opérationnelles (à faire par le responsable du déploiement)
+
+| Sujet | À vérifier | Fixe |
+|---|---|---|
+| Dépôt GitHub `gestionStock-backend` | Visibilité (public : journaux des workflows publics, workflows planifiés désactivés après 60 jours sans activité) ; branche par défaut (un workflow planifié ne tourne que depuis elle) | D11 (déjà agrégée), mise en service |
+| Secrets et permissions GitHub Actions | `GESTSTOCK_MAINTENANCE_TOKEN` ; permissions par défaut en lecture ; workflows des forks | G20e |
+| Ponctualité du cron GitHub | Retards possibles, intervalle minimal de 5 min | D6 |
+| Render | Offre, mise en veille et durée du réveil, délai HTTP maximal, nombre d'instances | D3 (budget), délai côté client (`curl --max-time`, départ 120 s) |
+| Variables Render | `GESTSTOCK_MAINTENANCE_TOKEN_SHA256` (et la seconde pendant une rotation), activation de la maintenance | Démarrage (`ProductionSafetyCheck`) |
+| Neon | Mise en veille de la base et réveil ; nombre maximal de connexions | D3 |
+
+**Hors G20, signalé** : `ClientAuthenticationFilter` écrit une ligne d'audit par échec d'authentification OAuth, au volume borné seulement par la limite par IP, elle-même dépendante de I1 (§ 29.7). À traiter par une décision séparée.
+
+### 33.10 Checklist de déploiement (complète le § 29.7)
+
+| # | Contrôle | Origine |
+|---|---|---|
+| M1 | Empreinte du secret du cron dans Render, secret dans GitHub, jamais dans un fichier | G20-D1 |
+| M2 | Purge en `SIMULATION` en production | G20-D5 |
+| M3 | Migration plateforme du bail et de l'état des entreprises appliquée | G20-D12, D13 |
+| M4 | Workflow planifié présent sur la branche par défaut | § 33.9 |
+| T1 | Remplacé : les tâches `@Scheduled` de purge et de mesures sont retirées (G20-D10) | v13-D2, v16-D2 |
+
+### 33.11 Changements du contrat (`integration-v1.openapi.yaml`)
+
+- Aucune route : `POST /internal/integration/maintenance` n'est pas destinée à JeCréeMaBoutique.
+- Bloc `x-decisions.v17.g20`.
+
+### 33.12 Ce qui n'a pas été fait
+
+- Aucun code, test, migration ni workflow ; aucune vérification sur GitHub, Render ou Neon.
+- D8 non tranchée ; valeurs de D3 et D6 non fixées.

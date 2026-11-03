@@ -276,6 +276,21 @@ info:
           - 'If-None-Match: * : 200, pas 304 (comportement de Spring MVC, comme l''API principale ; non tranché par une décision)'
         contractChanges:
           - 'GET /catalog/products/{productId}/image : operationId getCatalogProductImage (getProductImage était déjà attribué par l''API principale) ; réponses 400, 404 détaillé, 429, 500, 503 ; en-têtes ; règles G19-D1 à G19-D9'
+      g20:
+        date: '2026-11-03'
+        source: 'plan § 33 (relevé G20, maintenance de l''intégration), approuvé partiellement'
+        approved: [G20-D1, G20-D2, G20-D4, G20-D5, G20-D7, G20-D9, G20-D10, G20-D11, G20-D12, G20-D13, G20-D14, G20-D15]
+        approvedInPrinciple:
+          - 'G20-D3 : exécution synchrone et bornée ; budget à fixer après vérification du délai HTTP de Render'
+          - 'G20-D6 : cron toutes les 15 minutes ; à confirmer (ponctualité du cron GitHub)'
+        deferred:
+          - 'G20-D8 : suppression des demandes et codes d''autorisation anciens (irréversible)'
+        consequencesForThisContract:
+          - 'aucune route : POST /internal/integration/maintenance est une route interne, hors /api/integration/v1, non destinée à JeCréeMaBoutique'
+          - 'v17-D9 tranché par G20-D9 : sans liaison active ou suspendue, les événements sans seq sont séquencés par la maintenance puis soumis à la règle des 90 jours'
+          - 'purge en SIMULATION en production jusqu''à ce que le consommateur (J7) acquitte (G20-D5) ; les acquittements de JeCréeMaBoutique conditionnent la purge réelle'
+          - 'alertes de consommateur par liaison (NO_FIRST_ACK, NO_ACTIVITY, CONSUMER_STALLED) calculées à partir de acknowledged_at et des seq non acquittés : JeCréeMaBoutique doit acquitter régulièrement, même sans progression (E4)'
+        implemented: 'non (aucun code à la date du relevé)'
 servers:
   - url: '{geststockApiOrigin}/api/integration/v1'
     description: 'Backend GestStock hébergé sur Render (v16-D1 ; v13-D1 : Vercel), appelé directement, jamais à travers le relais nginx du frontend (v14-D8) ; URL publique de production non encore fixée dans ce contrat (D8).'
