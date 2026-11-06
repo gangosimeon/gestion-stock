@@ -1,0 +1,119 @@
+<section class="proposals-page">
+  <header class="proposals-header">
+    <h1>Prix boutique</h1>
+    <p>Propositions de prix en attente d'approbation, par boutique liée.</p>
+  </header>
+
+  @if (actionError(); as err) {
+    <div class="proposals-alert" role="alert">
+      <p class="proposals-alert-title">{{ err.message }}</p>
+      <p>{{ err.action }}</p>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="proposals-loading">
+      <mat-spinner diameter="32" />
+      <p>Chargement des propositions&#8230;</p>
+    </div>
+  } @else {
+    @if (groups().length === 0) {
+      <div class="proposals-empty">
+        <mat-icon aria-hidden="true">price_check</mat-icon>
+        <p class="proposals-empty-title">Aucune proposition en attente.</p>
+        <p>Toutes les boutiques liées sont à jour.</p>
+      </div>
+    }
+
+    @for (group of groups(); track group.linkId) {
+      <section class="link-group" data-test="link-group">
+        <h2 class="link-group-title">
+          <mat-icon aria-hidden="true">storefront</mat-icon>
+          {{ group.shopName }}
+          @if (group.linkStatus === 'SUSPENDED') {
+            <span class="link-suspended-badge" data-test="suspended-badge">Suspendue</span>
+          }
+          <span class="link-group-count">{{ group.proposals.length }}</span>
+        </h2>
+
+        <div class="proposals-list">
+          @for (proposal of group.proposals; track proposal.proposalId) {
+            <article class="proposal-card" [attr.data-proposal]="proposal.proposalId">
+              <div class="proposal-head">
+                <div class="proposal-product">
+                  <span class="proposal-name">{{ proposal.productName }}</span>
+                  <span class="proposal-sku">{{ proposal.productSku }}</span>
+                </div>
+                <div class="proposal-price">
+                  <span class="proposal-amount">{{ proposal.price }}&thinsp;{{ proposal.currency }}</span>
+                </div>
+              </div>
+
+              <dl class="proposal-facts">
+                <div>
+                  <dt>Prix de référence lors de la proposition</dt>
+                  <dd>{{ proposal.referencePriceAtProposal }}&thinsp;{{ proposal.currency }}</dd>
+                </div>
+                <div [class.proposal-ref-changed]="referenceChanged(proposal)">
+                  <dt>
+                    Prix de référence actuel
+                    @if (referenceChanged(proposal)) {
+                      <mat-icon
+                        class="proposal-ref-icon"
+                        aria-label="Prix de référence modifié depuis la proposition"
+                        matTooltip="Le prix de référence GestStock a changé depuis la proposition."
+                      >warning</mat-icon>
+                    }
+                  </dt>
+                  <dd>{{ proposal.currentReferencePrice }}&thinsp;{{ proposal.currency }}</dd>
+                </div>
+                @if (proposal.note) {
+                  <div class="proposal-note-row">
+                    <dt>Note de la boutique</dt>
+                    <dd>{{ proposal.note }}</dd>
+                  </div>
+                }
+                <div>
+                  <dt>Proposé le</dt>
+                  <dd>{{ proposal.proposedAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+                </div>
+              </dl>
+
+              <div class="proposal-actions">
+                <button
+                  mat-stroked-button
+                  color="warn"
+                  type="button"
+                  data-test="reject"
+                  [disabled]="isBusy(proposal.proposalId)"
+                  (click)="reject(group.linkId, proposal)"
+                >
+                  Refuser
+                </button>
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  data-test="approve"
+                  [disabled]="isBusy(proposal.proposalId)"
+                  (click)="approve(group.linkId, proposal)"
+                >
+                  Approuver
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <mat-paginator
+      [length]="total()"
+      [pageIndex]="table.pageIndex"
+      [pageSize]="table.pageSize"
+      [pageSizeOptions]="table.pageSizeOptions"
+      (page)="table.onPage($event)"
+      showFirstLastButtons
+    />
+  }
+</section>

@@ -125,12 +125,40 @@ describe('LayoutShellComponent (barre latérale responsive)', () => {
     expect(await active('/settings/invoice?onglet=logo')).toEqual(['Paramètres']);
     // Les autres entrées restent actives sur leurs sous-pages (comportement inchangé).
     expect(await active('/products/42')).toEqual(['Produits']);
+    // /products-archive partage le préfixe « /products » mais n'est pas une sous-page : aucune entrée allumée.
+    expect(await active('/products-archive')).toEqual([]);
   });
 
   it('« Boutique en ligne » : route /settings/online-shop protégée par integration:manage', () => {
     const route = (LAYOUT_ROUTES[0].children ?? []).find((r) => r.path === 'settings/online-shop');
     expect(route?.canMatch).toContain(permissionGuard);
     expect(route?.data?.['permissions']).toEqual(['integration:manage']);
+  });
+
+  it('« Prix boutique » (GA3) : proposé avec integration:price-approve seule', () => {
+    expect(setup(false, ['integration:price-approve']).navLabels()).toEqual(['Dashboard', 'Prix boutique']);
+  });
+
+  it('« Prix boutique » : masqué avec integration:manage seule (sans integration:price-approve)', () => {
+    expect(setup(false, ['integration:manage']).navLabels()).not.toContain('Prix boutique');
+  });
+
+  it('« Prix boutique » : route /settings/online-shop/price-proposals protégée par integration:price-approve', () => {
+    const route = (LAYOUT_ROUTES[0].children ?? []).find((r) => r.path === 'settings/online-shop/price-proposals');
+    expect(route?.canMatch).toContain(permissionGuard);
+    expect(route?.data?.['permissions']).toEqual(['integration:price-approve']);
+  });
+
+  it('sur /settings/online-shop/price-proposals, seule « Prix boutique » est allumée (ni « Boutique en ligne » ni « Paramètres »)', async () => {
+    const { fixture } = setup(false, ['settings:manage', 'integration:manage', 'integration:price-approve']);
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/settings/online-shop/price-proposals');
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const active = fixture.debugElement
+      .queryAll(By.css('.nav-item--active .nav-item__label'))
+      .map((e) => (e.nativeElement as HTMLElement).textContent?.trim());
+    expect(active).toEqual(['Prix boutique']);
   });
 
   it('sans permission : seul le tableau de bord est proposé (plus de « Accès refusé » au clic)', () => {

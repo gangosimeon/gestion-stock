@@ -1,0 +1,188 @@
+// Propositions de prix en attente : une carte par proposition, groupées par liaison.
+.proposals-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.proposals-header {
+  margin-bottom: 16px;
+
+  h1 {
+    font-size: 1.375rem;
+    margin: 0 0 4px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-neutral-text);
+  }
+}
+
+.proposals-alert {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  background: var(--color-danger-soft);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
+
+  p {
+    margin: 4px 0;
+  }
+}
+
+.proposals-alert-title,
+.proposals-empty-title {
+  font-weight: 600;
+}
+
+.proposals-loading,
+.proposals-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--color-neutral-text);
+}
+
+// Groupe par liaison
+.link-group {
+  margin-bottom: 24px;
+}
+
+.link-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+  color: var(--color-neutral-text);
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.link-group-count {
+  margin-left: auto;
+  background: var(--color-neutral-soft);
+  color: var(--color-neutral-text);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.link-suspended-badge {
+  background: var(--color-warning-soft, #fef9c3);
+  color: var(--color-warning-text, #92400e);
+  border: 1px solid var(--color-warning-border, #fcd34d);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.proposals-list {
+  display: grid;
+  gap: 12px;
+}
+
+// Carte d'une proposition
+.proposal-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+
+.proposal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.proposal-product {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.proposal-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.proposal-sku {
+  font-size: 0.8rem;
+  color: var(--color-neutral-text);
+}
+
+.proposal-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.proposal-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px 16px;
+  margin: 0 0 12px;
+
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--color-neutral-text);
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.proposal-ref-changed dd {
+  color: var(--color-warning-text);
+  font-weight: 600;
+}
+
+.proposal-ref-icon {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-warning-text);
+  vertical-align: middle;
+}
+
+.proposal-note-row {
+  grid-column: 1 / -1;
+
+  dd {
+    font-style: italic;
+    color: var(--color-neutral-text);
+  }
+}
+
+.proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (max-width: 480px) {
+  .proposal-actions button {
+    flex: 1 1 100%;
+  }
+}

@@ -121,6 +121,17 @@ export const LAYOUT_ROUTES: Routes = [
           import('../features/company/company-profile-page.component').then((m) => m.CompanyProfilePageComponent)
       },
       {
+        // Avant « settings/online-shop » : chemin plus précis, protégé par integration:price-approve (lot 3, GA3).
+        path: 'settings/online-shop/price-proposals',
+        canMatch: [permissionGuard],
+        data: { permissions: ROUTE_PERMISSIONS['settings/online-shop/price-proposals'] },
+        title: 'Prix boutique',
+        loadComponent: () =>
+          import('../features/integrations/pages/price-proposals-page.component').then(
+            (m) => m.PriceProposalsPageComponent
+          )
+      },
+      {
         // Avant « settings » : chemin plus précis, protégé par sa propre permission (integration:manage).
         path: 'settings/online-shop',
         canMatch: [permissionGuard],

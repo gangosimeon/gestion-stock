@@ -158,7 +158,8 @@ export class LayoutShellComponent {
       { label: 'Utilisateurs', icon: 'admin_panel_settings', section: 'users' },
       { label: 'Mon entreprise', icon: 'business', section: 'company' },
       { label: 'Paramètres', icon: 'settings', section: 'settings' },
-      { label: 'Boutique en ligne', icon: 'storefront', section: 'settings/online-shop' }
+      { label: 'Boutique en ligne', icon: 'storefront', section: 'settings/online-shop' },
+      { label: 'Prix boutique', icon: 'price_check', section: 'settings/online-shop/price-proposals' }
     ] satisfies { label: string; icon: string; section: AppSection }[]
   ).map(({ label, icon, section }) => ({
     label,

@@ -35,7 +35,9 @@ export const ROUTE_PERMISSIONS = {
   settings: ['settings:manage'],
   // Paramètres → Boutique en ligne : boutiques liées (lot 2, GA2), administrateur. Route distincte de settings,
   // pour ne pas exiger aussi settings:manage.
-  'settings/online-shop': ['integration:manage']
+  'settings/online-shop': ['integration:manage'],
+  // Paramètres → Prix boutique : approbation des propositions de prix (lot 3, GA3, G22b).
+  'settings/online-shop/price-proposals': ['integration:price-approve']
 } as const satisfies Record<string, readonly string[]>;
 
 export type AppSection = keyof typeof ROUTE_PERMISSIONS;
