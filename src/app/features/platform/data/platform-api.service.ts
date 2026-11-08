@@ -13,6 +13,9 @@ import {
   CompanyListItem,
   CompanyRequest,
   CompanyStatus,
+  CreateIntegrationClientRequest,
+  CreateIntegrationClientResponse,
+  IntegrationClientListItem,
   PlatformAuditEntry,
   PlatformStats,
   SchemaUpgradeStatus
@@ -130,6 +133,38 @@ export class PlatformApiService {
   auditLog(page: PageRequest, companyId?: string | null): Observable<PaginatedResult<PlatformAuditEntry>> {
     return this.http
       .get<PaginatedResult<PlatformAuditEntry>>(`${this.base}/audit-log`, { params: pageParams(page, { companyId }) })
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  // ── Clients d'intégration OAuth ──────────────────────────────────────────
+
+  integrationClients(): Observable<IntegrationClientListItem[]> {
+    return this.http
+      .get<IntegrationClientListItem[]>(`${this.base}/integration-clients`)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  createIntegrationClient(request: CreateIntegrationClientRequest): Observable<CreateIntegrationClientResponse> {
+    return this.http
+      .post<CreateIntegrationClientResponse>(`${this.base}/integration-clients`, request)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  resetIntegrationClientSecret(id: string): Observable<{ secret: string }> {
+    return this.http
+      .post<{ secret: string }>(`${this.base}/integration-clients/${id}/reset-secret`, null)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  disableIntegrationClient(id: string): Observable<void> {
+    return this.http
+      .post<void>(`${this.base}/integration-clients/${id}/disable`, null)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  enableIntegrationClient(id: string): Observable<void> {
+    return this.http
+      .post<void>(`${this.base}/integration-clients/${id}/enable`, null)
       .pipe(catchError((e) => throwError(() => toApiError(e))));
   }
 }

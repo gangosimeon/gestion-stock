@@ -21,6 +21,7 @@ import { PlatformAuthService } from './data/platform-auth.service';
         <nav class="platform-shell__nav" aria-label="Navigation Super Admin">
           <a routerLink="/platform/dashboard" routerLinkActive="active">Tableau de bord</a>
           <a routerLink="/platform/companies" routerLinkActive="active">Entreprises</a>
+          <a routerLink="/platform/integration-clients" routerLinkActive="active">Clients d'intégration</a>
           <a routerLink="/platform/audit" routerLinkActive="active">Journal</a>
         </nav>
         <span class="platform-shell__spacer"></span>

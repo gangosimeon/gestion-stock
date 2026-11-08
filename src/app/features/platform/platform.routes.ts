@@ -4,6 +4,7 @@ import { platformGuard, platformSessionGuard } from './data/platform.guards';
 import { CompaniesPageComponent } from './pages/companies-page.component';
 import { CompanyCreateComponent } from './pages/company-create.component';
 import { CompanyDetailComponent } from './pages/company-detail.component';
+import { IntegrationClientsPageComponent } from './pages/integration-clients-page.component';
 import { PlatformAuditComponent } from './pages/platform-audit.component';
 import { PlatformChangePasswordComponent } from './pages/platform-change-password.component';
 import { PlatformDashboardComponent } from './pages/platform-dashboard.component';
@@ -24,7 +25,8 @@ export const PLATFORM_ROUTES: Routes = [
       { path: 'companies', component: CompaniesPageComponent, title: 'Super Admin — Entreprises' },
       { path: 'companies/new', component: CompanyCreateComponent, title: 'Super Admin — Nouvelle entreprise' },
       { path: 'companies/:id', component: CompanyDetailComponent, title: 'Super Admin — Entreprise' },
-      { path: 'audit', component: PlatformAuditComponent, title: 'Super Admin — Journal' }
+      { path: 'audit', component: PlatformAuditComponent, title: 'Super Admin — Journal' },
+      { path: 'integration-clients', component: IntegrationClientsPageComponent, title: 'Super Admin — Clients d\'intégration' }
     ]
   }
 ];

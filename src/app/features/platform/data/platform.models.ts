@@ -174,6 +174,46 @@ export interface PlatformAuditEntry {
   details?: string | null;
 }
 
+// ── Clients d'intégration OAuth ──────────────────────────────────────────────
+
+export type IntegrationClientStatus = 'ACTIVE' | 'DISABLED';
+
+export const integrationClientStatusLabels: Record<IntegrationClientStatus, string> = {
+  ACTIVE: 'Actif',
+  DISABLED: 'Désactivé'
+};
+
+export const ALL_INTEGRATION_SCOPES = [
+  'catalog:read',
+  'catalog:match',
+  'price:propose',
+  'stock:read',
+  'orders:read',
+  'orders:write'
+] as const;
+
+export interface IntegrationClientListItem {
+  id: string;
+  clientId: string;
+  name: string;
+  status: IntegrationClientStatus;
+  createdAt: string;
+}
+
+export interface CreateIntegrationClientRequest {
+  clientId: string;
+  name: string;
+  redirectUris: string[];
+  allowedScopes?: string[];
+}
+
+export interface CreateIntegrationClientResponse {
+  client: IntegrationClientListItem;
+  secret: string;
+}
+
+// ── Branding ─────────────────────────────────────────────────────────────────
+
 /** Corps de PUT …/branding (couleurs #RRGGBB, mode, contraste, mentions). */
 export type BrandingRequest = Pick<
   CompanyBranding,
