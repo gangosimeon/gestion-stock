@@ -207,6 +207,11 @@ export interface CreateIntegrationClientRequest {
   allowedScopes?: string[];
 }
 
+export interface UpdateIntegrationClientRequest {
+  name: string;
+  redirectUris: string[];
+}
+
 export interface CreateIntegrationClientResponse {
   client: IntegrationClientListItem;
   secret: string;

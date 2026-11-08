@@ -18,7 +18,8 @@ import {
   IntegrationClientListItem,
   PlatformAuditEntry,
   PlatformStats,
-  SchemaUpgradeStatus
+  SchemaUpgradeStatus,
+  UpdateIntegrationClientRequest
 } from './platform.models';
 
 function toApiError(err: unknown): Error {
@@ -147,6 +148,12 @@ export class PlatformApiService {
   createIntegrationClient(request: CreateIntegrationClientRequest): Observable<CreateIntegrationClientResponse> {
     return this.http
       .post<CreateIntegrationClientResponse>(`${this.base}/integration-clients`, request)
+      .pipe(catchError((e) => throwError(() => toApiError(e))));
+  }
+
+  updateIntegrationClient(id: string, request: UpdateIntegrationClientRequest): Observable<IntegrationClientListItem> {
+    return this.http
+      .patch<IntegrationClientListItem>(`${this.base}/integration-clients/${id}`, request)
       .pipe(catchError((e) => throwError(() => toApiError(e))));
   }
 

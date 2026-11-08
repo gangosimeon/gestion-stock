@@ -40,7 +40,7 @@ import {
     <div class="page-header">
       <h1 class="page-header__title">Clients d'intégration</h1>
       <div class="page-header__spacer"></div>
-      @if (!showCreate()) {
+      @if (!showCreate() && !editingId()) {
         <button mat-flat-button color="primary" (click)="showCreate.set(true)">
           <mat-icon>add</mat-icon>
           Nouveau client
@@ -71,7 +71,6 @@ import {
             }
           </mat-form-field>
 
-          <!-- URIs de retour ─────────────────────────────────────────── -->
           <div class="field-group">
             <div class="field-group__label">URLs de retour OAuth *</div>
             @for (uri of uriControls.controls; track $index) {
@@ -95,7 +94,6 @@ import {
             </button>
           </div>
 
-          <!-- Portées ────────────────────────────────────────────────── -->
           <div class="field-group">
             <div class="field-group__label">Portées autorisées (toutes par défaut)</div>
             <div class="scopes-grid">
@@ -119,7 +117,58 @@ import {
       </div>
     }
 
-    <!-- Secret affiché après création ──────────────────────────────── -->
+    <!-- Formulaire d'édition ─────────────────────────────────────────── -->
+    @if (editingId()) {
+      <div class="create-panel">
+        <h2>Modifier « {{ editingName() }} »</h2>
+        <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="create-form">
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nom affiché</mat-label>
+            <input matInput formControlName="name" />
+            @if (editForm.controls.name.invalid && editForm.controls.name.touched) {
+              <mat-error>Obligatoire (100 caractères max)</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="field-group">
+            <div class="field-group__label">URLs de retour OAuth *</div>
+            @for (uri of editUriControls.controls; track $index) {
+              <div class="uri-row">
+                <mat-form-field appearance="outline" class="uri-field">
+                  <input matInput [formControl]="asControl(uri)" placeholder="https://exemple.com/callback" />
+                  @if (uri.invalid && uri.touched) {
+                    <mat-error>https:// ou http://localhost, sans fragment</mat-error>
+                  }
+                </mat-form-field>
+                @if (editUriControls.length > 1) {
+                  <button mat-icon-button type="button" (click)="removeEditUri($index)" matTooltip="Supprimer">
+                    <mat-icon>remove_circle_outline</mat-icon>
+                  </button>
+                }
+              </div>
+            }
+            <button mat-button type="button" (click)="addEditUri()">
+              <mat-icon>add</mat-icon>
+              Ajouter une URL
+            </button>
+          </div>
+
+          @if (editError()) {
+            <div class="form-error">{{ editError() }}</div>
+          }
+
+          <div class="form-actions">
+            <button mat-stroked-button type="button" (click)="cancelEdit()">Annuler</button>
+            <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+              @if (saving()) { Enregistrement… } @else { Enregistrer }
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+
+    <!-- Secret affiché après création/reset ─────────────────────────── -->
     @if (revealedSecret()) {
       <div class="secret-banner">
         <mat-icon class="secret-banner__icon">key</mat-icon>
@@ -176,6 +225,10 @@ import {
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let c">
             <div class="row-actions">
+              <button mat-stroked-button (click)="startEdit(c)" [disabled]="actionInProgress()">
+                <mat-icon>edit</mat-icon>
+                Modifier
+              </button>
               <button mat-stroked-button (click)="resetSecret(c)" [disabled]="actionInProgress()">
                 <mat-icon>refresh</mat-icon>
                 Réinitialiser le secret
@@ -245,7 +298,7 @@ import {
       border-radius: 4px;
       word-break: break-all;
     }
-    .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .row-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   `]
 })
 export class IntegrationClientsPageComponent {
@@ -266,6 +319,10 @@ export class IntegrationClientsPageComponent {
   readonly createError = signal<string | null>(null);
   readonly revealedSecret = signal<string | null>(null);
   readonly actionInProgress = signal(false);
+  readonly editingId = signal<string | null>(null);
+  readonly editingName = signal<string>('');
+  readonly saving = signal(false);
+  readonly editError = signal<string | null>(null);
 
   // ── formulaire création ───────────────────────────────────────────────────
   readonly createForm = new FormGroup({
@@ -280,7 +337,14 @@ export class IntegrationClientsPageComponent {
     )
   });
 
+  // ── formulaire édition ────────────────────────────────────────────────────
+  readonly editForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(100)] }),
+    uris: new FormArray([this.newUriControl()])
+  });
+
   get uriControls(): FormArray { return this.createForm.controls.uris; }
+  get editUriControls(): FormArray { return this.editForm.controls.uris; }
 
   scopeControl(scope: string): FormControl<boolean> {
     return this.createForm.controls.scopes.get(scope) as FormControl<boolean>;
@@ -299,13 +363,9 @@ export class IntegrationClientsPageComponent {
     });
   }
 
-  addUri(): void {
-    this.uriControls.push(this.newUriControl());
-  }
-
-  removeUri(i: number): void {
-    this.uriControls.removeAt(i);
-  }
+  // ── création ──────────────────────────────────────────────────────────────
+  addUri(): void { this.uriControls.push(this.newUriControl()); }
+  removeUri(i: number): void { this.uriControls.removeAt(i); }
 
   cancelCreate(): void {
     this.showCreate.set(false);
@@ -314,10 +374,7 @@ export class IntegrationClientsPageComponent {
   }
 
   submitCreate(): void {
-    if (this.createForm.invalid) {
-      this.createForm.markAllAsTouched();
-      return;
-    }
+    if (this.createForm.invalid) { this.createForm.markAllAsTouched(); return; }
     const v = this.createForm.getRawValue();
     const selectedScopes = ALL_INTEGRATION_SCOPES.filter((s) => v.scopes[s]);
     this.creating.set(true);
@@ -339,6 +396,47 @@ export class IntegrationClientsPageComponent {
     });
   }
 
+  // ── édition ───────────────────────────────────────────────────────────────
+  addEditUri(): void { this.editUriControls.push(this.newUriControl()); }
+  removeEditUri(i: number): void { this.editUriControls.removeAt(i); }
+
+  startEdit(c: IntegrationClientListItem): void {
+    this.editingId.set(c.id);
+    this.editingName.set(c.name);
+    this.editError.set(null);
+    this.editForm.controls.name.setValue(c.name);
+    // Réinitialise le FormArray des URIs avec une entrée vide (les URIs ne sont pas renvoyées dans la liste)
+    while (this.editUriControls.length > 0) this.editUriControls.removeAt(0);
+    this.editUriControls.push(this.newUriControl());
+    this.showCreate.set(false);
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+    this.editError.set(null);
+  }
+
+  submitEdit(): void {
+    if (this.editForm.invalid) { this.editForm.markAllAsTouched(); return; }
+    const id = this.editingId();
+    if (!id) return;
+    const v = this.editForm.getRawValue();
+    const uris = v.uris.filter((u) => u.trim());
+    if (uris.length === 0) { this.editError.set('Au moins une URL de retour est requise.'); return; }
+    this.saving.set(true);
+    this.editError.set(null);
+    this.api.updateIntegrationClient(id, { name: v.name, redirectUris: uris }).subscribe({
+      next: (updated) => {
+        this.saving.set(false);
+        this.editingId.set(null);
+        this.clients.update((list) => list.map((c) => (c.id === id ? { ...c, name: updated.name } : c)));
+        this.snack.open('Client mis à jour.', 'OK', { duration: 3000 });
+      },
+      error: (e: Error) => { this.saving.set(false); this.editError.set(e.message); }
+    });
+  }
+
+  // ── actions ───────────────────────────────────────────────────────────────
   resetSecret(c: IntegrationClientListItem): void {
     if (!confirm(`Réinitialiser le secret de « ${c.name} » ? L'ancien secret cessera immédiatement de fonctionner.`)) return;
     this.actionInProgress.set(true);
