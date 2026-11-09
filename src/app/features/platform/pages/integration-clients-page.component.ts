@@ -211,7 +211,7 @@ import {
           <th mat-header-cell *matHeaderCellDef>Statut</th>
           <td mat-cell *matCellDef="let c">
             <span class="badge" [class.badge--success]="c.status === 'ACTIVE'" [class.badge--neutral]="c.status === 'DISABLED'">
-              {{ statusLabels[c.status] ?? c.status }}
+              {{ statusLabels[c.status] || c.status }}
             </span>
           </td>
         </ng-container>

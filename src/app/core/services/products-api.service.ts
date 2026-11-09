@@ -39,7 +39,7 @@ function toApiError(err: unknown): Error {
  * change que par des mouvements de stock.
  */
 export interface ProductRequest {
-  sku: string;
+  sku?: string | null;
   name: string;
   categoryId: string;
   supplierId?: string | null;
