@@ -132,7 +132,8 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
       this.productSearch.valueChanges.pipe(
         startWith(this.productSearch.value),
         // Recherche tolérante (accents, ordre des mots, code-barres), commune avec la caisse rapide.
-        map((term) => (term.trim() ? searchProducts(products, term, 24) : products.slice(0, 24)))
+        // En mode liste (autocomplete), on limite à 24. En mode cartes, le slice se fait dans le template.
+        map((term) => (term.trim() ? searchProducts(products, term, 24) : products))
       )
     )
   );
@@ -141,6 +142,9 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   /** Choix des produits : liste de recherche ou cartes (mémorisé sur l'appareil). */
   readonly productView = signal<'list' | 'cards'>(browserStore.getItem(PRODUCT_VIEW_KEY) === 'cards' ? 'cards' : 'list');
+
+  /** Nombre de cartes produits affichées (chargement progressif au scroll). */
+  readonly visibleCount = signal(24);
 
   /** Vente dont le ticket a déjà été ouvert : le panneau ne s'ouvre qu'une fois par vente. */
   private shownSale: unknown = null;
@@ -153,6 +157,9 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
       this.selectedProductId.setValue(null);
       this.facade.refresh();
     });
+
+    // Réinitialise le nombre de cartes visibles à chaque nouvelle recherche.
+    this.productSearch.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => this.visibleCount.set(24));
 
     this.customerId.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setCustomer(v));
     this.paidAmount.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((v) => this.facade.setPaidAmount(v));
@@ -209,6 +216,7 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
         void this.invoiceDrawer.open();
       }
     });
+
   }
 
   ngOnDestroy(): void {
@@ -230,7 +238,19 @@ export class SalesShellPageComponent implements AfterViewInit, OnDestroy {
 
   setProductView(view: 'list' | 'cards'): void {
     this.productView.set(view);
+    this.visibleCount.set(24);
     browserStore.setItem(PRODUCT_VIEW_KEY, view);
+  }
+
+  clearError(): void {
+    this.facade.clearError();
+  }
+
+  onCatalogScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+      this.visibleCount.update((n) => n + 24);
+    }
   }
 
   /** Prix de l'article pour la vente en cours (détail ou gros). */

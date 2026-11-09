@@ -197,6 +197,10 @@ export class QuickSalePageComponent {
     this.focusSearch();
   }
 
+  clearError(): void {
+    this.facade.clearError();
+  }
+
   /** Prix de l'article pour la vente en cours (détail ou gros). */
   priceOf(product: Product): number {
     return this.vm()?.form.type === 'WHOLESALE' ? product.wholesalePrice : product.retailPrice;

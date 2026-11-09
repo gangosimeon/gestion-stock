@@ -18,7 +18,14 @@
         </header>
 
         @if (vm.isLoading) { <mat-progress-bar mode="indeterminate" /> }
-        @if (vm.errorMessage) { <div class="error" role="alert">{{ vm.errorMessage }}</div> }
+        @if (vm.errorMessage) {
+          <div class="error" role="alert">
+            {{ vm.errorMessage }}
+            <button mat-icon-button type="button" class="error__close" (click)="clearError()" aria-label="Fermer">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
 
         <div class="qs-layout">
           <!-- Articles : recherche (ou lecteur de codes-barres) et favoris -->

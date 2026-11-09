@@ -200,6 +200,10 @@ export class SalesFacade {
     this.cartSubject.next(this.cartSubject.value.filter((r) => r.productId !== productId));
   }
 
+  clearError(): void {
+    this.errorSubject.next(null);
+  }
+
   /** Ticket fermé : la vente encaissée n'est plus affichée (la prochaine vente repart de zéro). */
   dismissLastSale(): void {
     if (this.lastSaleSubject.value) this.lastSaleSubject.next(null);

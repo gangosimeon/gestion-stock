@@ -72,7 +72,7 @@ export class ProductDrawerComponent {
   loadedProduct: Product | null = null;
 
   readonly form = this.fb.nonNullable.group({
-    sku: ['', [Validators.required, Validators.maxLength(50)]],
+    sku: ['', [Validators.maxLength(50)]],
     name: ['', [Validators.required, Validators.maxLength(200)]],
     categoryId: ['', [Validators.required]],
     supplierId: [''],
@@ -167,7 +167,7 @@ export class ProductDrawerComponent {
     const current = this.ctx.mode === 'edit' && this.loadedProduct ? toProductRequest(this.loadedProduct) : null;
     const payload: ProductRequest = {
       ...current,
-      sku: raw.sku.trim(),
+      sku: raw.sku.trim() || null,
       name: raw.name.trim(),
       categoryId: raw.categoryId,
       supplierId: raw.supplierId || null,

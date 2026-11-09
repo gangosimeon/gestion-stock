@@ -98,8 +98,8 @@
           </div>
 
           @if (productView() === 'cards') {
-            <div class="catalog" role="list" aria-label="Produits">
-              @for (p of catalog; track p.id) {
+            <div class="catalog" role="list" aria-label="Produits" (scroll)="onCatalogScroll($event)">
+              @for (p of (catalog ?? []).slice(0, visibleCount()); track p.id) {
                 <app-product-card role="listitem" [product]="p" [unitPrice]="priceOf(vm, p)" [inCart]="inCart(vm, p.id)" (pick)="selectProduct($event.id)" />
               } @empty {
                 <p class="catalog__empty">Aucun produit ne correspond à la recherche.</p>
@@ -108,7 +108,12 @@
           }
 
           @if (vm.errorMessage) {
-            <div class="error" role="alert">{{ vm.errorMessage }}</div>
+            <div class="error" role="alert">
+              {{ vm.errorMessage }}
+              <button mat-icon-button type="button" class="error__close" (click)="clearError()" aria-label="Fermer">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
           }
 
           @if (vm.cart.length === 0) {

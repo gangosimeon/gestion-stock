@@ -3,7 +3,9 @@
     <div>
       <div class="drawer__title">{{ title }}</div>
       @if (ctx.mode === 'detail' && loadedProduct) {
-        <div class="drawer__subtitle">SKU: {{ loadedProduct.sku }}</div>
+        @if (loadedProduct.sku) {
+          <div class="drawer__subtitle">SKU: {{ loadedProduct.sku }}</div>
+        }
       }
     </div>
 
@@ -30,8 +32,9 @@
     }
     <div class="grid">
       <mat-form-field appearance="outline">
-        <mat-label>SKU</mat-label>
-        <input matInput formControlName="sku" />
+        <mat-label>SKU (optionnel)</mat-label>
+        <input matInput formControlName="sku" placeholder="ex : MON-RB3025" />
+        <mat-hint>Laissez vide si vous n'avez pas de référence</mat-hint>
         @if (fieldError('sku'); as e) { <mat-error>{{ e }}</mat-error> }
       </mat-form-field>
 
